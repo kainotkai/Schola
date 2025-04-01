@@ -18,6 +18,10 @@ bool USynchronousBrain::RequestDecision(const FDictPoint& Observations)
 	// This waits Timeout Seconds for the communicator to make the decision
 	// we got here by not time-ing out or not setting a timeout in the first place
 	this->InProgressActionRequest = std::move(DecisionFuture);
+	if (this->Decision.IsSet())
+	{
+		this->Decision.Reset();
+	}
 	bHasInProgressAction = true;
 	return true;
 }

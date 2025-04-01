@@ -64,17 +64,39 @@ float UTeleportActuator::GetVectorDimension(int Speed, int DiscretePointValue)
 
 void UTeleportActuator::TakeAction(const FDiscretePoint& Action)
 {
-	AActor* LocalTarget = Target;
-
-	if (Target == nullptr)
-	{
-		Target = TryGetOwner();
-	}
-
-	if (Target != nullptr)
+	
+	AActor* LocalTarget = TryGetOwner();
+	
+	if (LocalTarget != nullptr)
 	{
 		const FVector& ActionVector = ConvertActionToFVector(Action);
 		this->OnTeleportDelegate.Broadcast(ActionVector);
-		Target->SetActorLocation(Target->GetActorLocation() + ActionVector, this->bSweep, nullptr, this->TeleportType);
+		LocalTarget->SetActorLocation(LocalTarget->GetActorLocation() + ActionVector, this->bSweep, nullptr, this->TeleportType);
 	}
+	else
+	{
+		UE_LOG(LogSchola, Warning, TEXT("TeleportActuator %s: No Pawn found to apply action to."), *this->GetName());
+	}
+}
+
+FString UTeleportActuator::GenerateId() const
+{
+	FString Output = FString("Teleport");
+
+	if (bHasXDimension)
+	{
+		Output.Appendf(TEXT("_X_%.2f"), XDimensionSpeed);
+	}
+
+	if (bHasYDimension)
+	{
+		Output.Appendf(TEXT("_Y_%.2f"), YDimensionSpeed);
+	}
+
+	if (bHasZDimension)
+	{
+		Output.Appendf(TEXT("_Z_%.2f"), ZDimensionSpeed);
+	}
+
+	return Output;
 }

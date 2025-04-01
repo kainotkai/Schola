@@ -5,10 +5,10 @@
 #include "CoreMinimal.h"
 
 /**
- * @brief Enum class of frame of reference types.
+ * @brief Enum of frame of reference types.
  */
-UENUM()
-enum class EFrameOfReference
+UENUM(BlueprintType)
+enum EFrameOfReference : uint8
 {
 	/** Rotation and Position are both relative to a target Actor. Useful for agents that primarily navigate forward */
 	Egocentric,

@@ -9,7 +9,7 @@ UExternalGymConnector::UExternalGymConnector()
 
 void UExternalGymConnector::SubmitEnvironmentStates()
 {
-	this->SendState(SharedTrainingState);
+	this->SendState(this->TrainingState);
 }
 
 FTrainingStateUpdate* UExternalGymConnector::ResolveEnvironmentStateUpdate()

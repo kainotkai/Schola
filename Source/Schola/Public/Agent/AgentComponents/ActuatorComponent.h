@@ -21,7 +21,7 @@ public:
 	UActuatorComponent();
 
 	/** The Actuator Object inside this Actuator Component */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere, NoClear, Instanced, meta = (ShowInnerProperties))
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, NoClear, Instanced, meta = (ShowInnerProperties), Category = "Actuator")
 	UActuator* Actuator;
 
 protected:
@@ -31,5 +31,17 @@ protected:
 public:
 	/** Called every frame */
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+#if WITH_EDITOR
 
+	/** Generate a DebugId for this Actuator, to check what will be used for Naming */
+	UFUNCTION(CallInEditor, Category = "Sensor")
+	void GenerateDebugId()
+	{
+		if (Actuator)
+		{
+			Actuator->DisplayId = Actuator->GetId();
+		}
+	}
+
+	#endif
 };

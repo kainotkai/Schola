@@ -5,24 +5,12 @@ Implementation of stable_baselines3.common.vec_env.VecEnv backed by a Schola Env
 """
 
 from collections import OrderedDict
-from difflib import unified_diff
-from functools import cached_property
-from typing import Dict, List, Optional, Tuple, TypeVar, TypedDict, Union
-from venv import logger
-import stable_baselines3 as sb3
+from typing import Dict, List, Optional, Tuple, TypeVar, Union
 from schola.core.env import ScholaEnv
 from stable_baselines3.common.vec_env import VecEnv as Sb3VecEnv
 from stable_baselines3.common.vec_env.subproc_vec_env import _flatten_obs
-from schola.core.spaces import (
-    DiscreteSpace,
-    MultiDiscreteSpace,
-    BoxSpace,
-    MultiBinarySpace,
-    DictSpace
-)
 
 import numpy as np
-import gymnasium as gym
 from schola.core.error_manager import EnvironmentException
 from schola.core.utils import nested_get, IdManager
 import logging
@@ -46,10 +34,13 @@ class VecEnv(Sb3VecEnv):
         action_space = self._env.get_action_space(*self.id_manager[0])
         
         #test that everything is setup correctly
-        for env_id, agent_id in self.id_manager.id_list:
-            assert self._env.get_action_space(env_id,agent_id) == action_space, f"Action Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_action_space(env_id,agent_id)}\nExpected:{action_space}"
-            assert self._env.get_obs_space(env_id,agent_id) == obs_space, f"Observation Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_obs_space(env_id,agent_id)}\nExpected:{obs_space}"
-        
+        try:
+            for env_id, agent_id in self.id_manager.id_list:
+                assert self._env.get_action_space(env_id,agent_id) == action_space, f"Action Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_action_space(env_id,agent_id)}\nExpected:{action_space}"
+                assert self._env.get_obs_space(env_id,agent_id) == obs_space, f"Observation Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_obs_space(env_id,agent_id)}\nExpected:{obs_space}"
+        except Exception as e:
+            self._env.close()
+            raise e
         logging.debug(action_space)
         logging.debug(obs_space)
         self.reset_infos = [{} for _ in range(self._env.num_agents)]

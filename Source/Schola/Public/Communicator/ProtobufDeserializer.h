@@ -3,7 +3,8 @@
 #pragma once
 
 #include "../Common/Points.h"
-#include "../Training/TrainingStateUpdateStructs.h"
+#include "../Training/UpdateStructs/TrainingUpdate.h"
+#include "../Training/UpdateStructs/EnvironmentUpdate.h"
 THIRD_PARTY_INCLUDES_START
 #include "../Generated/GymConnector.pb.h"
 #include "../Generated/Spaces.pb.h"

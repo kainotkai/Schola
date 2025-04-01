@@ -25,7 +25,7 @@ public:
 	UPROPERTY(EditAnywhere, NoClear, Instanced, meta = (ShowInnerProperties), Category = "Reinforcement Learning")
 	UAbstractPolicy* Policy;
 
-	/** Object defining how decisions requests are synchronized. */
+	/** Object defining how decision requests are synchronized. */
 	UPROPERTY(EditAnywhere, NoClear, Instanced, meta = (ShowInnerProperties), Category = "Reinforcement Learning")
 	UAbstractBrain* Brain;
 
@@ -38,8 +38,20 @@ public:
 	TArray<UActuator*> Actuators;
 
 	/** The status of the agent. */
-	UPROPERTY(BlueprintReadOnly)
-	EAgentStatus Status = EAgentStatus::Running;
+	UPROPERTY(BlueprintReadOnly, Category = "Reinforcement Learning")
+	EAgentStatus Status = EAgentStatus::Stopped;
+
+	/* Tick function for Think calls. */
+	UPROPERTY()
+	FThinkTickFunction ThinkTickFunction = FThinkTickFunction(this);
+
+	/* Tick function for Act calls. */
+	UPROPERTY()
+	FActTickFunction ActTickFunction = FActTickFunction(this);
+
+	/** Whether the agent should be set up to take actions automatically. */
+	UPROPERTY(EditAnywhere, Category = "Reinforcement Learning")
+	bool bRegisterAgentStep = true;
 
 	virtual APawn* GetControlledPawn() override
 	{
@@ -81,4 +93,26 @@ public:
 	{
 		Status = NewStatus;
 	}
+
+	void RegisterActorTickFunctions(bool bRegister) override
+	{
+		Super::RegisterActorTickFunctions(bRegister);
+		if (bRegister && bRegisterAgentStep)
+		{
+			this->SetupDefaultTicking(this->ThinkTickFunction, this->ActTickFunction);
+		}
+		else
+		{
+			this->ThinkTickFunction.UnRegisterTickFunction();
+			this->ActTickFunction.UnRegisterTickFunction();
+		}
+		
+	}
+
+	virtual void BeginPlay() override
+	{
+		Super::BeginPlay();
+		this->Initialize();
+	}
+
 };

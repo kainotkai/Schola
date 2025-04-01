@@ -1,4 +1,4 @@
-
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 #include "ScholaEditor.h"
 
 #define LOCTEXT_NAMESPACE "ScholaEditor"
@@ -11,13 +11,21 @@ void FScholaEditorModule::StartupModule()
 	RegisterDefaultFunction(ABlueprintTrainer, AgentCallback, ComputeStatus);
 	RegisterDefaultFunction(ABlueprintTrainer, AgentCallback, GetInfo);
 
-	// Environment
-	FKismetEditorUtilities::FOnBlueprintCreated EnvironmentCallback;
-	RegisterDefaultFunction(ABlueprintScholaEnvironment, EnvironmentCallback, RegisterAgents);
-	RegisterDefaultEvent(ABlueprintScholaEnvironment, ResetEnvironment);
-	RegisterDefaultEvent(ABlueprintScholaEnvironment, InitializeEnvironment);
-	RegisterDefaultEvent(ABlueprintScholaEnvironment, SetEnvironmentOptions);
-	RegisterDefaultEvent(ABlueprintScholaEnvironment, SeedEnvironment);
+	// Static Environment
+	FKismetEditorUtilities::FOnBlueprintCreated StaticEnvironmentCallback;
+	RegisterDefaultFunction(ABlueprintStaticScholaEnvironment, StaticEnvironmentCallback, RegisterAgents);
+	RegisterDefaultEvent(ABlueprintStaticScholaEnvironment, ResetEnvironment);
+	RegisterDefaultEvent(ABlueprintStaticScholaEnvironment, InitializeEnvironment);
+	RegisterDefaultEvent(ABlueprintStaticScholaEnvironment, SetEnvironmentOptions);
+	RegisterDefaultEvent(ABlueprintStaticScholaEnvironment, SeedEnvironment);
+
+	//Dynamic Environment
+	FKismetEditorUtilities::FOnBlueprintCreated DynamicEnvironmentCallback;
+	RegisterDefaultFunction(ABlueprintDynamicScholaEnvironment, DynamicEnvironmentCallback, RegisterAgents);
+	RegisterDefaultEvent(ABlueprintDynamicScholaEnvironment, ResetEnvironment);
+	RegisterDefaultEvent(ABlueprintDynamicScholaEnvironment, InitializeEnvironment);
+	RegisterDefaultEvent(ABlueprintDynamicScholaEnvironment, SetEnvironmentOptions);
+	RegisterDefaultEvent(ABlueprintDynamicScholaEnvironment, SeedEnvironment);
 
 	// Observers
 	FKismetEditorUtilities::FOnBlueprintCreated DiscreteObserverCallback;

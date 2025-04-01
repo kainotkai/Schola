@@ -1275,6 +1275,8 @@ ueb-ui-slider {
   color: #c0c0c0;
 }
 
+/* @modification: align the title and bubble buttons, and add hover animation to improve appearance */
+/* @date: 2025-01-20  */
 .ueb-viewport-title {
   display: flex;
   justify-content: space-between;
@@ -1282,4 +1284,17 @@ ueb-ui-slider {
   padding: 4px 8px;
   background: #1a1a1a;
 }
+.ueb-viewport-title-bubble {
+  display: inline-block;
+  padding: 5px;
+  border-radius: 3px;
+  margin-right:10px;
+}
+.ueb-viewport-title-button:hover {
+  cursor: pointer;
+  background-color: #333 !important;
+  transition: background-color 0.1s ease-in-out;
+}
+
+
 /*# sourceMappingURL=ueb-style.css.map */

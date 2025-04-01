@@ -6,6 +6,7 @@
 #include "Common/Points.h"
 #include "Common/Spaces.h"
 #include "CoreMinimal.h"
+#include "Common/LogSchola.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Common/PositionalEnums.h"
 #include "MovementInputActuator.generated.h"
@@ -29,21 +30,14 @@ public:
 	/** Toggle for whether this actuator moves the Agent along the Y dimension */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Actuator Settings")
 	bool bHasYDimension = true;
-	/** The minimum speed at which the agent can move */
+
+	/** The minimum speed at which the agent can move. Set to negative to allow for backwards movement along each axis. */
 	UPROPERTY(EditAnywhere, Category = "Actuator Settings")
-	int MinSpeed = 0;
+	float MinSpeed = 0.0;
 
 	/** The maximum speed at which the agent can move */
 	UPROPERTY(EditAnywhere, Category = "Actuator Settings")
-	int MaxSpeed = 1;
-
-	/** The pawn to apply the movement input to. Defaults to the attached Agent */
-	UPROPERTY()
-	APawn* Target;
-
-	/** Toggle for clipping agent movement to the specified Max/Min */
-	UPROPERTY(EditAnywhere, Category = "Actuator Settings")
-	bool bClipMovementInputs = true;
+	float MaxSpeed = 1.0;
 
 	/** A delegate invoked when this actuator receives input from a brain. Useful for debugging and logging */
 	UPROPERTY(BlueprintAssignable)
@@ -57,9 +51,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Actuator Settings")
 	bool bForce = false;
 
-
-
-
 	FBoxSpace GetActionSpace() override;
 
 	/**
@@ -70,4 +61,6 @@ public:
 	FVector ConvertActionToFVector(const FBoxPoint& Action);
 
 	void TakeAction(const FBoxPoint& Action) override;
+
+	FString GenerateId() const override;
 };

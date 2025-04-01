@@ -5,7 +5,7 @@
 #include "CoreMinimal.h"
 #include "Common/Spaces.h"
 #include "Common/Points.h"
-#include "Training/TrainingStateUpdateStructs.h"
+#include "Training/UpdateStructs/TrainingUpdate.h"
 #include "IGymConnector.generated.h"
 
 /**

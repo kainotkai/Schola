@@ -1,16 +1,15 @@
-# Copyright (c) 2024 Advanced Micro Devices, Inc. All Rights Reserved.
+# Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
 """
 Script to train a Stable Baselines3 model using Schola.
 """
+from dataclasses import asdict, fields
 import os
-import pathlib
-from pkgutil import get_data
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union, Callable, Type
+import sys
+from typing import Any, Dict, Optional, Tuple, Type, List
 
-from schola.sb3.utils import convert_ckpt_to_onnx_for_unreal, save_model_as_onnx
-
-from stable_baselines3 import PPO, SAC
+from schola.sb3.utils import convert_ckpt_to_onnx_for_unreal
+import gymnasium as gym
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.vec_env import VecNormalize
 
@@ -18,132 +17,29 @@ from schola.scripts.sb3.utils import RewardCallback, CustomProgressBarCallback
 from schola.sb3.env import VecEnv
 from schola.sb3.utils import VecMergeDictActionWrapper
 from schola.core.error_manager import ScholaErrorContextManager
+from schola.core.utils import get_plugins
 from argparse import ArgumentParser
 from schola.sb3.action_space_patch import ActionSpacePatch
 from stable_baselines3.common.callbacks import CheckpointCallback
-from schola.core.spaces import DictSpace
 import traceback
 from schola.scripts.common import (
     ActivationFunctionEnum,
     add_unreal_process_args,
     add_checkpoint_args,
-    make_unreal_connection,
-    ScriptArgs,
 )
-import torch
-from dataclasses import dataclass, field, fields, asdict
-
-
-@dataclass
-class PPOSettings():
-    learning_rate: float = 0.0003
-    n_steps: int = 2048
-    batch_size: int = 64
-    n_epochs: int = 10
-    gamma: float = 0.99
-    gae_lambda: float = 0.95
-    clip_range: float = 0.2
-    normalize_advantage: bool = True
-    ent_coef: float = 0.0
-    vf_coef: float = 0.5
-    max_grad_norm: float = 0.5
-    use_sde: bool = False
-    sde_sample_freq: int = -1
-    
-    @property
-    def constructor(self) -> Type[PPO]:
-        return PPO 
-    
-    @property
-    def name(self) -> str: 
-        return "PPO"
-    
-    @property
-    def critic_type(self) -> str:
-        return "vf"
-
-@dataclass 
-class SACSettings():
-    learning_rate: float = 0.0003  
-    buffer_size: int = 1000000  
-    learning_starts: int = 100  
-    batch_size: int = 256  
-    tau: float = 0.005  
-    gamma: float = 0.99  
-    train_freq: int = 1  
-    gradient_steps: int = 1  
-    action_noise: any = None  
-    replay_buffer_class: any = None  
-    replay_buffer_kwargs: dict = None  
-    optimize_memory_usage: bool = False  
-    ent_coef: any = 'auto'  
-    target_update_interval: int = 1  
-    target_entropy: any = 'auto'  
-    use_sde: bool = False  
-    sde_sample_freq: int = -1
-    
-    @property
-    def constructor(self)  -> Type[SAC]: 
-        return SAC 
-    
-    @property
-    def name(self) -> str:
-        return "SAC"
-
-    @property
-    def critic_type(self) -> str:
-        return "qf"
-
-@dataclass
-class SB3ScriptArgs(ScriptArgs):
-    # General Arguments
-    timesteps: int = 3000
-
-    #   Misc Arguments
-    pbar: bool = False
-    disable_eval: bool = False
-
-    # Logging Arguments
-    enable_tensorboard: bool = False
-    log_dir: str = "./logs"
-    log_freq: int = 10
-    callback_verbosity: int = 0
-    schola_verbosity: int = 0
-    sb3_verbosity: int = 1
-
-    # Checkpoint Arguments
-    save_replay_buffer: bool = False
-    save_vecnormalize: bool = False
-
-    # Resume Arguments
-    resume_from: str = None
-    load_vecnormalize: str = None
-    load_replay_buffer: str = None
-    reset_timestep: bool = False
-
-    # Network Architecture Arguments
-    policy_parameters: List[int] = None
-    critic_parameters: List[int] = None
-    activation: ActivationFunctionEnum = ActivationFunctionEnum.ReLU
-
-    # Training Algorithm Arguments
-    algorithm_settings: Union[PPOSettings, SACSettings] = field(default_factory=PPOSettings)
-    
-    @property
-    def name_prefix(self):
-        return self.name_prefix_override if self.name_prefix_override is not None else self.algorithm_settings.name.lower()
-
+from schola.scripts.sb3.settings import PPOSettings, SACSettings, SB3ScriptArgs
+from stable_baselines3.common.logger import HumanOutputFormat, Logger
 
 def make_parser() -> ArgumentParser:
     """
     Create an argument parser for launching training with stable baselines 3.
-
+    
     Returns
     -------
     ArgumentParser
         The argument parser for the script.
     """
-    parser = ArgumentParser(prog="Schola Example with SB3")
+    parser = ArgumentParser(prog="Launch Schola Examples with SB3")
     parser.add_argument("-t", "--timesteps", type=int, default=3000)
     
     add_unreal_process_args(parser)
@@ -256,126 +152,149 @@ def main(args: SB3ScriptArgs) -> Optional[Tuple[float,float]]:
         except:
             print("tensorboard not installed. Disabling tensorboard logging")
             args.enable_tensorboard = False
+    #initialize so we can force closure at the end
+    env=None
+    try:
+        # This context manager redirects GRPC errors into custom error types to help debug
+        with ScholaErrorContextManager() as err_ctxt, ActionSpacePatch(
+            globals()
+        ) as action_patch:
 
-    # This context manager redirects GRPC errors into custom error types to help debug
-    with ScholaErrorContextManager() as err_ctxt, ActionSpacePatch(
-        globals()
-    ) as action_patch:
+            # make a gym environment
+            env = VecEnv(args.make_unreal_connection(), verbosity=args.schola_verbosity)
+            
+            if args.algorithm_settings.name == "SAC":
+                env = VecMergeDictActionWrapper(env)
+            
+            model_loaded = False
+            if args.resume_from:
+                try:
+                    model = args.algorithm_settings.constructor.load(args.resume_from, env=env)
+                    model_loaded = True
+                except Exception as e:
+                    print(f"Error Loading Model: {e}. Training from scratch")
 
-        # make a gym environment
-        env = VecEnv(args.make_unreal_connection(), verbosity=args.schola_verbosity)
-        
-        if args.algorithm_settings.name == "SAC":
-            env = VecMergeDictActionWrapper(env)
+            if not model_loaded:
+                policy_kwargs = None
+                if args.activation or args.value_func_parameters or args.policy_parameters:
+                    policy_kwargs = dict(features_extractor_kwargs={"normalized_image":True})
+                    #TODO add warning if image is less than [64,64] as this causes an error with SB3s default CNN model.
+                    # ~acann, 3/3/2025 
+                    if args.activation:
+                        policy_kwargs["activation_fn"] = args.activation.layer
 
-        model_loaded = False
-        if args.resume_from:
-            try:
-                model = args.algorithm_settings.constructor.load(args.resume_from, env=env)
-                model_loaded = True
-            except:
-                print("Error Loading Model. Training from Scratch")
+                    if args.critic_parameters or args.policy_parameters:
+                        # default to nothing
+                        policy_kwargs["net_arch"] = dict(vf=[], pi=[], qf=[])
 
-        if not model_loaded:
-            policy_kwargs = None
-            if args.activation or args.value_func_parameters or args.policy_parameters:
-                policy_kwargs = dict()
-                if args.activation:
-                    policy_kwargs["activation_fn"] = args.activation.layer
-
-                if args.critic_parameters or args.policy_parameters:
-                    # default to nothing
-                    policy_kwargs["net_arch"] = dict(vf=[], pi=[], qf=[])
-
-                if args.critic_parameters:
-                    policy_kwargs["net_arch"][args.algorithm_settings.critic_type] = args.critic_parameters
+                    if args.critic_parameters:
+                        policy_kwargs["net_arch"][args.algorithm_settings.critic_type] = args.critic_parameters
+                    
+                    if args.policy_parameters:
+                        policy_kwargs["net_arch"]["pi"] = args.policy_parameters
                 
-                if args.policy_parameters:
-                    policy_kwargs["net_arch"]["pi"] = args.policy_parameters
-
-            model = args.algorithm_settings.constructor(
-                policy = "MultiInputPolicy" if isinstance(env.observation_space, DictSpace) else "MlpPolicy" ,
-                env = env,
-                verbose = args.sb3_verbosity,
-                policy_kwargs = policy_kwargs,
-                tensorboard_log = args.log_dir if args.enable_tensorboard else None,
-                **asdict(args.algorithm_settings)
-            )
-
-        if args.load_vecnormalize:
-            if model.get_vec_normalize_env() is None:
-                try:
-                    VecNormalize.load(args.load_vecnormalize, env)
-                except:
-                    print("Error Loading saved VecNormalize Parameters. Skipping")
-            else:
-                print(
-                    "Load VecNormalize requested but no VecNormalize Wrapper exists to load to."
+                model = args.algorithm_settings.constructor(
+                    policy = "MultiInputPolicy" if isinstance(env.observation_space, gym.spaces.Dict) else "MlpPolicy" ,
+                    env = env,
+                    verbose = args.sb3_verbosity,
+                    policy_kwargs = policy_kwargs,
+                    tensorboard_log = args.log_dir if args.enable_tensorboard else None,
+                    **asdict(args.algorithm_settings)
                 )
+            # Set a variable here that we can use later when exporting to onnx 
+            model.__original_action_space = env.unwrapped.action_space
 
-        if args.load_replay_buffer:
-            if hasattr(model, "replay_buffer"):
-                try:
-                    model.load_replay_buffer(args.load_replay_buffer)
-                except:
-                    print("Error Loading saved Replay Buffer. Skipping.")
-            else:
-                print("Model does not have a Replay Buffer to load to. Skipping.")
+            if args.load_vecnormalize:
+                if model.get_vec_normalize_env() is None:
+                    try:
+                        VecNormalize.load(args.load_vecnormalize, env)
+                    except:
+                        print("Error Loading saved VecNormalize Parameters. Skipping")
+                else:
+                    print(
+                        "Load VecNormalize requested but no VecNormalize Wrapper exists to load to."
+                    )
 
-        callbacks = []
+            if args.load_replay_buffer:
+                if hasattr(model, "replay_buffer"):
+                    try:
+                        model.load_replay_buffer(args.load_replay_buffer)
+                    except:
+                        print("Error Loading saved Replay Buffer. Skipping.")
+                else:
+                    print("Model does not have a Replay Buffer to load to. Skipping.")
 
-        if args.enable_tensorboard:
-            reward_callback = RewardCallback(
-                frequency=args.log_freq, num_envs=env.num_envs
+            callbacks = []
+
+            if args.enable_tensorboard:
+                reward_callback = RewardCallback(
+                    verbose=args.callback_verbosity,
+                    frequency=args.log_freq, num_envs=env.num_envs
+                )
+                callbacks.append(reward_callback)
+
+            if args.enable_checkpoints:
+                ckpt_callback = CheckpointCallback(
+                    save_freq=args.save_freq,
+                    save_path=args.checkpoint_dir,
+                    name_prefix=args.name_prefix,
+                    save_replay_buffer=args.save_replay_buffer,
+                    save_vecnormalize=args.save_vecnormalize,
+                )
+                callbacks.append(ckpt_callback)
+
+            if args.pbar:
+                pbar_callback = CustomProgressBarCallback()
+                callbacks.append(pbar_callback)
+            
+            # grab all loggers that we can find installed in the pc,
+            output_formats = [HumanOutputFormat(sys.stdout)]
+            for plugin in args.plugins:
+                output_formats += plugin.get_extra_KVWriters()
+                callbacks += plugin.get_extra_callbacks()
+            loggers = Logger(
+                folder=None,
+                output_formats=output_formats,
             )
-            callbacks.append(reward_callback)
+            model.set_logger(loggers)
 
-        if args.enable_checkpoints:
-            ckpt_callback = CheckpointCallback(
-                save_freq=args.save_freq,
-                save_path=args.checkpoint_dir,
-                name_prefix=args.name_prefix,
-                save_replay_buffer=args.save_replay_buffer,
-                save_vecnormalize=args.save_vecnormalize,
-            )
-            callbacks.append(ckpt_callback)
-
-        if args.pbar:
-            pbar_callback = CustomProgressBarCallback()
-            callbacks.append(pbar_callback)
-
-        # if we loaded a model don't reset the timesteps
-        model.learn(
-            total_timesteps=args.timesteps,
-            callback=callbacks,
-            reset_num_timesteps=not model_loaded,
-        )
-
-        if args.save_final_policy:
-            print("...saving")
-            model.save(
-                os.path.join(args.checkpoint_dir, f"{args.name_prefix}_final.zip")
+            model.learn(
+                total_timesteps=args.timesteps,
+                callback=callbacks,
+                reset_num_timesteps=args.reset_timestep,
+                log_interval=args.log_freq, 
             )
 
-            if args.save_vecnormalize and model.get_vec_normalize_env() is not None:
-                model.get_vec_normalize_env().save(
+            if args.save_final_policy:
+                print("...saving")
+                model.save(
                     os.path.join(args.checkpoint_dir, f"{args.name_prefix}_final.zip")
                 )
 
-            if args.export_onnx:
-                convert_ckpt_to_onnx_for_unreal(model,f"{args.checkpoint_dir}/{args.name_prefix}_final.zip", f"{args.checkpoint_dir}/{args.name_prefix}_final.onnx")
+                if args.save_vecnormalize and model.get_vec_normalize_env() is not None:
+                    model.get_vec_normalize_env().save(
+                        os.path.join(args.checkpoint_dir, f"{args.name_prefix}_vec_normalize_final.zip")
+                    )
 
-        if not args.disable_eval:
-            print("...evaluating the model")
-            mean_reward, std_reward = evaluate_policy(
-                model, env, n_eval_episodes=10, deterministic=True
-            )
-            print(f"mean_reward={mean_reward:.2f} +/- {std_reward}")
+                if args.export_onnx:
+                    print("...exporting to onnx")
+                    convert_ckpt_to_onnx_for_unreal(model,f"{args.checkpoint_dir}/{args.name_prefix}_final.zip", f"{args.checkpoint_dir}/{args.name_prefix}_final.onnx")
+
+            if not args.disable_eval:
+                print("...evaluating the model")
+                mean_reward, std_reward = evaluate_policy(
+                    model, env, n_eval_episodes=10, deterministic=True
+                )
+                print(f"mean_reward={mean_reward:.2f} +/- {std_reward}")
+                env.close()
+                return mean_reward, std_reward
+            else:
+                print("...evaluation disabled. Skipping.")
+                env.close()
+    except Exception as e:
+        if env:
             env.close()
-            return mean_reward, std_reward
-        else:
-            print("...evaluation disabled. Skipping.")
-            env.close()
+        raise e
 
 
 def get_dataclass_args(args: Dict[str,Any], dataclass : Type[Any] ) -> Dict[str,Any]:
@@ -411,12 +330,23 @@ def main_from_cli() -> Optional[Tuple[float,float]]:
     main : The main function for launching training with stable baselines 3
     """
     parser = make_parser()
+    
+    discovered_plugins = get_plugins("schola.plugins.sb3.launch")
+    for plugin in discovered_plugins:
+        plugin.add_plugin_args_to_parser(parser)
+    
     args = parser.parse_args()
     args_dict = vars(args)
     sb3_args = get_dataclass_args(args_dict,SB3ScriptArgs)
     algorithm_args = get_dataclass_args(args_dict, args_dict["algorithm_settings_class"])
     algorithm_args = args.algorithm_settings_class(**algorithm_args)
-    args = SB3ScriptArgs(algorithm_settings=algorithm_args, **sb3_args)
+    
+    plugins=[]
+    for plugin in discovered_plugins:
+        plugin_args = get_dataclass_args(args_dict, plugin)
+        plugins.append(plugin(**plugin_args))
+    
+    args = SB3ScriptArgs(algorithm_settings=algorithm_args,plugins=plugins, **sb3_args)
     return main(args)
 
 

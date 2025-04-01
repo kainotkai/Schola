@@ -47,9 +47,13 @@ class GymVectorEnv(gym.vector.VectorEnv):
         single_action_space = self._env.get_action_space(*self.id_manager[0])
         
         #test that everything is setup correctly
-        for env_id, agent_id in self.id_manager.id_list:
-            assert self._env.get_action_space(env_id,agent_id) == single_action_space, f"Action Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_action_space(env_id,agent_id)}\nExpected:{single_action_space}"
-            assert self._env.get_obs_space(env_id,agent_id) == single_obs_space, f"Observation Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_obs_space(env_id,agent_id)}\nExpected:{single_obs_space}"
+        try:
+            for env_id, agent_id in self.id_manager.id_list:
+                assert self._env.get_action_space(env_id,agent_id) == single_action_space, f"Action Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_action_space(env_id,agent_id)}\nExpected:{single_action_space}"
+                assert self._env.get_obs_space(env_id,agent_id) == single_obs_space, f"Observation Space Mismatch on Agent:{agent_id} in Env {env_id}.\nGot: {self._env.get_obs_space(env_id,agent_id)}\nExpected:{single_obs_space}"
+        except Exception as e:
+            self._env.close()
+            raise e
         
         logging.debug(single_action_space)
         logging.debug(single_obs_space)

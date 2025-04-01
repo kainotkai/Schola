@@ -4,7 +4,7 @@
 Base classes for Schola spaces.
 """
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Tuple, Type
 import gymnasium
 from gymnasium.spaces import Space
 import schola.generated.Spaces_pb2 as proto_spaces
@@ -20,8 +20,6 @@ class UnrealSpace:
 
     Attributes
     ----------
-    proto_space : Type[proto_spaces.Space]
-        A class variable containing the protobuf representation of the space.
     _name : str
         The name of the space.
 
@@ -29,7 +27,7 @@ class UnrealSpace:
     --------
     gymnasium.spaces.Space : The gym space object that this class is analogous to.
     """
-    proto_space = None
+    proto_space : Type[proto_spaces.FundamentalSpace] = None #: A class variable containing the protobuf representation of the space.
 
     @classmethod
     def from_proto(cls, message) -> "UnrealSpace":

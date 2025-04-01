@@ -10,6 +10,8 @@ void UScholaManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UScholaManagerSubsystem::Deinitialize()
 {
+	Super::Deinitialize();
+	bSubsystemPrepared = false;
 }
 
 void UScholaManagerSubsystem::Tick(float DeltaTime)
@@ -20,11 +22,6 @@ void UScholaManagerSubsystem::Tick(float DeltaTime)
 	{
 		bFirstStep = true;
 		bool bStarted = this->GymConnector->CheckForStart();
-
-		if (bStarted)
-		{
-			this->InferenceAgentsThink();
-		}
 	}
 
 	// Action Phase: We take any actions or Reset the Environment
@@ -40,9 +37,6 @@ void UScholaManagerSubsystem::Tick(float DeltaTime)
 				this->GymConnector->UpdateEnvironments(*StateUpdate);
 			}
 		}
-
-		// Act for inference agents separately here
-		this->InferenceAgentsAct();
 
 		// Reset the environments, if the policy said so
 		// Do it after we take inference actions so that if they are linked to the envs they get reset properly
@@ -60,7 +54,7 @@ void UScholaManagerSubsystem::Tick(float DeltaTime)
 			this->GymConnector->CollectEnvironmentStates();
 			this->GymConnector->SubmitEnvironmentStates();
 		}
-		this->InferenceAgentsThink();
+		//this->InferenceAgentsThink();
 	}
 
 	// self-Reset Phase if we have already run for 1+ steps
@@ -74,22 +68,13 @@ void UScholaManagerSubsystem::Tick(float DeltaTime)
 
 ETickableTickType UScholaManagerSubsystem::GetTickableTickType() const
 {
-	return ETickableTickType::Always;
+	return Super::GetTickableTickType();
 }
 
-//Pipe the UObject GetStatID to the abstract method GetStatId in UTickableWorldSubsystem
+// Pipe the UObject GetStatID to the abstract method GetStatId in UTickableWorldSubsystem
 TStatId UScholaManagerSubsystem::GetStatId() const
 {
 	return this->GetStatID();
-}
-
-void UScholaManagerSubsystem::RegisterInferenceAgent(UObject* InferenceAgent)
-{
-	UE_LOG(LogSchola, Log, TEXT("Inference Agent Registered"))
-	TScriptInterface<IInferenceAgent>& InterfaceRef = this->InferenceAgents.Emplace_GetRef();
-	InterfaceRef.SetObject(InferenceAgent);
-	InterfaceRef.SetInterface(Cast<IInferenceAgent>(InferenceAgent));
-
 }
 
 void UScholaManagerSubsystem::PrepareSubsystem()
@@ -103,10 +88,6 @@ void UScholaManagerSubsystem::PrepareSubsystem()
 		this->GymConnector = NewObject<UAbstractGymConnector>(this, ScholaSettings->GymConnectorClass, FName("GymConnector"));
 		this->GymConnector->Init();
 	}
-
-	// Setup the inferencing agents
-	CollectInferenceAgents();
-	InitializeInferenceAgents();
 
 	// Setup the EnvController
 	int NumAgents = 0;
@@ -140,73 +121,8 @@ void UScholaManagerSubsystem::PrepareSubsystem()
 	}
 }
 
-//TODO make this work when the Agent is Stored as a component
-void UScholaManagerSubsystem::CollectInferenceAgents()
-{
-	int Count = 0;
-	for (UObject* Object : TObjectRange<UObject>())
-	{
-		Count++;
-		//Object is in the same world as us and is an Agent
-		if (Object->GetWorld() == GetWorld() && Object->GetClass()->ImplementsInterface(UInferenceAgent::StaticClass()))
-		{
-			IInferenceAgent* Agent = Cast<IInferenceAgent>(Object);
-
-			if (Agent->GetBrain() && Agent->GetPolicy() && Agent->GetControlledPawn())
-			{
-				this->RegisterInferenceAgent(Object);
-			}
-			else
-			{
-				UE_LOG(LogSchola, Warning, TEXT("Skipping Registering InferenceAgent %s due to invalid setup"), *Object->GetName());
-			}
-		}
-	}
-}
 
 bool UScholaManagerSubsystem::IsTickable() const
 {
-	return bSubsystemPrepared;
-}
-
-void UScholaManagerSubsystem::InferenceAgentsThink()
-{
-	for (TScriptInterface<IInferenceAgent> Agent : InferenceAgents)
-	{
-		// Check for agent status
-		if (Agent->GetStatus() != EAgentStatus::Error)
-		{
-			Agent->Think();
-		}
-		else
-		{
-			UE_LOG(LogSchola, Warning, TEXT("Agent %s has errored out during think"), *Agent->GetAgentName());
-		}
-	}
-}
-
-void UScholaManagerSubsystem::InferenceAgentsAct()
-{
-	for (TScriptInterface<IInferenceAgent> Agent : InferenceAgents)
-	{
-		// Check for agent status
-		// If error, log and remove this agent
-		if (Agent->GetStatus() != EAgentStatus::Error)
-		{
-			Agent->Act();
-		}
-		else
-		{
-			UE_LOG(LogSchola, Warning, TEXT("Agent %s has errored out during act"), *Agent->GetAgentName());
-		}
-		
-	}
-}
-
-void UScholaManagerSubsystem::InitializeInferenceAgents()
-{
-	for (TScriptInterface<IInferenceAgent> Agent : InferenceAgents)
-	{
-		Agent->Initialize();
-	}
+	return Super::IsAllowedToTick();
 }

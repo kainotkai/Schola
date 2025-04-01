@@ -17,7 +17,6 @@ FBoxSpace URotationActuator::GetActionSpace()
 		{
 			SpaceDefinition.Dimensions.Add(PitchBounds);
 		}
-		
 	}
 
 	if (bHasYaw)
@@ -88,18 +87,41 @@ FRotator URotationActuator::ConvertActionToFRotator(const FBoxPoint& Action)
 void URotationActuator::TakeAction(const FBoxPoint& Action)
 {
 
-	int		Offset = 0;
-	APawn*  LocalTarget = Target;
-
-	if (Target == nullptr)
-	{
-		Target = Cast<APawn>(TryGetOwner());
-	}
-
-	if (Target != nullptr)
+	AActor* LocalTarget = this->TryGetOwner();
+	
+	if (LocalTarget != nullptr)
 	{
 		const FRotator& Rotation = ConvertActionToFRotator(Action);
 		this->OnRotationDelegate.Broadcast(Rotation);
-		Target->AddActorLocalRotation(Rotation, bSweep, nullptr, TeleportType);
+		LocalTarget->AddActorLocalRotation(Rotation, bSweep, nullptr, TeleportType);
 	}
+	else
+	{
+		UE_LOG(LogSchola, Warning, TEXT("RotationActuator %s: No Pawn found to apply rotation to."), *this->GetName());
+	}
+}
+
+FString URotationActuator::GenerateId() const
+{
+	FString Output = FString("Rotation");
+
+	if (bHasPitch)
+	{
+		Output.Appendf(TEXT("_Pitch_%f_%f"), PitchBounds.Low, PitchBounds.High);
+	}
+	if (bHasYaw)
+	{
+		Output.Appendf(TEXT("_Yaw_%f_%f"), YawBounds.Low, YawBounds.High);
+	}
+	if (bHasRoll)
+	{
+		Output.Appendf(TEXT("_Roll_%f_%f"), RollBounds.Low, RollBounds.High);
+	}
+	// Add if we are rescaling and Normalizing
+	if (bNormalizeAndRescale)
+	{
+		Output.Append("_Rescaled");
+	}
+
+	return Output;
 }

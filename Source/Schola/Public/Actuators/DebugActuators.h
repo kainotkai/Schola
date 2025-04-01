@@ -18,15 +18,19 @@ class SCHOLA_API UDebugBoxActuator : public UBoxActuator
 public:
 	
 	/** The Action Space to use in this Actuator */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Actuator Settings")
 	FBoxSpace ActionSpace = FBoxSpace();
 
+	/** 
+	 * @brief Returns the action space of the actuator
+	 * @return The action space of type FBoxSpace
+	 */
 	FBoxSpace GetActionSpace();
 
 	/** 
-	* @brief No-Op 
-	* @param[in] Action A box point that is disgarded.
-	*/
+	 * @brief No-Op 
+	 * @param[in] Action A box point that is disgarded.
+	 */
 	void TakeAction(const FBoxPoint& Action) {};
 };
 
@@ -40,11 +44,19 @@ class SCHOLA_API UDebugDiscreteActuator : public UDiscreteActuator
 public:
 
 	/** The Action Space to use in this Actuator */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Actuator Settings")
 	FDiscreteSpace ActionSpace;
 
+	/** 
+	 * @brief Returns the action space of the actuator
+	 * @return The action space of type FDiscreteSpace
+	 */
 	FDiscreteSpace GetActionSpace();
 
+	/** 
+	 * @brief No-Op 
+	 * @param[in] Action A discrete point that is discarded.
+	 */
 	void TakeAction(const FDiscretePoint& Action) {};
 };
 
@@ -58,10 +70,18 @@ class SCHOLA_API UDebugBinaryActuator : public UBinaryActuator
 public:
 
 	/** The Action Space to use in this Actuator */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Actuator Settings")
 	FBinarySpace ActionSpace;
 
+	/** 
+	 * @brief Returns the action space of the actuator
+	 * @return The action space of type FBinarySpace
+	 */
 	FBinarySpace GetActionSpace();
 
+	/** 
+	 * @brief No-Op 
+	 * @param[in] Action A binary point that is discarded.
+	 */
 	void TakeAction(const FBinaryPoint& Action){};
 };

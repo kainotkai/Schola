@@ -6,6 +6,7 @@
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
 #include "Common/AbstractInteractor.h"
+#include "Actuators/ActuatorWrappers/ActuatorWrapperInterfaces.h"
 #include "AbstractActuators.generated.h"
 
 /**
@@ -44,15 +45,17 @@ public:
 	virtual void InitializeActuator(){};
 
 
-#if WITH_EDITOR
+	/**
+	 * @brief Reset the actuator to its initial state.
+	 * @note This function should be implemented by any derived classes
+	 */
+	virtual void ResetActuator() {};
 
 	/**
-	 * @brief Set the debug actions for this observer.
-	 * @param[in] Temp The temporary point to copy to the debug actions.
-	 * @note This function should be implemented by any derived classes, to use the correct type of point.
+	 * @brief Reset the actuator to its initial state.
+	 * @note This function should be implemented by any derived classes
 	 */
-	virtual void SetDebugActions(const TPoint& Temp) PURE_VIRTUAL(UAbstractActuator::SetDebugActions, return;);
-#endif
+	virtual void Reset() override { this->ResetActuator(); };
 
 };
 
@@ -64,6 +67,11 @@ class SCHOLA_API UBoxActuator : public UActuator
 {
 	GENERATED_BODY()
 public:
+	
+	/** Wrappers for customizing the actions taken by this observer. Applied in order. Space is computed in reverse order. */
+	UPROPERTY(EditAnywhere, Instanced, meta = (AllowedClasses = "/Script/Schola.BoxActuatorWrapper", ExactClass = false), Category = "Actuator Settings")
+	TArray<UObject*> Wrappers;
+	
 	/**
 	* @brief Get the Space bounding the inputs to this actuator
 	* @return BoxSpace containing the bounds of the inputs to this actuator
@@ -80,20 +88,40 @@ public:
 
 	void TakeAction(const TPoint& Action) override
 	{
+		FBoxPoint ActionPoint = Action.Get<FBoxPoint>();
+		for (TScriptInterface<IBoxActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			ActionPoint = Wrapper->WrapBoxAction(ActionPoint);
+		}
+
 	#if WITH_EDITOR
-		this->SetDebugActions(Action);
+		this->DebugBoxPoint = ActionPoint.Values;
 	#endif
-		this->TakeAction(Action.Get<FBoxPoint>());
+		this->TakeAction(ActionPoint);
 	}
 
 	void FillActionSpace(TSpace& OutSpace) override
 	{
-		OutSpace.Set<FBoxSpace>(this->GetActionSpace());
+		FBoxSpace OutputSpace = this->GetActionSpace();
+
+		for (TScriptInterface<IBoxActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			OutputSpace = Wrapper->WrapBoxActionSpace(OutputSpace);
+		}
+
+		OutSpace.Set<FBoxSpace>(OutputSpace);
 	}
 
-#if WITH_EDITOR
-	void SetDebugActions(const TPoint& Temp) override;
-#endif
+	void Reset() override
+	{
+		for (TScriptInterface<IBoxActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			Wrapper->Reset();
+		}
+		this->ResetActuator();
+	};
+
+	FString GetId() const;
 
 #if WITH_EDITORONLY_DATA
 	/** The debug actions for this actuator. Shows the last taken action  */
@@ -111,6 +139,11 @@ class SCHOLA_API UDiscreteActuator : public UActuator
 	GENERATED_BODY()
 
 public:
+
+	/** Wrappers for customizing the actions taken by this observer. Applied in order. Space is computed in reverse order. */
+	UPROPERTY(EditAnywhere, Instanced, meta = (AllowedClasses = "/Script/Schola.DiscreteActuatorWrapper", ExactClass = false), Category = "Actuator Settings")
+	TArray<UObject*> Wrappers;
+
 	/**
 	* @brief Get the Space bounding the inputs to this actuator
 	* @return DiscreteSpace containing the bounds of the inputs to this actuator
@@ -127,21 +160,39 @@ public:
 
 	void TakeAction(const TPoint& Action) override
 	{	
+		FDiscretePoint ActionPoint = Action.Get<FDiscretePoint>();
+		for (TScriptInterface<IDiscreteActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			ActionPoint = Wrapper->WrapDiscreteAction(ActionPoint);
+		}
+
 	#if WITH_EDITOR
-		this->SetDebugActions(Action);
+		this->DebugDiscretePoint = ActionPoint.Values;
 	#endif
-		this->TakeAction(Action.Get<FDiscretePoint>());
+		this->TakeAction(ActionPoint);
 	}
 
 	void FillActionSpace(TSpace& OutSpace) override
 	{
-		OutSpace.Set<FDiscreteSpace>(this->GetActionSpace());
+		FDiscreteSpace OutputSpace = this->GetActionSpace();
+
+		for (TScriptInterface<IDiscreteActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			OutputSpace = Wrapper->WrapDiscreteActionSpace(OutputSpace);
+		}
+		OutSpace.Set<FDiscreteSpace>(OutputSpace);
 	}
 
+	void Reset() override
+	{
+		for (TScriptInterface<IDiscreteActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			Wrapper->Reset();
+		}
+		this->ResetActuator();
+	};
 
-#if WITH_EDITOR
-	void SetDebugActions(const TPoint& Temp) override;
-#endif
+	FString GetId() const;
 
 #if WITH_EDITORONLY_DATA
 	/** The debug actions for this actuator. Shows the last taken action  */
@@ -160,6 +211,11 @@ class SCHOLA_API UBinaryActuator : public UActuator
 	GENERATED_BODY()
 
 public:
+
+	/** Wrappers for customizing the actions taken by this observer. Applied in order. Space is computed in reverse order. */
+	UPROPERTY(EditAnywhere, Instanced, meta = (AllowedClasses = "/Script/Schola.BinaryActuatorWrapper", ExactClass = false), Category = "Actuator Settings")
+	TArray<UObject*> Wrappers;
+
 	/**
 	* @brief Get the Space bounding the inputs to this actuator
 	* @return BinarySpace containing the bounds of the inputs to this actuator
@@ -176,20 +232,41 @@ public:
 
 	void TakeAction(const TPoint& Action) override
 	{
-		#if WITH_EDITOR
-			this->SetDebugActions(Action);
-		#endif
-		this->TakeAction(Action.Get<FBinaryPoint>());
+		FBinaryPoint ActionPoint = Action.Get<FBinaryPoint>();
+		for (TScriptInterface<IBinaryActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			ActionPoint = Wrapper->WrapBinaryAction(ActionPoint);
+		}
+
+	#if WITH_EDITOR
+		this->DebugBinaryPoint = ActionPoint.Values;
+	#endif
+		this->TakeAction(ActionPoint);
 	}
 
 	void FillActionSpace(TSpace& OutSpace) override
 	{
-		OutSpace.Set<FBinarySpace>(this->GetActionSpace());
+		FBinarySpace OutputSpace = this->GetActionSpace();
+
+		for (TScriptInterface<IBinaryActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			OutputSpace = Wrapper->WrapBinaryActionSpace(OutputSpace);
+		}
+
+		OutSpace.Set<FBinarySpace>(OutputSpace);
 	}
 
-#if WITH_EDITOR
-	void SetDebugActions(const TPoint& Temp) override;
-#endif
+	void Reset() override
+	{
+		for (TScriptInterface<IBinaryActuatorWrapper> Wrapper : this->Wrappers)
+		{
+			Wrapper->Reset();
+		}
+		this->ResetActuator();
+	};
+
+	virtual FString GetId() const;
+
 
 #if WITH_EDITORONLY_DATA
 	/** The debug actions for this observer. Shows the last taken action  */

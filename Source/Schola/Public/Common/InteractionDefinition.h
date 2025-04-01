@@ -10,7 +10,7 @@
 /**
  * @brief Struct containing a definition of the inputs and outputs of a policy
  */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct SCHOLA_API FInteractionDefinition
 {
 
@@ -24,15 +24,10 @@ struct SCHOLA_API FInteractionDefinition
 	UPROPERTY()
 	FDictSpace ActionSpaceDefn;
 
-	/** Should observations be normalized. Only affects continuous observations. */
-	UPROPERTY(EditAnywhere, Category = "Reinforcement Learning")
-	bool bNormalizeObservations = false;
-
 	FInteractionDefinition(const FInteractionDefinition& Other)
 	{
 		ObsSpaceDefn = Other.ObsSpaceDefn;
 		ActionSpaceDefn = Other.ActionSpaceDefn;
-		bNormalizeObservations = Other.bNormalizeObservations;
 	}
 
 	FInteractionDefinition()

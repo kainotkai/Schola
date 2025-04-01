@@ -10,7 +10,7 @@ set GRPC_LIBRARIES_DIR=%SCRIPT_FOLDER%\..\..\Source\ThirdParty\Grpc\Win64\lib
 set GRPC_PROGRAMS_DIR=%SCRIPT_FOLDER%\..\tools
 
 set CMAKE_BUILD_DIR=%GRPC_ROOT%\.build
-set UE_ROOT=C:\Program Files\Epic Games\UE_5.4
+set UE_ROOT=C:\Program Files\Epic Games\UE_5.5
 set REMOTE_ORIGIN=https://github.com/grpc/grpc.git
 set BRANCH=v1.53.0
 

@@ -43,24 +43,7 @@ FVector UMovementInputActuator::ConvertActionToFVector(const FBoxPoint& Action)
 		OutVector.Z = Action[Offset];
 		Offset++;
 	}
-	
-	if(this->bClipMovementInputs)
-	{
-		if (bHasXDimension)
-		{
-			OutVector.X = FMath::Clamp(OutVector.X, MinSpeed, MaxSpeed);
-		}
 
-		if (bHasYDimension)
-		{
-			OutVector.Y = FMath::Clamp(OutVector.Y, MinSpeed, MaxSpeed);
-		}
-
-		if (bHasZDimension)
-		{
-			OutVector.Z = FMath::Clamp(OutVector.Z, MinSpeed, MaxSpeed);
-		}
-	}
 	return OutVector;
 }
 
@@ -68,18 +51,36 @@ void UMovementInputActuator::TakeAction(const FBoxPoint& Action)
 {
 	int Offset = 0;
 
-	APawn* LocalTarget = Target;
+	APawn* LocalTarget = Cast<APawn>(TryGetOwner());
 
-	if (Target == nullptr)
-	{
-		Target = Cast<APawn>(TryGetOwner());
-	}
-
-	if (Target != nullptr)
+	if (LocalTarget != nullptr)
 	{
 		const FVector& ActionVector = ConvertActionToFVector(Action);
 		
 		this->OnMovementDelegate.Broadcast(ActionVector);
-		Target->AddMovementInput(Target->GetActorRotation().RotateVector(ActionVector), ScaleValue, bForce);
+		LocalTarget->AddMovementInput(LocalTarget->GetActorRotation().RotateVector(ActionVector), ScaleValue, bForce);
 	}
+	else
+	{
+		UE_LOG(LogSchola, Warning, TEXT("MovementInputActuator %s: No Pawn found to apply movement input to."), *this->GetName());
+	}
+}
+
+FString UMovementInputActuator::GenerateId() const
+{
+	FString Output = FString("MovementInput");
+
+	// Add Dimensions one at a time
+	Output.Append("_");
+
+	Output.Append(bHasXDimension ? "X" : "");
+
+	Output.Append(bHasYDimension ? "Y" : "");
+
+	Output.Append(bHasZDimension ? "Z" : "");
+
+	// Add Min and Max Speed
+	Output.Appendf(TEXT("_%.2f_%.2f"), MinSpeed, MaxSpeed);
+	
+	return Output;
 }

@@ -25,3 +25,10 @@ void UEventObserver::CollectObservations(FBinaryPoint& OutObservations)
 		bEventTriggered = false;
 	}
 }
+
+FString UEventObserver::GenerateId() const
+{
+	FString Output = FString("Event");
+	Output.Append(bAutoClearEventFlag ? "_AutoClear" : "_NoAutoClear");
+	return Output;
+}

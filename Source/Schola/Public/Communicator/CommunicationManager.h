@@ -6,7 +6,7 @@
 #include "Common/LogSchola.h"
 #include "Communicator/ComBackendInterface.h"
 #include "Subsystems/GameInstanceSubsystem.h"
-#include "Subsystem/SubsystemSettings.h"
+#include "Subsystem/SubsystemSettings/SubsystemSettings.h"
 #include "../Communicator/ComBackendInterface.h"
 #include <grpc/grpc.h>
 #include <grpcpp/server.h>

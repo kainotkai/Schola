@@ -7,7 +7,7 @@
 #include "Environment/EnvironmentComponents/AbstractEnvironmentUtilityComponent.h"
 #include "Common/LogSchola.h"
 #include "GameFramework/Actor.h"
-#include "Training/TrainingStateStructs.h"
+#include "Training/StateStructs/TrainerState.h"
 #include "StatLoggerComponent.generated.h"
 
 UCLASS(Blueprintable, ClassGroup = Schola, meta = (BlueprintSpawnableComponent))
@@ -35,7 +35,7 @@ public:
 	 * @param TextToSave The text to save to the file
 	 * @return True if the log was successful
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category="Logging")
 	bool LogToFile(FString TextToSave = "");
 
 	/**

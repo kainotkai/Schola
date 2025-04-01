@@ -2,7 +2,7 @@
 
 #include "Schola.h"
 #include "Developer/Settings/Public/ISettingsModule.h"
-#include "Subsystem/SubsystemSettings.h"
+#include "Subsystem/SubsystemSettings/SubsystemSettings.h"
 
 
 #define LOCTEXT_NAMESPACE "FScholaModule"

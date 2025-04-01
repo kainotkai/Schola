@@ -12,7 +12,7 @@ class BinarySpace(_message.Message):
     def __init__(self, shape: _Optional[int] = ...) -> None: ...
 
 class BoxSpace(_message.Message):
-    __slots__ = ["dimensions"]
+    __slots__ = ["dimensions", "shape_dimensions"]
     class BoxSpaceDimension(_message.Message):
         __slots__ = ["high", "low"]
         HIGH_FIELD_NUMBER: _ClassVar[int]
@@ -21,8 +21,10 @@ class BoxSpace(_message.Message):
         low: float
         def __init__(self, low: _Optional[float] = ..., high: _Optional[float] = ...) -> None: ...
     DIMENSIONS_FIELD_NUMBER: _ClassVar[int]
+    SHAPE_DIMENSIONS_FIELD_NUMBER: _ClassVar[int]
     dimensions: _containers.RepeatedCompositeFieldContainer[BoxSpace.BoxSpaceDimension]
-    def __init__(self, dimensions: _Optional[_Iterable[_Union[BoxSpace.BoxSpaceDimension, _Mapping]]] = ...) -> None: ...
+    shape_dimensions: _containers.RepeatedScalarFieldContainer[int]
+    def __init__(self, dimensions: _Optional[_Iterable[_Union[BoxSpace.BoxSpaceDimension, _Mapping]]] = ..., shape_dimensions: _Optional[_Iterable[int]] = ...) -> None: ...
 
 class DictSpace(_message.Message):
     __slots__ = ["labels", "values"]

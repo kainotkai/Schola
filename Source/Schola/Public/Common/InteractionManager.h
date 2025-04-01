@@ -3,18 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AIController.h"
 #include "Common/InteractionDefinition.h"
-#include "Agent/AgentAction.h"
 #include "Agent/AgentComponents/SensorComponent.h"
 #include "Observers/AbstractObservers.h"
 #include "Components/ActorComponent.h"
-#include "Brains/AbstractBrain.h"
 #include "Agent/AgentUIDSubsystem.h"
 #include "Common/Spaces.h"
 #include "Common/Points.h"
 #include "Common/LogSchola.h"
-#include "Common/IValidatable.h"
 #include "Actuators/AbstractActuators.h"
 #include "Containers/SortedMap.h"
 #include "Agent/AgentComponents/ActuatorComponent.h"
@@ -26,7 +22,10 @@ class UInteractionManager : public UObject
 	GENERATED_BODY()
 
 public:
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Reinforcement Learning")
 	TArray<UAbstractObserver*> Observers;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Reinforcement Learning")
 	TArray<UActuator*>		   Actuators;
 
 	/** The most recently collected observations */
@@ -34,7 +33,7 @@ public:
 	FDictPoint Observations;
 
 	/** The input output spaces, and other information for this interaction manager */
-	UPROPERTY(EditAnywhere, meta = (ShowInnerProperties), Category = "Reinforcement Learning")
+	UPROPERTY(VisibleAnywhere, meta = (ShowInnerProperties), Category = "Reinforcement Learning")
 	FInteractionDefinition InteractionDefn;
 
 	/**
@@ -64,6 +63,7 @@ public:
 	 * @param[out] OutActuators A copy of the input actuators (used to set the Actuators on the InteractionManager)
 	 */
 	void SetupActuators(const TArray<UActuator*>& InActuators, TArray<UActuator*>& OutActuators);
+	
 	/**
 	 * @brief Send actions to actuators
 	 * @param[in] OutActuators The actuators to send actions to
@@ -96,4 +96,9 @@ public:
 	 * @return The aggregated observations as DictPoint
 	 */
 	FDictPoint& AggregateObservations();
+
+	/**
+	 * @brief Reset the Observers and Actuators managed by this InteractionManager
+	 */
+	void Reset();
 };

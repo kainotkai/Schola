@@ -106,7 +106,14 @@ def make_grpc_files(protoc_path, proto_folder, plugin_path, target_folder):
     for file in get_proto_files(proto_folder):
         subprocess.run([protoc_path,I_arg,grpc_out,plugin,join(proto_folder,file)],check=True)
 
-def main(plugin_folder: Path, disable_warnings: List[str], add_type_stubs: bool):
+def make_parser():
+    parser = argparse.ArgumentParser("Compile Protobuf Files for Schola")
+    parser.add_argument("--plugin-folder", type=Path, default=Path("."), help="Path to the project folder, can be left blank if running from Schola Plugin directory")
+    parser.add_argument("--disable-warnings", nargs="+", type=str, default=["4125", "4800"])
+    parser.add_argument("--add-type-stubs", action="store_true")
+    return parser
+
+def main(plugin_folder: Path, warnings_to_disable: List[str], add_type_stubs: bool):
     """
     Compile Protobuf files for Schola
 
@@ -114,7 +121,7 @@ def main(plugin_folder: Path, disable_warnings: List[str], add_type_stubs: bool)
     ----------
     project : Path
         Path to the project folder
-    disable_warnings : List[str]
+    warnings_to_disable : List[str]
         List of warnings to disable
 
     """
@@ -126,6 +133,19 @@ def main(plugin_folder: Path, disable_warnings: List[str], add_type_stubs: bool)
     cpp_plugin_path = tools_path / "grpc_cpp_plugin.exe"
     cpp_code_folder = plugin_folder / "Source" / "Schola" / "Generated"
     python_code_folder = plugin_folder / "Resources" / "python" / "Schola" / "generated"
+    
+    short_dep_path = r"Schola\Resources\Build\windows_dependencies.bat"
+
+    # Check if protoc_path exists  
+    if not protoc_path.exists():  
+        raise FileNotFoundError(f"Protoc Path {protoc_path} does not exist. Please run {short_dep_path} to generate this. Please note that Linux is not supported.")  
+  
+    # Check if plugin paths exist  
+    if not python_plugin_path.exists():  
+        raise FileNotFoundError(f"Python Plugin Path {python_plugin_path} does not exist. Please run {short_dep_path} to generate this. Please note that Linux is not supported.")  
+  
+    if not cpp_plugin_path.exists():  
+        raise FileNotFoundError(f"C++ Plugin Path {cpp_plugin_path} does not exist. Please run {short_dep_path} to generate this. Please note that Linux is not supported.")  
 
     #generate protobuf files defining serialization for the messages
     make_proto_files(protoc_path, proto_folder, python_code_folder, cpp_code_folder, add_type_stubs)
@@ -138,17 +158,15 @@ def main(plugin_folder: Path, disable_warnings: List[str], add_type_stubs: bool)
     generated_python_files = get_generated_python_file_types(python_code_folder)
     
     #need to disable safe to ignore warnings that would otherwise cause Unreal compilation errors
-    disable_warnings(cpp_code_folder, generated_cpp_files["proto-c"], disable_warnings)
+    disable_warnings(cpp_code_folder, generated_cpp_files["proto-c"], warnings_to_disable)
 
     #generated code doesn't import correctly so we need to prepend Schola.generated._____
     fix_imports(python_code_folder)
 
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser("Compile Protobuf Files for Schola")
-    parser.add_argument("--plugin-folder", type=Path, default=Path("."), help="Path to the project folder, can be left blank if running from Schola Plugin directory")
-    parser.add_argument("--disable-warnings", nargs="+",type=str, default=["4125","4800"])
-    parser.add_argument("--add-type-stubs", action="store_true")
+def main_from_cli():
+    parser = make_parser()
     args = parser.parse_args()
     main(args.plugin_folder, args.disable_warnings, args.add_type_stubs)
-    
+
+if __name__ == "__main__":
+   main_from_cli()

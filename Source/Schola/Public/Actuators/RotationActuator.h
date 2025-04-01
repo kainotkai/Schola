@@ -5,6 +5,7 @@
 #include "Common/Points.h"
 #include "Common/Spaces.h"
 #include "CoreMinimal.h"
+#include "Common/LogSchola.h"
 #include "Common/PositionalEnums.h"
 #include "RotationActuator.generated.h"
 
@@ -41,10 +42,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Meta = (InlineEditConditionToggle), Category = "Actuator Settings")
 	bool bHasYaw = true;
 
-	/** The pawn to apply the movement input to. Defaults to the attached Agent */
-	UPROPERTY()
-	APawn* Target;
-
 	/** Type of teleportation to use. See SetActorLocation documentation for more details. */
 	UPROPERTY(EditAnywhere, Category = "Actuator Settings")
 	ETeleportType TeleportType = ETeleportType::None;
@@ -72,4 +69,6 @@ public:
 	FRotator ConvertActionToFRotator(const FBoxPoint& Action);
 
 	void TakeAction(const FBoxPoint& Action) override;
+
+	FString GenerateId() const override;
 };

@@ -35,7 +35,7 @@ void UPythonGymConnector::SubmitPostResetState(const FTrainingState& States)
 	PostResetStateService->SendProtobufMessage(States.ToResetProto(EnvsToReset));
 }
 
-void UPythonGymConnector::Init(const FSharedTrainingDefinition& AgentDefns)
+void UPythonGymConnector::Init(const FTrainingDefinition& AgentDefns)
 {
 	std::shared_ptr<GymService::AsyncService> Service = std::make_shared<GymService::AsyncService>();
 	const UScholaManagerSubsystemSettings*	  Settings = GetDefault<UScholaManagerSubsystemSettings>();
@@ -43,13 +43,13 @@ void UPythonGymConnector::Init(const FSharedTrainingDefinition& AgentDefns)
 
 	this->CommunicationManager->Initialize();
 
-	DecisionRequestService = this->CommunicationManager->CreateExchangeBackend<GymService::AsyncService, TrainingStateUpdate, TrainingState>(&GymService::AsyncService::RequestUpdateState, Service);
+	DecisionRequestService = this->CommunicationManager->CreateExchangeBackend<GymService::AsyncService, TrainingStateUpdate, Schola::TrainingState>(&GymService::AsyncService::RequestUpdateState, Service);
 
 	// Watch out for clobbering between Schola::AgentDefinition and the parameter
 
 	PostResetStateService = this->CommunicationManager->CreateProducerBackend<GymService::AsyncService, InitialTrainingStateRequest, InitialTrainingState>(&GymService::AsyncService::RequestRequestInitialTrainingState, Service);
 
-	AgentDefinitionService = CommunicationManager->CreateProducerBackend<GymService::AsyncService, TrainingDefinitionRequest, TrainingDefinition>(&GymService::AsyncService::RequestRequestTrainingDefinition, Service);
+	AgentDefinitionService = CommunicationManager->CreateProducerBackend<GymService::AsyncService, TrainingDefinitionRequest, Schola::TrainingDefinition>(&GymService::AsyncService::RequestRequestTrainingDefinition, Service);
 
 	StartRequestService = this->CommunicationManager->CreatePollingBackend<GymService::AsyncService, GymConnectorStartRequest, GymConnectorStartResponse>(&GymService::AsyncService::RequestStartGymConnector, Service);
 
@@ -61,7 +61,7 @@ void UPythonGymConnector::Init(const FSharedTrainingDefinition& AgentDefns)
 
 	this->OnConnectorStarted.AddLambda(
 		[this]() {
-			this->AgentDefinitionService->SendProtobufMessage(this->SharedTrainingDefinition.ToProtobuf());
+			this->AgentDefinitionService->SendProtobufMessage(this->TrainingDefinition.ToProtobuf());
 		});
 
 	//Since we will have a msg with no response (the closed message, send one more to reset everything)

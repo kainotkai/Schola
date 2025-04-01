@@ -32,6 +32,34 @@ void UVelocityObserver::CollectObservations(FBoxPoint& OutObservations)
 	}
 }
 
+FString UVelocityObserver::GenerateId() const
+{
+	FString Output = FString("Velocity");
+	// Add X Dimension
+	if (bHasXDimensions)
+	{
+		// _X followed by upper and lower bound
+		Output.Appendf(TEXT("_X_%.2f_%.2f"), XDimensionBounds.Low, XDimensionBounds.High);
+	}
+	// Add Y Dimension
+	if (bHasYDimensions)
+	{
+		// _Y followed by upper and lower bound
+		Output.Appendf(TEXT("_Y_%.2f_%.2f"), YDimensionBounds.Low, YDimensionBounds.High);
+	}
+	// Add Z Dimension
+	if (bHasZDimensions)
+	{
+		// _Z followed by upper and lower bound
+		Output.Appendf(TEXT("_Z_%.2f_%.2f"), ZDimensionBounds.Low, ZDimensionBounds.High);
+	}
+	if (bTrackNonOwner)
+	{
+		Output.Append("_Other");
+	}
+	return Output;
+}
+
 FBoxSpace UVelocityObserver::GetObservationSpace() const
 {
 	FBoxSpace SpaceDefinition;

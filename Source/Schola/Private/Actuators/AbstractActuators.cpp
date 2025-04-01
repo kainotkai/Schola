@@ -14,21 +14,69 @@ AActor* UActuator::SpawnActor(TSubclassOf<AActor> Class, const FTransform& Spawn
 	return this->GetWorld()->SpawnActor<AActor>(Class, SpawnTransform, Parameters);
 };
 
-#if WITH_EDITOR
 
-void UBinaryActuator::SetDebugActions(const TPoint& Temp)
+FString UBoxActuator::GetId() const
 {
-	this->DebugBinaryPoint = Temp.Get<FBinaryPoint>().Values;
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		FString Id = this->GenerateId();
+
+		for (UObject* RawWrapper : this->Wrappers)
+		{
+			IBoxActuatorWrapper* Wrapper = Cast<IBoxActuatorWrapper>(RawWrapper);
+			if (Wrapper)
+			{
+				Id.Append("_").Append(Wrapper->GenerateId());
+			}
+		}
+		return this->GenerateId();
+	}
 }
 
-void UBoxActuator::SetDebugActions(const TPoint& Temp)
+FString UDiscreteActuator::GetId() const
 {
-	this->DebugBoxPoint = Temp.Get<FBoxPoint>().Values;
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		FString Id = this->GenerateId();
+
+		for (UObject* RawWrapper : this->Wrappers)
+		{
+			IDiscreteActuatorWrapper* Wrapper = Cast<IDiscreteActuatorWrapper>(RawWrapper);
+			if (Wrapper)
+			{
+				Id.Append("_").Append(Wrapper->GenerateId());
+			}
+		}
+		return this->GenerateId();
+	}
 }
 
-void UDiscreteActuator::SetDebugActions(const TPoint& Temp)
+FString UBinaryActuator::GetId() const
 {
-	this->DebugDiscretePoint = Temp.Get<FDiscretePoint>().Values;
-}
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		FString Id = this->GenerateId();
 
-#endif
+		for (UObject* RawWrapper : this->Wrappers)
+		{
+			IBinaryActuatorWrapper* Wrapper = Cast<IBinaryActuatorWrapper>(RawWrapper);
+			if (Wrapper)
+			{
+				Id.Append("_").Append(Wrapper->GenerateId());
+			}
+		}
+		return this->GenerateId();
+	}
+}

@@ -1,6 +1,7 @@
 // Copyright (c) 2024 Advanced Micro Devices, Inc. All Rights Reserved.
 #pragma once
 #include "Common/Points.h"
+#include "Common/Points/PointVisitor.h"	
 THIRD_PARTY_INCLUDES_START
 #include "../Generated/Spaces.pb.h"
 THIRD_PARTY_INCLUDES_END

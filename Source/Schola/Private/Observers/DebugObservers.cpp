@@ -15,6 +15,16 @@ void UDebugBoxObserver::CollectObservations(FBoxPoint& OutObservations)
 	}
 }
 
+FString UDebugBoxObserver::GenerateId() const
+{
+	FString Output = FString("DebugBox");
+	for (const FBoxSpaceDimension& BoxSpaceDim : this->ObservationSpace.Dimensions)
+	{
+		Output.Appendf(TEXT("_%f_%f"), BoxSpaceDim.Low, BoxSpaceDim.High);
+	}
+	return Output;
+}
+
 FBinarySpace UDebugBinaryObserver::GetObservationSpace() const
 {
 	return this->ObservationSpace;
@@ -28,6 +38,13 @@ void UDebugBinaryObserver::CollectObservations(FBinaryPoint& OutObservations)
 	}
 }
 
+FString UDebugBinaryObserver::GenerateId() const
+{
+	FString Output = FString("DebugBinary");
+	Output.Appendf(TEXT("_%d"), this->ObservationSpace.Shape);
+	return Output;
+}
+
 FDiscreteSpace UDebugDiscreteObserver::GetObservationSpace() const
 {
 	return this->ObservationSpace;
@@ -39,4 +56,14 @@ void UDebugDiscreteObserver::CollectObservations(FDiscretePoint& OutObservations
 	{
 		OutObservations.Add(FMath::RandHelper(DimUpperBound));
 	}
+}
+
+FString UDebugDiscreteObserver::GenerateId() const
+{
+	FString Output = FString("DebugDiscrete");
+	for (auto& DimUpperBound : this->ObservationSpace.High)
+	{
+		Output.Appendf(TEXT("_%d"), DimUpperBound);
+	}
+	return Output;
 }

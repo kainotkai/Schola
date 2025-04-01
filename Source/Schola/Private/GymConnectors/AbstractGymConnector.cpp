@@ -6,24 +6,25 @@ UAbstractGymConnector::UAbstractGymConnector()
 {
 }
 
-void UAbstractGymConnector::Init(const FSharedTrainingDefinition& AgentDefinitions) {}
+void UAbstractGymConnector::Init(const FTrainingDefinition& AgentDefinitions) {}
 
 void UAbstractGymConnector::Init()
 {
 	this->Status = EConnectorStatus::NotStarted;
 	this->CollectEnvironments();
 	// Add a bunch of defaulted values
-	this->SharedTrainingState.EnvironmentStates.AddDefaulted(Environments.Num());
-	this->SharedTrainingDefinition.EnvironmentDefinitions.AddDefaulted(Environments.Num());
+	this->TrainingState.EnvironmentStates.AddDefaulted(Environments.Num());
+	this->TrainingDefinition.EnvironmentDefinitions.AddDefaulted(Environments.Num());
 
 	for (int i = 0; i < Environments.Num(); i++)
 	{
 		Environments[i]->Initialize();
-		Environments[i]->PopulateAgentDefinitionPointers(SharedTrainingDefinition.EnvironmentDefinitions[i]);
-		Environments[i]->PopulateAgentStatePointers(SharedTrainingState.EnvironmentStates[i]);
+		Environments[i]->PopulateAgentDefinitionPointers(TrainingDefinition.EnvironmentDefinitions[i]);
+		Environments[i]->PopulateAgentStatePointers(TrainingState.EnvironmentStates[i]);
+		Environments[i]->State = &TrainingState.EnvironmentStates[i];
 	}
 
-	this->Init(this->SharedTrainingDefinition);
+	this->Init(this->TrainingDefinition);
 }
 
 void UAbstractGymConnector::ResetCompletedEnvironments()
@@ -43,7 +44,7 @@ void UAbstractGymConnector::ResetCompletedEnvironments()
 		return;
 	}
 	// TODO make this take an array of ints
-	this->SubmitPostResetState(this->SharedTrainingState);
+	this->SubmitPostResetState(this->TrainingState);
 	UE_LOG(LogSchola, Verbose, TEXT("Reset %d Environments"), Count);
 
 	//We set the environment back to running once we've sent out the state etc. etc.

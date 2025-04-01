@@ -4,24 +4,26 @@
 
 AActor* UAbstractInteractor::TryGetOwner() const
 {
-	//Four possible locations
-	// 1. In a component on the Agent
-	// 2. In a component on the Trainer/Controller
-	// 3. In the controller directly
-	// 4. In the Agent Directly
+	// Four possible locations
+	// 1. In Sensor/Actuator/InferenceAgent component on the Agent Pawn
+	// 2. In Sensor/Actuator component on the Trainer/Controller
+	// 3. In the Controller directly
+	// 4. In InferencePawn directly
+	// 5. *New* in BTTask directly
 
 	UObject* Outer = this->GetOuter();
 	if (Outer)
 	{
 		UActorComponent* Comp = Cast<UActorComponent>(Outer);
 		AController*	 Controller = Cast<AController>(Outer);
-		
+		UBTTaskNode*	 BTTask = Cast<UBTTaskNode>(Outer);
+
 		if (Comp)
-		{	
+		{
 			// In a Component
 			AActor* CompOwner = Comp->GetOwner();
 			Controller = Cast<AController>(CompOwner);
-			
+
 			if (Controller)
 			{
 				// In a Component in the Trainer
@@ -31,15 +33,20 @@ AActor* UAbstractInteractor::TryGetOwner() const
 			{
 				return CompOwner;
 			}
-		} 
-		else if (Controller) 
+		}
+		else if (Controller)
 		{
 			// Directly in the Trainer
 			return Controller->GetPawn();
-		} 
-		else 
-		{ 
-			//In the Pawn
+		}
+		else if (BTTask)
+		{
+			// In a BTTask
+			return Cast<AActor>(Cast<AController>(Cast<UBehaviorTreeComponent>(BTTask->GetOuter())->GetAIOwner())->GetPawn());
+		}
+		else
+		{
+			// In the Pawn
 			return Cast<AActor>(Outer);
 		}
 	}
@@ -59,7 +66,7 @@ UObject* UAbstractInteractor::GetLocation() const
 
 		if (Comp)
 		{
-			return Comp->GetOwner(); //Return Either the Controller, if that is where this comp is, or the Pawn
+			return Comp->GetOwner(); // Return Either the Controller, if that is where this comp is, or the Pawn
 		}
 		else if (Controller)
 		{
@@ -88,7 +95,7 @@ FString UAbstractInteractor::GetLabel() const
 		{
 			return Comp->GetName(); // Return Either the Controller, if that is where this comp is, or the Pawn
 		}
-		else 
+		else
 		{
 			return Outer->GetClass()->GetName() + FString("_") + this->GetName(); // Return the Pawn or other entity owning this Controller
 		}
@@ -99,9 +106,27 @@ FString UAbstractInteractor::GetLabel() const
 	}
 }
 
-FString UAbstractInteractor::GetId(int IntId) const
+FString UAbstractInteractor::GetId() const
 {
-	//Breaks if the number of interactors is greater than 99999 which is totally okay.
-	return FString("").Appendf(TEXT("%05d"), IntId).Append("_").Append(this->GetLabel());
-	
+
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		return this->GenerateId();
+	}
+}
+
+FString UAbstractInteractor::GetSanitizedId() const
+{
+	FString Output = this->GetId();
+	Output.ReplaceCharInline('.', ',');
+	return Output;
+}
+
+FString UAbstractInteractor::GenerateId() const
+{
+	return this->GetLabel();
 }

@@ -5,15 +5,18 @@ Utility functions and classes for Schola.
 
 from functools import cached_property, singledispatchmethod
 from typing import List, Optional, Tuple, TypeVar, Dict, Iterable, Union
+from dataclasses import dataclass
+import argparse
 
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
 
 # A generic recursive dictionary type
-NestedDict = Dict[K,Union[V,"NestedDict[V]"]]
+NestedDict = Dict[K, Union[V, "NestedDict[V]"]]
 
-def nested_get(dct: NestedDict[K,V], keys : Iterable[K], default: V) -> V:
+
+def nested_get(dct: NestedDict[K, V], keys: Iterable[K], default: V) -> V:
     """
     Get a value from a nested dictionary, returning a default value if the key is not found.
 
@@ -25,7 +28,7 @@ def nested_get(dct: NestedDict[K,V], keys : Iterable[K], default: V) -> V:
         The keys to search for in the dictionary.
     default : V
         The value to return if the key is not found.
-    
+
     Returns
     -------
     V
@@ -39,6 +42,7 @@ def nested_get(dct: NestedDict[K,V], keys : Iterable[K], default: V) -> V:
             return default
     return curr_dct
 
+
 class IdManager:
     """
     A class to manage the mapping between nested and flattened ids.
@@ -47,18 +51,20 @@ class IdManager:
     ----------
     ids : List[List[int]]
         A nested list of lists of ids to manage, index in the list is first id, second id is stored in the second list.
-    
+
     Attributes
     ----------
     ids : List[List[int]]
         The nested list of lists of ids to manage.
-    
+
     """
 
-    def __init__(self, ids : List[List[int]]):
+    def __init__(self, ids: List[List[int]]):
         self.ids = ids
-    
-    def flatten_id_dict(self, nested_id_dict: Dict[int, Dict[int, T]], default:Optional[T]=None) -> List[T] :
+
+    def flatten_id_dict(
+        self, nested_id_dict: Dict[int, Dict[int, T]], default: Optional[T] = None
+    ) -> List[T]:
         """
         Flatten a dictionary of nested ids into a list of values.
 
@@ -68,7 +74,7 @@ class IdManager:
             The dictionary to flatten.
         default : Optional[T], optional
             The default value to use if a key is not found, by default None.
-        
+
         Returns
         -------
         List[T]
@@ -79,8 +85,10 @@ class IdManager:
             for second_id, value in nested_ids.items():
                 output_list[self.id_map[first_id][second_id]] = value
         return output_list
-    
-    def nest_id_list(self, id_list: List[T], default:Optional[T]=None) -> Dict[int, Dict[int, T]]:
+
+    def nest_id_list(
+        self, id_list: List[T], default: Optional[T] = None
+    ) -> Dict[int, Dict[int, T]]:
         """
         Nest a list of values, indexed by flattened id, into a dictionary of nested ids.
 
@@ -90,20 +98,21 @@ class IdManager:
             The list of values to convert into a nested dictionary.
         default : Optional[T], optional
             The default value to use if a key is not found, by default None.
-        
+
         Returns
         -------
         Dict[int, Dict[int, T]]
             A nested dictionary of the values in `id_list` or `default` if values are missing.
         """
         output_dict = {
-        first_id:{second_id: default for second_id in nested_ids} for first_id, nested_ids in enumerate(self.ids)
+            first_id: {second_id: default for second_id in nested_ids}
+            for first_id, nested_ids in enumerate(self.ids)
         }
         for flat_id, body in enumerate(id_list):
             first_id, second_id = self[flat_id]
             output_dict[first_id][second_id] = body
         return output_dict
-    
+
     @singledispatchmethod
     def __getitem__(self, key):
         """
@@ -113,7 +122,7 @@ class IdManager:
         ----------
         key : Union[int, Tuple[int,int]]
             The key to convert.
-        
+
         Returns
         -------
         Union[Tuple[int,int], int]
@@ -124,18 +133,20 @@ class IdManager:
         NotImplementedError
             If the key is not of type int or Tuple[int,int].
         """
-        raise NotImplementedError("get item not supported for keys that aren't int or Tuple[int,int]")
-    
+        raise NotImplementedError(
+            "get item not supported for keys that aren't int or Tuple[int,int]"
+        )
+
     @__getitem__.register
-    def _(self, key: int) -> Tuple[int,int]:
+    def _(self, key: int) -> Tuple[int, int]:
         return self.id_list[key]
-    
+
     @__getitem__.register
-    def _(self, key : tuple) -> int:
+    def _(self, key: tuple) -> int:
         assert len(key) == 2, "if supplying tuple key must supply a key of length 2"
         return self.id_map[key[0]][key[1]]
 
-    def get_nested_id(self,flat_id:int) -> Tuple[int,int]:
+    def get_nested_id(self, flat_id: int) -> Tuple[int, int]:
         """
         Get the nested id from a flattened id.
 
@@ -143,15 +154,15 @@ class IdManager:
         ----------
         flat_id : int
             The flattened id to convert.
-        
+
         Returns
         -------
         Tuple[int,int]
             The nested id.
         """
         return self[flat_id]
-    
-    def get_flattened_id(self,first_id:int,second_id:int) -> int:
+
+    def get_flattened_id(self, first_id: int, second_id: int) -> int:
         """
         Get the flattened id from a nested id.
 
@@ -161,14 +172,14 @@ class IdManager:
             The first id.
         second_id : int
             The second id.
-        
+
         Returns
         -------
         int
             The flattened id.
         """
-        return self[first_id,second_id]
-        
+        return self[first_id, second_id]
+
     @cached_property
     def id_list(self) -> List[Tuple[int, int]]:
         """
@@ -184,9 +195,9 @@ class IdManager:
             for second_id in nested_ids:
                 id_list.append((first_id, second_id))
         return id_list
-    
+
     @cached_property
-    def id_map(self) -> List[Dict[int,int]]:
+    def id_map(self) -> List[Dict[int, int]]:
         """
         List of dictionaries mapping nested ids to flattened ids.
 
@@ -202,8 +213,8 @@ class IdManager:
                 id_map[first_id][second_id] = uid
                 uid += 1
         return id_map
-    
-    def partial_get(self,first_id:int) -> List[int]:
+
+    def partial_get(self, first_id: int) -> List[int]:
         """
         Get the second ids for a given first id.
 
@@ -218,7 +229,7 @@ class IdManager:
             The second ids for the given first id.
         """
         return self.ids[first_id]
-    
+
     @cached_property
     def num_ids(self) -> int:
         """
@@ -229,5 +240,47 @@ class IdManager:
         int
             The number of ids.
         """
-        return sum(map(len,self.ids))
+        return sum(map(len, self.ids))
 
+
+import torch as th
+
+
+class ScholaModel(th.nn.Module):
+    """
+    A PyTorch Module that is compatible with Schola inference.
+
+    """
+
+    def __init__(
+        self,
+    ):
+        super().__init__()
+
+    def forward(self, x: th.Tensor, state) -> Tuple[th.Tensor, th.Tensor]:
+        raise NotImplementedError("forward method must be implemented in subclass")
+    
+    def save_as_onnx(self, export_path: str, onnx_oppset: int = 17):
+        raise NotImplementedError("save as ONNX method must be implemented in subclass")
+
+def get_plugins(group_name: str) -> List:
+    """
+    Returns a list of plugins for a given group name.
+
+    Parameters
+    ----------
+    group_name : str
+        The name of the plugin group to search for.
+
+    Returns
+    -------
+    List
+        A list of loaded plugin objects for the specified group name.
+    """
+    from importlib.metadata import entry_points
+    eps = entry_points()
+    if hasattr(eps, 'select'):
+        discovered_plugins = eps.select(group=group_name)
+    else:
+        discovered_plugins = eps.get(group_name, [])
+    return [x.load() for x in discovered_plugins]

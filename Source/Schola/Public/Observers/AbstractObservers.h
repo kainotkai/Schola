@@ -10,6 +10,7 @@
 #include "Common/IValidatable.h"
 #include "Common/LogSchola.h"
 #include "Common/AbstractInteractor.h"
+#include "Observers/ObserverWrappers/ObserverWrapperInterfaces.h"
 #include "AbstractObservers.generated.h"
 
 /**
@@ -22,43 +23,51 @@ class SCHOLA_API UAbstractObserver : public UAbstractInteractor
 
 public:
 	/**
-	 * @brief Create a new instance of UAbstractObserver
+	 * @brief Create a new instance of UAbstractObserver.
 	 */
-	UAbstractObserver(){};
-
+	UAbstractObserver() = default;
 	
 	/**
 	 * @brief Get the ObservationSpace bounding the outputs of this sensor.
 	 * @param[out] OutSpace The ObservationSpace bounding the outputs of this sensor.
-	 * @note This function should be implemented by any derived classes
+	 * @note This function should be implemented by any derived classes.
 	 */
 	virtual void FillObservationSpace(TSpace& OutSpace) const PURE_VIRTUAL(UAbstractObserver::FillObservationSpace, return; );
 
 	/**
-	 * @brief Use this sensor to collect observations about the environment state
+	 * @brief Use this sensor to collect observations about the environment state.
 	 * @param OutObservations - DataPoint that will be updated with the outputs of this sensor.
-	 * @note This function should be implemented by any derived classes
+	 * @note This function should be implemented by any derived classes.
 	 */
 	virtual void CollectObservations(TPoint& OutObservations) PURE_VIRTUAL(UAbstractObserver::CollectObservations, return; );
 
 	/**
-	 * @brief Do any subclass specific setup.
-	 * @note This function should be implemented by any derived classes
+	 * @brief Do any subclass-specific setup.
+	 * @note This function should be implemented by any derived classes.
 	 */
 	virtual void InitializeObserver() {};
+
+	/**
+	* @brief Reset the state of this observer, called when an episode ends.
+	* @note This function should be implemented by any derived classes.
+	*/
+	virtual void ResetObserver() {};
+
+	
+	virtual void Reset() override { this->ResetObserver(); };
 
 
 #if WITH_EDITOR
 	
 	/**
-	 * @brief Test whether this sensors output matches the constraints defined by the return of GetObservationSpace.
+	 * @brief Test whether this sensor's output matches the constraints defined by the return of GetObservationSpace.
 	 * @note Sets the ValidationResult and ObservationShape properties.
 	 */
 	void TestObserverValidity();
 
 	/**
 	 * @brief Set the debug observations for this observer.
-	 * @param[in] Temp The ctemporary point to copy to the debug observations.
+	 * @param[in] Temp The temporary point to copy to the debug observations.
 	 * @note This function should be implemented by any derived classes, to use the correct type of point.
 	 */
 	virtual void SetDebugObservations(TPoint& Temp) PURE_VIRTUAL(UAbstractObserver::SetDebugObservations, return;);
@@ -67,7 +76,7 @@ public:
 
 #if WITH_EDITORONLY_DATA
 
-	/** The results of the Most Recent Validation.*/
+	/** The results of the most recent validation. */
 	UPROPERTY(VisibleInstanceOnly, Category = "Observer Utilities")
 	ESpaceValidationResult ValidationResult = ESpaceValidationResult::NoResults;
 
@@ -87,11 +96,17 @@ class SCHOLA_API UBoxObserver : public UAbstractObserver
 {
 	GENERATED_BODY()
 
+
 public:
 	/**
 	 * @brief Create a new instance of UBoxObserver
 	 */
 	UBoxObserver(){};
+
+
+	/** Wrappers for customizing the observations recorded by this observer. Applied in order. */
+	UPROPERTY(EditAnywhere, Instanced, meta = (AllowedClasses = "/Script/Schola.BoxObserverWrapper", ExactClass = false), Category="Sensor Properties")
+	TArray<UObject*> Wrappers;
 
 	/**
 	 * @brief Get the BoxSpace bounding the outputs of this sensor.
@@ -107,19 +122,43 @@ public:
 	 */
 	virtual void CollectObservations(FBoxPoint& OutObservations) PURE_VIRTUAL(UBoxObserver::CollectObservations, return; );
 
+	void Reset() override 
+	{
+		for (TScriptInterface<IBoxObserverWrapper> Wrapper : this->Wrappers)
+		{
+			Wrapper->Reset();
+		}
+		this->ResetObserver();
+	};
+
 	void CollectObservations(TPoint& OutObservations) override
 	{
-		OutObservations.Emplace<FBoxPoint>();
-		this->CollectObservations(OutObservations.Get<FBoxPoint>());
+		
+		FBoxPoint OutputPoint;
+		this->CollectObservations(OutputPoint);
+		for (TScriptInterface<IBoxObserverWrapper> Wrapper : this->Wrappers)
+		{
+			OutputPoint = Wrapper->WrapBoxObservation(OutputPoint);
+		}
+		OutObservations.Set<FBoxPoint>(OutputPoint);
 		#if WITH_EDITOR
 				this->SetDebugObservations(OutObservations);
 		#endif
 	}
 
 	void FillObservationSpace(TSpace& OutSpaceGroup) const override
-	{
-		OutSpaceGroup.Set<FBoxSpace>(this->GetObservationSpace());
+	{	
+		FBoxSpace OutputSpace = this->GetObservationSpace();
+		
+		for (TScriptInterface<IBoxObserverWrapper> Wrapper : this->Wrappers)
+		{
+			OutputSpace = Wrapper->WrapBoxObservationSpace(OutputSpace);
+		}
+
+		OutSpaceGroup.Set<FBoxSpace>(OutputSpace);
 	}
+
+	FString GetId() const;
 
 
 #if WITH_EDITOR
@@ -153,6 +192,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void InitializeObserver() override;
+
 };
 
 /**
@@ -165,6 +205,11 @@ class SCHOLA_API UBinaryObserver : public UAbstractObserver
 	GENERATED_BODY()
 
 public:
+
+	/** Wrappers for customizing the observations recorded by this observer. Applied in order. */
+	UPROPERTY(EditAnywhere, Instanced, meta = (AllowedClasses = "/Script/Schola.BinaryObserverWrapper", ExactClass = false), Category = "Sensor Properties")
+	TArray<UObject*> Wrappers;
+
 	UBinaryObserver(){};
 
 	/**
@@ -184,8 +229,13 @@ public:
 	void CollectObservations(TPoint& OutObservations)
 	{
 		
-		OutObservations.Emplace<FBinaryPoint>();
-		this->CollectObservations(OutObservations.Get<FBinaryPoint>());
+		FBinaryPoint OutputPoint;
+		this->CollectObservations(OutputPoint);
+		for (TScriptInterface<IBinaryObserverWrapper> Wrapper : this->Wrappers)
+		{
+			OutputPoint = Wrapper->WrapBinaryObservation(OutputPoint);
+		}
+		OutObservations.Set<FBinaryPoint>(OutputPoint);
 		#if WITH_EDITOR
 			this->SetDebugObservations(OutObservations);
 		#endif
@@ -193,10 +243,17 @@ public:
 
 	void FillObservationSpace(TSpace& OutSpaceGroup) const
 	{
+		FBinarySpace OutputSpace = this->GetObservationSpace();
+
+		for (TScriptInterface<IBinaryObserverWrapper> Wrapper : this->Wrappers)
+		{
+			OutputSpace = Wrapper->WrapBinaryObservationSpace(OutputSpace);
+		}
+
 		OutSpaceGroup.Set<FBinarySpace>(this->GetObservationSpace());
 	}
 
-
+	FString GetId() const;
 
 #if WITH_EDITOR
 	void SetDebugObservations(TPoint& Temp) override;
@@ -229,6 +286,7 @@ public:
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void InitializeObserver();
+
 };
 
 /**
@@ -241,6 +299,11 @@ class SCHOLA_API UDiscreteObserver : public UAbstractObserver
 	GENERATED_BODY()
 
 public:
+
+	/** Wrappers for customizing the observations recorded by this observer. Applied in order. */
+	UPROPERTY(EditAnywhere, Instanced, meta = (AllowedClasses = "/Script/Schola.DiscreteObserverWrapper", ExactClass = false), Category = "Sensor Properties")
+	TArray<UObject*> Wrappers;
+
 	UDiscreteObserver(){};
 
 	/**
@@ -259,8 +322,13 @@ public:
 
 	void CollectObservations(TPoint& OutObservations)
 	{
-		OutObservations.Emplace<FDiscretePoint>();
-		this->CollectObservations(OutObservations.Get<FDiscretePoint>());
+		FDiscretePoint OutputPoint;
+		this->CollectObservations(OutputPoint);
+		for (TScriptInterface<IDiscreteObserverWrapper> Wrapper : this->Wrappers)
+		{
+			OutputPoint = Wrapper->WrapDiscreteObservation(OutputPoint);
+		}
+		OutObservations.Set<FDiscretePoint>(OutputPoint);
 		#if WITH_EDITOR
 				this->SetDebugObservations(OutObservations);
 		#endif
@@ -268,9 +336,18 @@ public:
 
 	void FillObservationSpace(TSpace& OutSpaceGroup) const
 	{
+		FDiscreteSpace OutputSpace = this->GetObservationSpace();
+
+		for (TScriptInterface<IDiscreteObserverWrapper> Wrapper : this->Wrappers)
+		{
+			OutputSpace = Wrapper->WrapDiscreteObservationSpace(OutputSpace);
+		}
+
 		OutSpaceGroup.Set<FDiscreteSpace>(this->GetObservationSpace());
 		
 	}
+
+	FString GetId() const;
 
 #if WITH_EDITOR
 	void SetDebugObservations(TPoint& Temp) override;

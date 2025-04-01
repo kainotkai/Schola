@@ -40,9 +40,15 @@ class UnrealConnection:
         """
         Close the Unreal Connection. Method must be safe to call multiple times.
         """
-        if self.channel:
+        if hasattr(self,"channel") and self.channel:
             self.channel.close()
             self.channel = None
+    
+    def __del__(self) -> None:
+        """
+        Destructor for Unreal Connections. Close the connection.
+        """
+        self.close()
 
     def start(self) -> None:
         """
@@ -176,7 +182,7 @@ class StandaloneUnrealConnection(UnrealConnection):
     
     Attributes
     ----------
-    ue_path : str
+    executable_path : str
         The path to the Unreal Engine executable
     headless_mode : bool
         Whether to run in headless mode
@@ -197,7 +203,7 @@ class StandaloneUnrealConnection(UnrealConnection):
     def __init__(
         self,
         url: str,
-        ue_path: str,
+        executable_path: str,
         headless_mode: bool,
         port: Optional[int] = None,
         map: str = None,
@@ -211,7 +217,7 @@ class StandaloneUnrealConnection(UnrealConnection):
             self.tcp_socket = None
             port = port
         super().__init__(url, port)
-        self.ue_path = ue_path
+        self.executable_path = executable_path
         self.headless_mode = headless_mode
         self.display_logs = display_logs
         self.set_fps = set_fps
@@ -230,9 +236,12 @@ class StandaloneUnrealConnection(UnrealConnection):
         List[str]
             The arguments to be supplied to the Unreal Engine Executable
         """
-        args = [self.ue_path, "-UNATTENDED"]
+        args = [self.executable_path, "-UNATTENDED"]
         if self.headless_mode:
             args += ["-nullRHI"]
+        else:
+            args += ["-WINDOWED"]
+
         if self.map:
             args += [self.map]
         if self.display_logs:

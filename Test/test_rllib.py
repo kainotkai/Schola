@@ -3,7 +3,7 @@
 from schola.core.unreal_connections import StandaloneUnrealConnection
 from schola.ray.env import BaseEnv
 import pytest
-from schola.scripts.ray.launch import RLlibArgs, main
+from schola.scripts.ray.launch import RLlibScriptArgs, main
 from schola.core.spaces import DictSpace, BoxSpace, DiscreteSpace
 import numpy as np
 import gymnasium as gym

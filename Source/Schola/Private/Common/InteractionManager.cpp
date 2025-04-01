@@ -9,6 +9,7 @@ void UInteractionManager::SetupObservers(const TArray<UAbstractObserver*>& InObs
 		Observer->InitializeObserver();
 		OutObservers.Add(Observer);
 	}
+	OutObservers.Sort([](UAbstractObserver& A, UAbstractObserver& B) { return A.GetSanitizedId() < B.GetSanitizedId(); });
 }
 
 void UInteractionManager::CollectObservationsFromObservers(const TArray<UAbstractObserver*>& InObservers, FDictPoint& OutObservationsMap)
@@ -22,13 +23,26 @@ void UInteractionManager::CollectObservationsFromObservers(const TArray<UAbstrac
 
 void UInteractionManager::CollectObservationSpaceFromObservers(const TArray<UAbstractObserver*>& InObservers, FDictSpace& OutDictSpace)
 {
-	int Id = 0;
+	FString LastId;
+	FString Id;
+	int		CurrentIncrement = 1;
 	for (UAbstractObserver* Observer : InObservers)
 	{
-		TSpace& Space = OutDictSpace.Add(Observer->GetId(Id++));
+		Id = Observer->GetSanitizedId();
+		if (Id == LastId)
+		{
+			UE_LOG(LogSchola, Warning, TEXT("Duplicate Observer ID: %s, adding suffix _%03d"), *Id, CurrentIncrement);
+			Id.Appendf(TEXT("_%03d"), CurrentIncrement);
+			CurrentIncrement++;
+		}
+		else
+		{
+			CurrentIncrement = 1;
+			LastId = Id;
+		}
+		TSpace& Space = OutDictSpace.Add(Id);
 		// Make a reference and then pass it in for filling
 		Observer->FillObservationSpace(Space);
-		UE_LOG(LogSchola, Warning, TEXT("Observation Space filled"));
 	}
 };
 
@@ -39,7 +53,10 @@ void UInteractionManager::SetupActuators(const TArray<UActuator*>& InActuators, 
 		Actuator->InitializeActuator();
 		OutActuators.Add(Actuator);
 	}
-	
+	//Put the Actuators in alphabetical order
+	OutActuators.Sort([](UActuator& A, UActuator& B) { return A.GetSanitizedId() < B.GetSanitizedId(); });
+
+
 }
 
 void UInteractionManager::SendActionsToActuators(TArray<UActuator*>& OutActuators, const FDictPoint& Actions)
@@ -54,10 +71,26 @@ void UInteractionManager::SendActionsToActuators(TArray<UActuator*>& OutActuator
 
 void UInteractionManager::CollectActionSpaceFromActuators(const TArray<UActuator*>& InActuators, FDictSpace& OutSpaceGroups)
 {
-	int Id = 0;
+
+	FString LastId;
+	FString Id;
+	int		CurrentIncrement = 1;
+
 	for (UActuator* Actuator : InActuators)
 	{
-		TSpace& TempGroup = OutSpaceGroups.Add(Actuator->GetId(Id++));
+		Id = Actuator->GetSanitizedId();
+		if (Id == LastId)
+		{
+			UE_LOG(LogSchola, Warning, TEXT("Duplicate Actuator ID: %s, adding suffix _%03d"), *Id, CurrentIncrement);
+			Id.Appendf(TEXT("_%03d"), CurrentIncrement);
+			CurrentIncrement++;
+		}
+		else
+		{
+			CurrentIncrement = 1;
+			LastId = Id;
+		}
+		TSpace& TempGroup = OutSpaceGroups.Add(Id);
 
 		Actuator->FillActionSpace(TempGroup);
 	}
@@ -66,7 +99,6 @@ void UInteractionManager::CollectActionSpaceFromActuators(const TArray<UActuator
 void UInteractionManager::Initialize(TArray<UAbstractObserver*>& InObservers, TArray<UActuator*>& InActuators)
 {
 	// Collect all the attached sensors
-
 	SetupObservers(InObservers, this->Observers);
 	CollectObservationSpaceFromObservers(this->Observers, this->InteractionDefn.ObsSpaceDefn);
 
@@ -91,11 +123,20 @@ FDictPoint& UInteractionManager::AggregateObservations()
 	// Collect observaions from the sensors
 	CollectObservationsFromObservers(Observers, this->Observations);
 
-	// TODO make this more efficient
-	if (this->InteractionDefn.bNormalizeObservations)
+	return this->Observations;
+}
+
+void UInteractionManager::Reset()
+{
+
+	for (UAbstractObserver* Observer : Observers)
 	{
-		this->InteractionDefn.ObsSpaceDefn.NormalizeObservation(this->Observations);
+		Observer->Reset();
 	}
 
-	return this->Observations;
+	for (UActuator* Actuator : Actuators)
+	{
+		Actuator->Reset();
+	}
+
 }

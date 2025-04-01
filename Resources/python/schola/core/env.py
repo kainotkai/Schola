@@ -67,7 +67,6 @@ class ScholaEnv:
         verbosity:int=0,
         environment_start_timeout:int = 45,
     ):
-        super().__init__()
 
         log_level = logging.WARNING
         log_level = logging.INFO if verbosity == 1 else log_level
@@ -243,7 +242,7 @@ class ScholaEnv:
         # welp let's see if this goes
         if len(observations.keys()) < 1:
             return self.poll()
-        
+ 
         return observations, rewards, terminateds, truncateds, infos
 
     

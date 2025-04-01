@@ -61,9 +61,12 @@ bool IInferenceAgent::Initialize()
 
 	// Setup the Policy
 	this->GetPolicy()->Init(this->GetInteractionManager()->InteractionDefn);
+
 	// Configure the brain to use the policy
 	this->GetBrain()->Init(this->GetPolicy());
-	UE_LOG(LogSchola, Warning, TEXT("Initialization finished"));
+	UE_LOG(LogSchola, Log, TEXT("Agent %s finished initializing"), *(this->GetAgentName()));
+	this->SetStatus(EAgentStatus::Running);
+
 	return true;
 }
 
@@ -113,4 +116,81 @@ void IInferenceAgent::Act()
 		}
 	}
 	this->GetBrain()->IncrementStep();
+}
+
+void IInferenceAgent::SetupDefaultTicking(FThinkTickFunction& OutThinkTickFunction, FActTickFunction& OutActTickFunction, AActor* InTargetActor)
+{
+	if (InTargetActor == nullptr)
+	{
+		InTargetActor = this->GetControlledPawn();
+	}
+	OutThinkTickFunction.RegisterTickFunction(InTargetActor->GetLevel());
+	OutThinkTickFunction.SetTickFunctionEnable(true);
+
+	OutActTickFunction.RegisterTickFunction(InTargetActor->GetLevel());
+	OutActTickFunction.SetTickFunctionEnable(true);
+	OutActTickFunction.AddPrerequisite(Cast<UObject>(this), OutThinkTickFunction);
+}
+
+FThinkTickFunction::FThinkTickFunction(IInferenceAgent* Agent)
+	: Super()
+{
+	this->Agent.SetObject(Cast<UObject>(Agent));
+	this->Agent.SetInterface(Agent);
+	this->bAllowTickBatching = true;
+	this->bHighPriority = true;
+	this->bStartWithTickEnabled = false;
+	this->bTickEvenWhenPaused = false;
+}
+
+void FThinkTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	if (Agent->GetStatus() == EAgentStatus::Running)
+	{
+		Agent->Think();
+	}
+}
+
+FString FThinkTickFunction::DiagnosticMessage()
+{
+	return FString("Agent Thinking");
+}
+
+FName FThinkTickFunction::DiagnosticContext(bool bDetailed)
+{
+	return FName("Agent Thinking");
+}
+
+FActTickFunction::FActTickFunction(IInferenceAgent* Agent, bool bStopAfterCurrentTick)
+	: Super()
+{
+	this->Agent.SetObject(Cast<UObject>(Agent));
+	this->Agent.SetInterface(Agent);
+	this->bStopAfterCurrentTick = bStopAfterCurrentTick;
+	this->bAllowTickBatching = true;
+	this->bHighPriority = false;
+	this->bStartWithTickEnabled = false;
+	this->bTickEvenWhenPaused = false;
+}
+
+void FActTickFunction::ExecuteTick(float DeltaTime, ELevelTick TickType, ENamedThreads::Type CurrentThread, const FGraphEventRef& MyCompletionGraphEvent)
+{
+	if (Agent->GetStatus() == EAgentStatus::Running)
+	{
+		Agent->Act();
+	}
+	if (bStopAfterCurrentTick)
+	{
+		Agent->SetStatus(EAgentStatus::Stopped);
+	}
+}
+
+FString FActTickFunction::DiagnosticMessage()
+{
+	return FString("Agent Acting");
+}
+
+FName FActTickFunction::DiagnosticContext(bool bDetailed)
+{
+	return FName("Agent Acting");
 }

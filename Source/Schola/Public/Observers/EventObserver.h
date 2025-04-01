@@ -16,7 +16,7 @@ class SCHOLA_API UEventObserver : public UBinaryObserver
 public:
 
 	/** Was an event triggered during this step */
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Category = "Sensor Properties")
 	bool bEventTriggered = false;
 
 	/** Should the event flag be cleared automatically after each step */
@@ -26,13 +26,13 @@ public:
 	/**
 	 * @brief Trigger the event.
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Sensor")
 	void TriggerEvent();
 
 	/**
 	 * @brief Clear the event.
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Sensor")
 	void ClearEvent();
 
 	/**
@@ -46,4 +46,6 @@ public:
 	 * @param[out] OutObservations A BinaryPoint that will be updated with the outputs of this sensor.
 	 */
 	virtual void CollectObservations(FBinaryPoint& OutObservations);
+
+	virtual FString GenerateId() const override;
 };

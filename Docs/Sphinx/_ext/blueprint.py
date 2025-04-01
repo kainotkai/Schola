@@ -89,8 +89,8 @@ def visit_blueprint_node(self : HTML5Translator, node: blueprint):
             display : block
         }}
     </style>
-    <ueb-blueprint data-heading="{node.attributes["heading"].replace(">"," ❯ ")}" data-zoom="{node.attributes["zoom"]}" id="ueb-id-{visit_blueprint_node.id}">
-        <template>
+    <ueb-blueprint data-number-id="{visit_blueprint_node.id}" data-heading="{node.attributes["heading"].replace(">"," ❯ ")}" data-zoom="{node.attributes["zoom"]}" id="ueb-id-{visit_blueprint_node.id}">
+        <template id="template-id-{visit_blueprint_node.id}">
             {node.attributes["code"]}
     """
     if node.attributes["imagefallback"] != None:

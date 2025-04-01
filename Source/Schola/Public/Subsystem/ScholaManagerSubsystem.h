@@ -11,7 +11,7 @@
 #include "Inference/IInferenceAgent.h"
 #include "GymConnectors/AbstractGymConnector.h"
 #include <Kismet/GameplayStatics.h>
-#include "Subsystem/SubsystemSettings.h"
+#include "Subsystem/SubsystemSettings/SubsystemSettings.h"
 #include "ScholaManagerSubsystem.generated.h"
 
 /**
@@ -31,9 +31,6 @@ private:
 
 protected:
 public:
-	/** The inferencing agents that are currently being controlled by the subsystem */
-	UPROPERTY()
-	TArray<TScriptInterface<IInferenceAgent>> InferenceAgents = TArray<TScriptInterface<IInferenceAgent>>();
 
 	/** The gym connector that is currently selected */
 	UPROPERTY()
@@ -52,35 +49,10 @@ public:
 	virtual TStatId			  GetStatId() const override;
 
 	/**
-	 * @brief Register an inferencing agent with the subsystem so that it can be controlled by the subsytem.
-	 * @param[in] InferenceAgent The inference agent to be registered.
-	 */
-	void RegisterInferenceAgent(UObject* InferenceAgent);
-
-	/**
 	 * @brief Prepare the subsystem by doing post BeginPlay setup
 	 */
 	void PrepareSubsystem();
 
-	/**
-	 * @brief Collect all the inferencing agents in the simulation
-	 */
-	void CollectInferenceAgents();
-
 	virtual bool IsTickable() const;
 
-	/**
-	 * @brief Take Actions for all the inference agents in the simulation
-	 */
-	void InferenceAgentsAct();
-
-	/**
-	 * @brief Collect Observations and start decision making for all the inference agents in the simulation
-	 */
-	void InferenceAgentsThink();
-
-	/**
-	 * @brief Initialize the inference agents in the simulation
-	 */
-	void InitializeInferenceAgents();
 };

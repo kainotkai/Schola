@@ -1,4 +1,4 @@
-// Copyright (c) 2023 Advanced Micro Devices, Inc. All Rights Reserved.
+// Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
 #pragma once
 
@@ -9,8 +9,10 @@
 #include "Environment/EnvironmentComponents/AbstractEnvironmentUtilityComponent.h"
 #include <Kismet/GameplayStatics.h>
 #include "Common/LogSchola.h"
-#include "Training/TrainingDefinitionStructs.h"
-#include "Training/TrainingStateUpdateStructs.h"
+#include "Training/DefinitionStructs/EnvironmentDefinition.h"
+#include "Training/UpdateStructs/EnvironmentUpdate.h"
+#include "Training/StateStructs/SharedEnvironmentState.h"
+#include "Containers/Map.h"
 #include "AbstractEnvironment.generated.h"
 
 
@@ -26,6 +28,32 @@ enum class EEnvironmentStatus : uint8
 	Error	  UMETA(DisplayName = "Error")
 };
 
+USTRUCT(BlueprintType)
+struct SCHOLA_API FTrainerAgentPair
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	APawn* AgentCDO;
+
+	UPROPERTY()
+	AAbstractTrainer* Trainer;
+
+	FTrainerAgentPair(APawn* AgentCDO, AAbstractTrainer* Trainer)
+	{
+		this->AgentCDO = AgentCDO;
+		this->Trainer = Trainer;
+	};
+
+	FTrainerAgentPair()
+	{
+		this->AgentCDO = nullptr;
+		this->Trainer = nullptr;
+	};
+
+};
+
+
 /**
  * An abstract class representing an environment.
  */
@@ -35,8 +63,8 @@ class SCHOLA_API AAbstractScholaEnvironment : public AActor
 	GENERATED_BODY()
 
 protected:
-	/** A map from the agent ID to the Agent Object. Filled from AgentControlledPawns when the game begins */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	/** A map from the agent ID to the Agent Object. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reinforcement Learning")
 	TMap<int, AAbstractTrainer*> Trainers = TMap<int, AAbstractTrainer*>();
 
 	/** The current largest Id. Used for Registering New Agents at runtime.*/
@@ -52,19 +80,16 @@ protected:
 	EEnvironmentStatus EnvironmentStatus = EEnvironmentStatus::Running;
 
 public:
-	/**
-	 * @brief Register an individual agent with the environment. Called after the environment is initialized.
-	 * @param Agent The agent to register
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Reinforcement Learning")
-	void RegisterAgent(AAbstractTrainer* Agent);
+
+	FSharedEnvironmentState* State;
 
 	/**
 	 * @brief Register a list of agents with the environment, from a list of pawns with associated agents. Called after the environment is initialized.
-	 * @param OutAgentControlledPawnArray An array of pawns in the environment that are controlled by agents
+	 * @param[out] OutAgentTrainerPairs An array of Trainers and their controlled Pawns, representing all agents in the environment.
 	 */
-	virtual void RegisterAgents(TArray<APawn*>& OutAgentControlledPawnArray) PURE_VIRTUAL(UAbstractEnvironment::RegisterAgents, return; );
+	virtual void InternalRegisterAgents(TArray<FTrainerAgentPair>& OutAgentTrainerPairs) PURE_VIRTUAL(AAbstractScholaEnvironment::InternalRegisterAgents, return;);
 
+	
 	/**  A list of utility components that can be used to add additional behaviour such as logging or data collection. */
 	UPROPERTY()
 	TArray<UAbstractEnvironmentUtilityComponent*> UtilityComponents;
@@ -90,7 +115,7 @@ public:
 	 * @brief Used on initialization to populate the AgentDefinitionMapping with the AgentDefinition pointers.
 	 * @param[out] OutEnvDefn A shared environment definition structure that will be populated with the agent definition pointers.
 	 */
-	void PopulateAgentDefinitionPointers(FSharedEnvironmentDefinition& OutEnvDefn);
+	void PopulateAgentDefinitionPointers(FEnvironmentDefinition& OutEnvDefn);
 
 	/**
 	 * @brief Get the number of agents registered to this environment
@@ -109,12 +134,12 @@ public:
 	 * @brief Reset the environment. Note that this does not reset the agent state.
 	 * @note Subclasses should implement this method to add logic that runs when the environment is reset
 	 */
-	virtual void ResetEnvironment() PURE_VIRTUAL(UEnvironmentManager::ResetEnvironment, return; );
+	virtual void ResetEnvironment() PURE_VIRTUAL(AAbstractScholaEnvironment::ResetEnvironment, return; );
 
 	/**
 	 * @brief Perform any environment setup like initializing variables, or binding delegates. Occurs before Register Agents.
 	 */
-	virtual void InitializeEnvironment() PURE_VIRTUAL(UEnvironmentManager::InitializeEnvironment, return; );
+	virtual void InitializeEnvironment() PURE_VIRTUAL(AAbstractScholaEnvironment::InitializeEnvironment, return;);
 	
 	/**
 	 * @brief Reset the environment and any agents in it. Note: Does not set the state to running.
@@ -147,7 +172,7 @@ public:
 	 * @brief Set the status of this environment to the given status.
 	 * @param[in] NewStatus The new status of the environment
 	 */
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Reinforcement Learning")
 	void UpdateStatus(EEnvironmentStatus NewStatus);
 
 	/**
@@ -160,37 +185,13 @@ public:
 	* @brief Configure this environment based on arbitrary Options from the GymConnector. Called immediately before the environment is reset, if the gym connector has Options.
 	* @param[in] Options A map of options to configure the environment with
 	*/
-	virtual void SetEnvironmentOptions(const TMap<FString, FString>& Options) PURE_VIRTUAL(UEnvironmentManager::SetEnvironmentOptions, return; );
+	virtual void SetEnvironmentOptions(const TMap<FString, FString>& Options) PURE_VIRTUAL(AAbstractScholaEnvironment::SetEnvironmentOptions, return;);
 	
 	/**
 	 * @brief Configure this environment based on a Seed . Called immediately before the environment is reset, if the gym connector has a new seed supplied.
 	 * @param[in] Seed The seed to configure the environment with
 	 */
-	virtual void SeedEnvironment(int Seed) PURE_VIRTUAL(UEnvironmentManager::SeedEnvironment, return; );
+	virtual void SeedEnvironment(int Seed) PURE_VIRTUAL(AAbstractScholaEnvironment::SeedEnvironment, return;);
+
 };
 
-/**
- * @brief A blueprintable version of the AbstractScholaEnvironment
- */
-UCLASS(Blueprintable)
-class SCHOLA_API ABlueprintScholaEnvironment : public AAbstractScholaEnvironment
-{
-	GENERATED_BODY()
-
-public:
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void ResetEnvironment();
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void RegisterAgents(TArray<APawn*>& OutAgentControlledPawnArray);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void InitializeEnvironment();
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void SetEnvironmentOptions(const TMap<FString, FString>& Options);
-
-	UFUNCTION(BlueprintImplementableEvent)
-	void SeedEnvironment(int Seed);
-};

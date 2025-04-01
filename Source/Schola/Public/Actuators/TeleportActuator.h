@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Actuators/AbstractActuators.h"
+#include "Common/LogSchola.h"
 #include "CoreMinimal.h"
 #include "TeleportActuator.generated.h"
 
@@ -57,9 +58,6 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Actuator Settings")
 	bool bSweep;
 
-	UPROPERTY()
-	AActor* Target;
-
 	FDiscreteSpace GetActionSpace() override;
 
 	/**
@@ -78,4 +76,6 @@ public:
 	float GetVectorDimension(int Speed, int DiscretePointValue);
 
 	void TakeAction(const FDiscretePoint& Action) override;
+
+	FString GenerateId() const override;
 };

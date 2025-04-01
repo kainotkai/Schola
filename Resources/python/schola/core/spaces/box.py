@@ -54,7 +54,13 @@ class BoxSpace(gymnasium.spaces.Box, UnrealSpace):
         for dimension in message.dimensions:
             low.append(dimension.low)
             high.append(dimension.high)
-        return BoxSpace(low=low, high=high)
+        if(len(message.shape_dimensions) == 0):
+            shape = [len(low)]
+        else:
+            shape = tuple(message.shape_dimensions)
+        low = np.asarray(low, dtype=np.float32).reshape(shape)
+        high = np.asarray(high, dtype=np.float32).reshape(shape)
+        return BoxSpace(low=low, high=high, shape=shape)
 
     @classmethod
     def is_empty_definition(cls, message : proto_spaces.BoxSpace) -> bool:
@@ -78,8 +84,8 @@ class BoxSpace(gymnasium.spaces.Box, UnrealSpace):
         >>> space.to_normalized() == BoxSpace([0., 0.], [1., 1.])
         True
         """
-        self.low = np.asarray([0. for x in self.low], dtype=np.float32)
-        self.high = np.asarray([1. for x in self.high], dtype=np.float32)
+        self.low = np.zeros_like(self.low)
+        self.high = np.ones_like(self.high)
         return self
 
     @classmethod
@@ -113,6 +119,7 @@ class BoxSpace(gymnasium.spaces.Box, UnrealSpace):
                 raise TypeError(f"Cannot merge BoxSpace with {type(space)}")
         low = np.concatenate([space.low for space in spaces])
         high = np.concatenate([space.high for space in spaces])
+        # Try and merge on the first axis
         return BoxSpace(low,high)
 
     def __len__(self) -> int:
@@ -130,7 +137,8 @@ class BoxSpace(gymnasium.spaces.Box, UnrealSpace):
         >>> len(space)
         2
         """
-        return self.shape[0]
+        return self.low.size
 
     def process_data(self, msg : proto_points.FundamentalPoint) -> np.ndarray:
-        return np.asarray(msg.box_point.values)
+        output = np.asarray(msg.box_point.values).reshape(self.shape)
+        return output

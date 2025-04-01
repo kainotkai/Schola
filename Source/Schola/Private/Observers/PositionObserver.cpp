@@ -2,6 +2,8 @@
 
 #include "Observers/PositionObserver.h"
 
+# 
+
 void UPositionObserver::CollectObservations(FBoxPoint& OutObservations)
 {
 	AActor* LocalTrackedActor = TrackedActor;
@@ -42,6 +44,38 @@ void UPositionObserver::CollectObservations(FBoxPoint& OutObservations)
 			OutObservations.Values.Add(ActorLocation.Z);
 		}
 	}
+}
+
+FString UPositionObserver::GenerateId() const
+{
+	FString Output = FString("Position");
+	//Add X Dimension
+	if (bHasXDimensions)
+	{
+		//_X followed by upper and lower bound
+		Output.Appendf(TEXT("_X_%.2f_%.2f"), XDimensionBounds.Low, XDimensionBounds.High);
+	}
+	//Add Y Dimension
+	if (bHasYDimensions)
+	{
+		//_Y followed by upper and lower bound
+		Output.Appendf(TEXT("_Y_%.2f_%.2f"), YDimensionBounds.Low, YDimensionBounds.High);
+	}
+
+	//Add Z Dimension
+	if (bHasZDimensions)
+	{
+		//_Z followed by upper and lower bound
+		Output.Appendf(TEXT("_Z_%.2f_%.2f"), ZDimensionBounds.Low, ZDimensionBounds.High);
+	}
+
+	if (bTrackNonOwner)
+	{
+		Output.Append("_Other");
+		Output.Append("_").Append(UEnum::GetValueAsString<EFrameOfReference>(PositionAdjustment));
+	}
+	
+	return Output;
 }
 
 FBoxSpace UPositionObserver::GetObservationSpace() const

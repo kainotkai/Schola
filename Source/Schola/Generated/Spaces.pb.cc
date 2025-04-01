@@ -40,6 +40,8 @@ PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORIT
 PROTOBUF_CONSTEXPR BoxSpace::BoxSpace(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.dimensions_)*/{}
+  , /*decltype(_impl_.shape_dimensions_)*/{}
+  , /*decltype(_impl_._shape_dimensions_cached_byte_size_)*/{0}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct BoxSpaceDefaultTypeInternal {
   PROTOBUF_CONSTEXPR BoxSpaceDefaultTypeInternal()
@@ -126,6 +128,7 @@ const uint32_t TableStruct_Spaces_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::Schola::BoxSpace, _impl_.dimensions_),
+  PROTOBUF_FIELD_OFFSET(::Schola::BoxSpace, _impl_.shape_dimensions_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::Schola::DiscreteSpace, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -162,10 +165,10 @@ const uint32_t TableStruct_Spaces_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(p
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   { 0, -1, -1, sizeof(::Schola::BoxSpace_BoxSpaceDimension)},
   { 8, -1, -1, sizeof(::Schola::BoxSpace)},
-  { 15, -1, -1, sizeof(::Schola::DiscreteSpace)},
-  { 22, -1, -1, sizeof(::Schola::BinarySpace)},
-  { 29, -1, -1, sizeof(::Schola::FundamentalSpace)},
-  { 39, -1, -1, sizeof(::Schola::DictSpace)},
+  { 16, -1, -1, sizeof(::Schola::DiscreteSpace)},
+  { 23, -1, -1, sizeof(::Schola::BinarySpace)},
+  { 30, -1, -1, sizeof(::Schola::FundamentalSpace)},
+  { 40, -1, -1, sizeof(::Schola::DictSpace)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
@@ -178,22 +181,22 @@ static const ::_pb::Message* const file_default_instances[] = {
 };
 
 const char descriptor_table_protodef_Spaces_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\014Spaces.proto\022\006Schola\"r\n\010BoxSpace\0226\n\ndi"
-  "mensions\030\001 \003(\0132\".Schola.BoxSpace.BoxSpac"
-  "eDimension\032.\n\021BoxSpaceDimension\022\013\n\003low\030\001"
-  " \001(\002\022\014\n\004high\030\002 \001(\002\"\035\n\rDiscreteSpace\022\014\n\004h"
-  "igh\030\001 \003(\005\"\034\n\013BinarySpace\022\r\n\005shape\030\001 \001(\005\""
-  "\240\001\n\020FundamentalSpace\022%\n\tbox_space\030\001 \001(\0132"
-  "\020.Schola.BoxSpaceH\000\022/\n\016discrete_space\030\002 "
-  "\001(\0132\025.Schola.DiscreteSpaceH\000\022+\n\014binary_s"
-  "pace\030\003 \001(\0132\023.Schola.BinarySpaceH\000B\007\n\005spa"
-  "ce\"E\n\tDictSpace\022(\n\006values\030\001 \003(\0132\030.Schola"
-  ".FundamentalSpace\022\016\n\006labels\030\002 \003(\tb\006proto"
-  "3"
+  "\n\014Spaces.proto\022\006Schola\"\214\001\n\010BoxSpace\0226\n\nd"
+  "imensions\030\001 \003(\0132\".Schola.BoxSpace.BoxSpa"
+  "ceDimension\022\030\n\020shape_dimensions\030\002 \003(\005\032.\n"
+  "\021BoxSpaceDimension\022\013\n\003low\030\001 \001(\002\022\014\n\004high\030"
+  "\002 \001(\002\"\035\n\rDiscreteSpace\022\014\n\004high\030\001 \003(\005\"\034\n\013"
+  "BinarySpace\022\r\n\005shape\030\001 \001(\005\"\240\001\n\020Fundament"
+  "alSpace\022%\n\tbox_space\030\001 \001(\0132\020.Schola.BoxS"
+  "paceH\000\022/\n\016discrete_space\030\002 \001(\0132\025.Schola."
+  "DiscreteSpaceH\000\022+\n\014binary_space\030\003 \001(\0132\023."
+  "Schola.BinarySpaceH\000B\007\n\005space\"E\n\tDictSpa"
+  "ce\022(\n\006values\030\001 \003(\0132\030.Schola.FundamentalS"
+  "pace\022\016\n\006labels\030\002 \003(\tb\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_Spaces_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_Spaces_2eproto = {
-    false, false, 441, descriptor_table_protodef_Spaces_2eproto,
+    false, false, 468, descriptor_table_protodef_Spaces_2eproto,
     "Spaces.proto",
     &descriptor_table_Spaces_2eproto_once, nullptr, 0, 6,
     schemas, file_default_instances, TableStruct_Spaces_2eproto::offsets,
@@ -460,6 +463,8 @@ BoxSpace::BoxSpace(const BoxSpace& from)
   BoxSpace* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.dimensions_){from._impl_.dimensions_}
+    , decltype(_impl_.shape_dimensions_){from._impl_.shape_dimensions_}
+    , /*decltype(_impl_._shape_dimensions_cached_byte_size_)*/{0}
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
@@ -472,6 +477,8 @@ inline void BoxSpace::SharedCtor(
   (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.dimensions_){arena}
+    , decltype(_impl_.shape_dimensions_){arena}
+    , /*decltype(_impl_._shape_dimensions_cached_byte_size_)*/{0}
     , /*decltype(_impl_._cached_size_)*/{}
   };
 }
@@ -488,6 +495,7 @@ BoxSpace::~BoxSpace() {
 inline void BoxSpace::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.dimensions_.~RepeatedPtrField();
+  _impl_.shape_dimensions_.~RepeatedField();
 }
 
 void BoxSpace::SetCachedSize(int size) const {
@@ -501,6 +509,7 @@ void BoxSpace::Clear() {
   (void) cached_has_bits;
 
   _impl_.dimensions_.Clear();
+  _impl_.shape_dimensions_.Clear();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -520,6 +529,17 @@ const char* BoxSpace::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx)
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
+        } else
+          goto handle_unusual;
+        continue;
+      // repeated int32 shape_dimensions = 2;
+      case 2:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+          ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt32Parser(_internal_mutable_shape_dimensions(), ptr, ctx);
+          CHK_(ptr);
+        } else if (static_cast<uint8_t>(tag) == 16) {
+          _internal_add_shape_dimensions(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
+          CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
@@ -560,6 +580,15 @@ uint8_t* BoxSpace::_InternalSerialize(
         InternalWriteMessage(1, repfield, repfield.GetCachedSize(), target, stream);
   }
 
+  // repeated int32 shape_dimensions = 2;
+  {
+    int byte_size = _impl_._shape_dimensions_cached_byte_size_.load(std::memory_order_relaxed);
+    if (byte_size > 0) {
+      target = stream->WriteInt32Packed(
+          2, _internal_shape_dimensions(), byte_size, target);
+    }
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -583,6 +612,20 @@ size_t BoxSpace::ByteSizeLong() const {
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
+  // repeated int32 shape_dimensions = 2;
+  {
+    size_t data_size = ::_pbi::WireFormatLite::
+      Int32Size(this->_impl_.shape_dimensions_);
+    if (data_size > 0) {
+      total_size += 1 +
+        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
+    }
+    int cached_size = ::_pbi::ToCachedSize(data_size);
+    _impl_._shape_dimensions_cached_byte_size_.store(cached_size,
+                                    std::memory_order_relaxed);
+    total_size += data_size;
+  }
+
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
@@ -602,6 +645,7 @@ void BoxSpace::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTO
   (void) cached_has_bits;
 
   _this->_impl_.dimensions_.MergeFrom(from._impl_.dimensions_);
+  _this->_impl_.shape_dimensions_.MergeFrom(from._impl_.shape_dimensions_);
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
@@ -620,6 +664,7 @@ void BoxSpace::InternalSwap(BoxSpace* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.dimensions_.InternalSwap(&other->_impl_.dimensions_);
+  _impl_.shape_dimensions_.InternalSwap(&other->_impl_.shape_dimensions_);
 }
 
 ::PROTOBUF_NAMESPACE_ID::Metadata BoxSpace::GetMetadata() const {

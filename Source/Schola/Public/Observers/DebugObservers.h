@@ -21,12 +21,14 @@ public:
 	UDebugBoxObserver(){};
 
 	/** The ObservationSpace bounding the outputs of this sensor. */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sensor Properties")
 	FBoxSpace ObservationSpace = FBoxSpace();
 
 	FBoxSpace GetObservationSpace() const;
 
 	void CollectObservations(FBoxPoint& OutObservations);
+
+	FString GenerateId() const override;
 };
 
 /**
@@ -41,12 +43,14 @@ public:
 	UDebugBinaryObserver(){};
 
 	/** The ObservationSpace bounding the outputs of this sensor. */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sensor Properties")
 	FBinarySpace ObservationSpace;
 	
 	FBinarySpace GetObservationSpace() const;
 
 	void CollectObservations(FBinaryPoint& OutObservations);
+
+	FString GenerateId() const override;
 };
 
 /**
@@ -60,10 +64,12 @@ public:
 	UDebugDiscreteObserver(){};
 
 	/** The ObservationSpace bounding the outputs of this sensor. */
-	UPROPERTY(BlueprintReadWrite, EditAnywhere)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Sensor Properties")
 	FDiscreteSpace ObservationSpace;
 
 	FDiscreteSpace GetObservationSpace() const;
 
 	void CollectObservations(FDiscretePoint& OutObservations);
+
+	FString GenerateId() const override;
 };

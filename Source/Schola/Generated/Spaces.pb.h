@@ -359,6 +359,7 @@ class BoxSpace final :
 
   enum : int {
     kDimensionsFieldNumber = 1,
+    kShapeDimensionsFieldNumber = 2,
   };
   // repeated .Schola.BoxSpace.BoxSpaceDimension dimensions = 1;
   int dimensions_size() const;
@@ -378,6 +379,28 @@ class BoxSpace final :
   const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::Schola::BoxSpace_BoxSpaceDimension >&
       dimensions() const;
 
+  // repeated int32 shape_dimensions = 2;
+  int shape_dimensions_size() const;
+  private:
+  int _internal_shape_dimensions_size() const;
+  public:
+  void clear_shape_dimensions();
+  private:
+  int32_t _internal_shape_dimensions(int index) const;
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >&
+      _internal_shape_dimensions() const;
+  void _internal_add_shape_dimensions(int32_t value);
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >*
+      _internal_mutable_shape_dimensions();
+  public:
+  int32_t shape_dimensions(int index) const;
+  void set_shape_dimensions(int index, int32_t value);
+  void add_shape_dimensions(int32_t value);
+  const ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >&
+      shape_dimensions() const;
+  ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >*
+      mutable_shape_dimensions();
+
   // @@protoc_insertion_point(class_scope:Schola.BoxSpace)
  private:
   class _Internal;
@@ -387,6 +410,8 @@ class BoxSpace final :
   typedef void DestructorSkippable_;
   struct Impl_ {
     ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::Schola::BoxSpace_BoxSpaceDimension > dimensions_;
+    ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t > shape_dimensions_;
+    mutable std::atomic<int> _shape_dimensions_cached_byte_size_;
     mutable ::PROTOBUF_NAMESPACE_ID::internal::CachedSize _cached_size_;
   };
   union { Impl_ _impl_; };
@@ -1196,6 +1221,53 @@ inline const ::PROTOBUF_NAMESPACE_ID::RepeatedPtrField< ::Schola::BoxSpace_BoxSp
 BoxSpace::dimensions() const {
   // @@protoc_insertion_point(field_list:Schola.BoxSpace.dimensions)
   return _impl_.dimensions_;
+}
+
+// repeated int32 shape_dimensions = 2;
+inline int BoxSpace::_internal_shape_dimensions_size() const {
+  return _impl_.shape_dimensions_.size();
+}
+inline int BoxSpace::shape_dimensions_size() const {
+  return _internal_shape_dimensions_size();
+}
+inline void BoxSpace::clear_shape_dimensions() {
+  _impl_.shape_dimensions_.Clear();
+}
+inline int32_t BoxSpace::_internal_shape_dimensions(int index) const {
+  return _impl_.shape_dimensions_.Get(index);
+}
+inline int32_t BoxSpace::shape_dimensions(int index) const {
+  // @@protoc_insertion_point(field_get:Schola.BoxSpace.shape_dimensions)
+  return _internal_shape_dimensions(index);
+}
+inline void BoxSpace::set_shape_dimensions(int index, int32_t value) {
+  _impl_.shape_dimensions_.Set(index, value);
+  // @@protoc_insertion_point(field_set:Schola.BoxSpace.shape_dimensions)
+}
+inline void BoxSpace::_internal_add_shape_dimensions(int32_t value) {
+  _impl_.shape_dimensions_.Add(value);
+}
+inline void BoxSpace::add_shape_dimensions(int32_t value) {
+  _internal_add_shape_dimensions(value);
+  // @@protoc_insertion_point(field_add:Schola.BoxSpace.shape_dimensions)
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >&
+BoxSpace::_internal_shape_dimensions() const {
+  return _impl_.shape_dimensions_;
+}
+inline const ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >&
+BoxSpace::shape_dimensions() const {
+  // @@protoc_insertion_point(field_list:Schola.BoxSpace.shape_dimensions)
+  return _internal_shape_dimensions();
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >*
+BoxSpace::_internal_mutable_shape_dimensions() {
+  return &_impl_.shape_dimensions_;
+}
+inline ::PROTOBUF_NAMESPACE_ID::RepeatedField< int32_t >*
+BoxSpace::mutable_shape_dimensions() {
+  // @@protoc_insertion_point(field_mutable_list:Schola.BoxSpace.shape_dimensions)
+  return _internal_mutable_shape_dimensions();
 }
 
 // -------------------------------------------------------------------

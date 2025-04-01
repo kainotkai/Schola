@@ -32,6 +32,35 @@ void URotationObserver::CollectObservations(FBoxPoint& OutObservations)
 	}
 }
 
+FString URotationObserver::GenerateId() const
+{
+	FString Output = FString("Rotation");
+	// Add Pitch Dimension
+	if (bHasPitch)
+	{
+		// _Pitch followed by upper and lower bound
+		Output.Appendf(TEXT("_Pitch_%.2f_%.2f"), PitchBounds.Low, PitchBounds.High);
+	}
+	// Add Yaw Dimension
+	if (bHasYaw)
+	{
+		// _Yaw followed by upper and lower bound
+		Output.Appendf(TEXT("_Yaw_%.2f_%.2f"), YawBounds.Low, YawBounds.High);
+	}
+	// Add Roll Dimension
+	if (bHasRoll)
+	{
+		// _Roll followed by upper and lower bound
+		Output.Appendf(TEXT("_Roll_%.2f_%.2f"), RollBounds.Low, RollBounds.High);
+	}
+	if (bTrackNonOwner)
+	{
+		Output.Append("_Other");
+	}
+
+	return Output;
+}
+
 FBoxSpace URotationObserver::GetObservationSpace() const
 {
 	FBoxSpace SpaceDefinition;

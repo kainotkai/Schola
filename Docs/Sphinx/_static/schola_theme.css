@@ -14,3 +14,9 @@
 ueb-blueprint {
     margin-bottom: 10px;
 }
+
+.option-list dt kbd {
+    background: #e7f2fa;
+    padding: 6px;
+    border-top: 3px solid #6ab0de;
+}

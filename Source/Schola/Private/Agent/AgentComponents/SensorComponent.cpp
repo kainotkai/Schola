@@ -5,6 +5,10 @@
 #if WITH_EDITOR
 void USensor::TestSensorValidity()
 {
-	this->Observer->TestObserverValidity();
+	if (this->Observer)
+	{
+		this->Observer->TestObserverValidity();
+	}
+	
 }
 #endif

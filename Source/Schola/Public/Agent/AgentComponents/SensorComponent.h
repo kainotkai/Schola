@@ -21,13 +21,24 @@ class SCHOLA_API USensor : public UInteractionComponent
 
 public:
 	/** The Observer Object inside this Actuator Component */
-	UPROPERTY(EditAnywhere, NoClear, Instanced, meta = (ShowInnerProperties))
+	UPROPERTY(EditAnywhere, NoClear, Instanced, meta = (ShowInnerProperties), Category = "Sensor")
 	UAbstractObserver* Observer;
 
 #if WITH_EDITOR
 	/** Test the sensor validity by checking, if the number of dimensions is correct and if values are out of bounds. */
 	UFUNCTION(CallInEditor, Category="Sensor", Meta = (Tooltip = "Test the sensor validity by checking if the number of dimensions is correct and if values are out of bounds."))
 	void TestSensorValidity();
+
+	/** Generate a DebugId for this Observer, to check what will be used for Naming */
+	UFUNCTION(CallInEditor, Category = "Sensor", Meta = (Tooltip = "Display the Id for the Observer contained in this sensor."))
+	void GenerateDebugId()
+	{
+		if (Observer)
+		{
+			Observer->DisplayId = Observer->GetId();
+		}
+	}
+	
 #endif
 
 };

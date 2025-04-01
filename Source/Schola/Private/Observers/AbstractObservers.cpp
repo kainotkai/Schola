@@ -31,3 +31,69 @@ void UDiscreteObserver::SetDebugObservations(TPoint& Temp)
 }
 
 #endif
+
+FString UBoxObserver::GetId() const
+{
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		FString Id = this->GenerateId();
+		
+		for (UObject* RawWrapper : this->Wrappers)
+		{
+			IBoxObserverWrapper* Wrapper = Cast<IBoxObserverWrapper>(RawWrapper);
+			if (Wrapper)
+			{
+				Id.Append("_").Append(Wrapper->GenerateId());
+			}
+		}
+		return Id;
+	}
+}
+
+FString UDiscreteObserver::GetId() const
+{
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		FString Id = this->GenerateId();
+
+		for (UObject* RawWrapper : this->Wrappers)
+		{
+			IDiscreteObserverWrapper* Wrapper = Cast<IDiscreteObserverWrapper>(RawWrapper);
+			if (Wrapper)
+			{
+				Id.Append("_").Append(Wrapper->GenerateId());
+			}
+		}
+		return Id;
+	}
+}
+
+FString UBinaryObserver::GetId() const
+{
+	if (this->bUseCustomId)
+	{
+		return this->CustomId;
+	}
+	else
+	{
+		FString Id = this->GenerateId();
+
+		for (UObject* RawWrapper : this->Wrappers)
+		{
+			IBinaryObserverWrapper* Wrapper = Cast<IBinaryObserverWrapper>(RawWrapper);
+			if (Wrapper)
+			{
+				Id.Append("_").Append(Wrapper->GenerateId());
+			}
+		}
+		return Id;
+	}
+}

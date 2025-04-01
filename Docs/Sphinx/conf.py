@@ -28,9 +28,13 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx_copybutton',
     'sphinx.ext.autosectionlabel', 
+    'argparseautodoc.ext',
     'breathe',
-    "blueprint"
+    "blueprint",
+    "localref"
 ]
+
+autosectionlabel_prefix_document = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
@@ -54,6 +58,9 @@ html_static_path = ['_static']
 html_logo = './_static/AMD_Schola_Lockup_RGB_Blk.png'
 html_css_files = ['schola_theme.css']
 html_favicon = "./_static/icon.png"
+
+# disable index page
+html_domain_indices = False
 
 html_theme_options = {
     # Toc options

@@ -1,13 +1,12 @@
+# Copyright (c) 2023 Advanced Micro Devices, Inc. All Rights Reserved.
 """
-Copyright (c) 2023 Advanced Micro Devices, Inc. All Rights Reserved.
-
 Collection of custom callback classes for training NPCRL through Schola with stable baselines3
 """
 
 import sys
 import time
-from typing import Any, Dict, List
-from stable_baselines3.common.callbacks import BaseCallback, CheckpointCallback, CallbackList
+from typing import List
+from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 import numpy as np
 
 

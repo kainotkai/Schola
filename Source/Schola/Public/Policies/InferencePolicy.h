@@ -6,7 +6,9 @@
 #include "Policies/AbstractPolicy.h"
 #include "NNE.h"
 #include "NNERuntimeCPU.h"
+#include "NNERuntimeGPU.h"
 #include "NNEModelData.h"
+#include "NNERuntimeRunSync.h"
 #include "Common/InteractionDefinition.h"
 #include "Agent/AgentAction.h"
 #include "Common/LogSchola.h"
@@ -15,6 +17,9 @@
 #include <type_traits>
 #include "NNEStatus.h"
 #include "InferencePolicy.generated.h"
+
+using UE::NNE::FTensorBindingCPU;
+using UE::NNE::IModelInstanceRunSync;
 
 /**
  * @brief Generic Interface for a model instance wrapping NNE ModelInstaces targetted at different devices
@@ -25,50 +30,7 @@ public:
 	virtual ~IModelInstanceInterface() = default;
 	virtual TConstArrayView<UE::NNE::FTensorDesc> GetInputTensorDescs() = 0;
 	virtual UE::NNE::EResultStatus				  SetInputTensorShapes(TConstArrayView<UE::NNE::FTensorShape> InInputShapes) = 0;
-	virtual UE::NNE::EResultStatus				  RunSync(TConstArrayView<FGenericTensorBinding> InInputBindings, TConstArrayView<FGenericTensorBinding> InOutputBinding) = 0;
-};
-
-
-/**
- * @brief Generic Interface for a model wrapping NNE Models targetted at different devices
- * @tparam T The type of the model instance to be wrapped
- */
-template <class T>
-class UModelInstanceWrapper : public IModelInstanceInterface
-{
-private:
-	TSharedPtr<T> WrappedModel;
-
-	template <typename BindingType>
-	struct FBindingTypeExtractor;
-
-	template <typename BindingType>
-	struct FBindingTypeExtractor<UE::NNE::EResultStatus (T::*)(TConstArrayView<BindingType>, TConstArrayView<BindingType>)>
-	{
-		using BoundType = BindingType;
-	};
-public:
-	UModelInstanceWrapper(TSharedPtr<T> ModelPtr)
-		: WrappedModel(ModelPtr)
-	{
-	}
-
-	using BindingType = FBindingTypeExtractor<decltype(&T::RunSync)>::BoundType;
-
-	TConstArrayView<UE::NNE::FTensorDesc> GetInputTensorDescs()
-	{
-		return WrappedModel->GetInputTensorDescs();
-	};
-
-	UE::NNE::EResultStatus SetInputTensorShapes(TConstArrayView<UE::NNE::FTensorShape> InInputShapes) override
-	{
-		return WrappedModel->SetInputTensorShapes(InInputShapes);
-	};
-
-	UE::NNE::EResultStatus RunSync(TConstArrayView<FGenericTensorBinding> InInputBindings, TConstArrayView<FGenericTensorBinding> InOutputBindings) override
-	{
-		return WrappedModel->RunSync(MakeArrayView((BindingType*)InInputBindings.GetData(), InInputBindings.Num()), MakeArrayView((BindingType*)InOutputBindings.GetData(), InOutputBindings.Num()));
-	};
+	virtual UE::NNE::EResultStatus				  RunSync(TConstArrayView<FTensorBindingCPU> InInputBindings, TConstArrayView<FTensorBindingCPU> InOutputBinding) = 0;
 };
 
 /**
@@ -80,7 +42,8 @@ class IModelInterface
 public:
 	virtual ~IModelInterface() = default;
 
-	virtual TUniquePtr<IModelInstanceInterface> CreateModelInstance() = 0;
+	virtual TSharedPtr<IModelInstanceRunSync> CreateModelInstance() = 0;
+	virtual bool							  IsValid() = 0;
 };
 
 /**
@@ -88,16 +51,22 @@ public:
  */
 class UCPUModelWrapper : public IModelInterface
 {
-	TSharedPtr<UE::NNE::IModelCPU>		ModelPtr;
+	TSharedPtr<UE::NNE::IModelCPU> ModelPtr;
+
 public:
 	UCPUModelWrapper(TSharedPtr<UE::NNE::IModelCPU> RawModel)
-		: ModelPtr(RawModel){
+		: ModelPtr(RawModel) {
 
+		};
+
+	bool IsValid()
+	{
+		return ModelPtr.IsValid();
 	};
 
-	TUniquePtr<IModelInstanceInterface> CreateModelInstance()
+	TSharedPtr<IModelInstanceRunSync> CreateModelInstance()
 	{
-		return TUniquePtr<IModelInstanceInterface>(new UModelInstanceWrapper<UE::NNE::IModelInstanceCPU>(this->ModelPtr->CreateModelInstanceCPU()));
+		return this->ModelPtr->CreateModelInstanceCPU();
 	};
 };
 
@@ -107,15 +76,21 @@ public:
 class UGPUModelWrapper : public IModelInterface
 {
 	TSharedPtr<UE::NNE::IModelGPU> ModelPtr;
+
 public:
 	UGPUModelWrapper(TSharedPtr<UE::NNE::IModelGPU> RawModel)
-		: ModelPtr(RawModel){
+		: ModelPtr(RawModel) {
 
+		};
+
+	bool IsValid()
+	{
+		return ModelPtr.IsValid();
 	};
 
-	TUniquePtr<IModelInstanceInterface> CreateModelInstance()
+	TSharedPtr<IModelInstanceRunSync> CreateModelInstance()
 	{
-		return TUniquePtr<IModelInstanceInterface>(new UModelInstanceWrapper<UE::NNE::IModelInstanceGPU>(this->ModelPtr->CreateModelInstanceGPU()));
+		return this->ModelPtr->CreateModelInstanceGPU();
 	};
 };
 
@@ -141,13 +116,12 @@ public:
 	UCPURuntimeWrapper(TWeakInterfacePtr<INNERuntimeCPU> RawRuntime)
 		: RuntimePtr(RawRuntime)
 	{
-
 	}
 
 	bool IsValid()
 	{
 		return RuntimePtr.IsValid();
-	}
+	};
 
 	TUniquePtr<IModelInterface> CreateModel(TObjectPtr<UNNEModelData> ModelData)
 	{
@@ -166,13 +140,12 @@ public:
 	UGPURuntimeWrapper(TWeakInterfacePtr<INNERuntimeGPU> RawRuntime)
 		: RuntimePtr(RawRuntime)
 	{
-
 	}
 
 	bool IsValid()
 	{
 		return RuntimePtr.IsValid();
-	}
+	};
 
 	TUniquePtr<IModelInterface> CreateModel(TObjectPtr<UNNEModelData> ModelData)
 	{
@@ -188,6 +161,31 @@ enum class ERuntimeType : uint8
 {
 	CPU,
 	GPU
+};
+
+//Structure for storing ActionBuffer
+USTRUCT()
+struct FInferencePolicyBuffer
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	TArray<float> Buffer;
+
+	int Num() const
+	{
+		return this->Buffer.Num();
+	}
+
+	float* GetData()
+	{
+		return this->Buffer.GetData();
+	}
+
+	void Init(int Size)
+	{
+		this->Buffer.Init(0.0f, Size);
+	}
 };
 
 /**
@@ -206,26 +204,26 @@ public:
 	int Step = 0;
 
 	/** The Action Space of the Agent */
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Category="Policy Definition")
 	FDictSpace ActionSpaceDefn;
 
 	/** The Observation Space of the Agent */
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, Category="Policy Definition")
 	FDictSpace ObservationSpaceDefn;
 
 	/** The Model Data for the NNE Model */
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, Category="Policy Properties")
 	TObjectPtr<UNNEModelData> ModelData;
 
 	/** The Name of the Runtime to use for Inference. If no Runtimes are available, enable NNE plugins (e.g. NNERuntimeORT) */
-	UPROPERTY(EditAnywhere, meta=(GetOptions="GetRuntimeNames"))
+	UPROPERTY(EditAnywhere, meta = (GetOptions = "GetRuntimeNames"), Category="Policy Properties")
 	FString RuntimeName;
 
-	/** 
-	 * @brief Function that grabs all availabe runtime names 
+	/**
+	 * @brief Function that grabs all availabe runtime names
 	 * @return An Array of available runtime names
 	 */
-	UFUNCTION()
+	UFUNCTION(Category="Policy Utilities")
 	TArray<FString> GetRuntimeNames() const;
 
 	/**
@@ -236,20 +234,35 @@ public:
 	IRuntimeInterface* GetRuntime(const FString& SelectedRuntimeName) const;
 
 	/** Variable tracking if the network loaded correctly?*/
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, Category="Policy Properties")
 	bool bNetworkLoaded = false;
 
 	virtual TFuture<FPolicyDecision*> RequestDecision(const FDictPoint& Observations) override;
 
 	void Init(const FInteractionDefinition& PolicyDefinition);
 
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere)
-	TArray<float> ActionBuffer;
+	bool SetupBuffersAndBindings(const FInteractionDefinition& PolicyDefinition, TSharedPtr<IModelInstanceRunSync> ModelInstance);
 
-	UPROPERTY(BlueprintReadOnly,VisibleAnywhere)
-	TArray<float> ObservationBuffer;
+	UPROPERTY(VisibleAnywhere, Category="Policy Data")
+	TArray<FInferencePolicyBuffer> ActionBuffer;
+
+	UPROPERTY(VisibleAnywhere, Category="Policy Data")
+	TArray<FInferencePolicyBuffer> ObservationBuffer;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Policy Data")
+	TArray<float> StateBuffer;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Policy Properties")
+	int StateSeqLen;
+
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Policy Properties")
+	int StateDimSize;
 
 private:
 	/** The instantiated model */
-	TSharedPtr<IModelInstanceInterface> ModelInstance;
+	TSharedPtr<IModelInstanceRunSync> ModelInstance;
+
+	TArray<UE::NNE::FTensorBindingCPU> InputBindings;
+
+	TArray<UE::NNE::FTensorBindingCPU> OutputBindings;
 };

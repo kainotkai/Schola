@@ -20,7 +20,7 @@ from ray.rllib.utils.annotations import PublicAPI
 logger = logging.getLogger(__name__)
 
 
-def sorted_multi_agent_space(multi_agent_space: Dict[int,DictSpace]) -> DictSpace:
+def sorted_multi_agent_space(multi_agent_space: Dict[int, DictSpace]) -> DictSpace:
     """
     Sorts the spaces in a multi-agent space alphabetically by agent ID.
 
@@ -28,7 +28,7 @@ def sorted_multi_agent_space(multi_agent_space: Dict[int,DictSpace]) -> DictSpac
     ----------
     multi_agent_space : Dict[int,DictSpace]
         The multi-agent space to sort.
-    
+
     Returns
     -------
     DictSpace
@@ -42,6 +42,7 @@ def sorted_multi_agent_space(multi_agent_space: Dict[int,DictSpace]) -> DictSpac
         output_space[agent_id] = sorted_space
     return output_space
 
+
 @PublicAPI
 class BaseEnv(RayBaseEnv):
     """
@@ -53,7 +54,7 @@ class BaseEnv(RayBaseEnv):
         The connection to the Unreal Engine environment.
     verbosity : int, default=0
         The verbosity level for the environment.
-    
+
     Attributes
     ----------
     unwrapped : MultiAgentEnv
@@ -63,6 +64,7 @@ class BaseEnv(RayBaseEnv):
     last_reset_infos : Dict[int,Dict[str,str]]
         The info dict recorded during the last reset.
     """
+
     def __init__(
         self,
         unreal_connection: UnrealConnection,
@@ -100,14 +102,14 @@ class BaseEnv(RayBaseEnv):
         logging.debug(action_space)
         logging.debug(observation_space)
         # we convert the dictionary to a Dict space
-        self.unwrapped : MultiAgentEnv = MultiAgentSubclass(
+        self.unwrapped: MultiAgentEnv = MultiAgentSubclass(
             action_space=action_space,
             observation_space=observation_space,
             agent_ids=set(observation_space.keys()),
         )
 
     @property
-    def observation_space(self) -> DictSpace: #DictSpace[int,DictSpace[str,Any]]
+    def observation_space(self) -> DictSpace:  # DictSpace[int,DictSpace[str,Any]]
         """
         The observation space for the environment.
 
@@ -119,10 +121,10 @@ class BaseEnv(RayBaseEnv):
         return self.unwrapped.observation_space
 
     @property
-    def action_space(self) -> DictSpace: #DictSpace[int,DictSpace[str,Any]]
+    def action_space(self) -> DictSpace:  # DictSpace[int,DictSpace[str,Any]]
         """
         The action space for the environment.
-        
+
         Returns
         -------
         DictSpace
@@ -142,21 +144,30 @@ class BaseEnv(RayBaseEnv):
         """
         return self._env.num_envs
 
-    def poll(self) -> Tuple[EnvAgentIdDict[Dict[str,Any]], EnvAgentIdDict[float], EnvAgentIdDict[bool], EnvAgentIdDict[bool], EnvAgentIdDict[Dict[str,str]], EnvAgentIdDict[Any]]:
+    def poll(
+        self,
+    ) -> Tuple[
+        EnvAgentIdDict[Dict[str, Any]],
+        EnvAgentIdDict[float],
+        EnvAgentIdDict[bool],
+        EnvAgentIdDict[bool],
+        EnvAgentIdDict[Dict[str, str]],
+        EnvAgentIdDict[Any],
+    ]:
         """
         Poll the environment for the next observation, reward, termination, info and any off_policy_actions (Currently Unused).
 
         Returns
         -------
         observations : EnvAgentIdDict[Dict[str,Any]]
-            A dictionary, keyed by the environment and agent Id, containing the observations for each agent. 
+            A dictionary, keyed by the environment and agent Id, containing the observations for each agent.
         rewards : EnvAgentIdDict[float]
             A dictionary, keyed by the environment and agent Id, containing the reward for each agent.
         terminateds : EnvAgentIdDict[bool]
             A dictionary, keyed by the environment and agent Id, containing the termination flag for each agent.
         truncateds : EnvAgentIdDict[bool]
             A dictionary, keyed by the environment and agent Id, containing the truncation flag for each agent.
-        infos : EnvAgentIdDict[Dict[str,str]]]: 
+        infos : EnvAgentIdDict[Dict[str,str]]]:
             A dictionary, keyed by the environment and agent Id, containing the information dictionary for each agent.
         off_policy_actions : EnvAgentIdDict[Any]
             A dictionary, keyed by the environment and agent Id, containing the off-policy actions for each agent. Unused.
@@ -184,19 +195,27 @@ class BaseEnv(RayBaseEnv):
             truncateds[env_id]["__all__"] = all(truncateds[env_id].values())
             if terminateds[env_id]["__all__"] or truncateds[env_id]["__all__"]:
                 completed_env_ids.append(env_id)
+                
 
         if completed_env_ids:
             self.last_reset_obs, self.last_reset_infos = self._env.soft_reset(
                 completed_env_ids
             )
-            self.last_reset_obs = self.last_reset_obs
-
+       
+        #logging.info(f"{obs}, {terminateds},{truncateds}, {infos}")
+        logging.info(f"{terminateds}")
         return obs, rewards, terminateds, truncateds, infos, off_policy_actions
 
-    def send_actions(self, action_dict : EnvAgentIdDict[Dict[str,Any]]) -> None:
+    def send_actions(self, action_dict: EnvAgentIdDict[Dict[str, Any]]) -> None:
         self._env.send_actions(action_dict)
 
-    def try_reset(self, env_id:Optional[int]=None, seed:Optional[Union[List[int],int]]=None, options:Optional[Dict[str,str]]=None):
+    def try_reset(
+        self,
+        env_id: Optional[int] = None,
+        seed: Optional[Union[List[int], int]] = None,
+        options: Optional[Dict[str, str]] = None,
+    ):
+        logging.info(env_id)
         if env_id is not None:
             obs = {env_id: self.last_reset_obs[env_id]}
             infos = {env_id: self.last_reset_infos[env_id]}

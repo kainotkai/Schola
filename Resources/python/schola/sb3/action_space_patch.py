@@ -18,11 +18,9 @@ from gymnasium import spaces
 from typing import Callable, Dict, Iterable, Tuple, Union, Optional, Type, Any
 import warnings
 
-from stable_baselines3.common.buffers import RolloutBuffer
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.policies import ActorCriticCnnPolicy, ActorCriticPolicy, BasePolicy, MultiInputActorCriticPolicy
-from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
-from stable_baselines3.common.utils import explained_variance, get_schedule_fn
+from stable_baselines3.common.policies import ActorCriticPolicy
+from stable_baselines3.common.type_aliases import GymEnv, Schedule
 
 
 def reshape_nonbatch(tensor : th.Tensor) -> th.Tensor:
@@ -274,6 +272,31 @@ def patched_with_norm(discrete_norm_factor = 1.0, continuous_norm_factor = 1.0):
             return cached_make_proba_dist(action_space, use_sde, dist_kwargs)
     return patched_make_proba_dist
 
+# Below code is adapted from https://github.com/DLR-RM/stable-baselines3/blob/master/stable_baselines3/common/callbacks.py
+
+#The MIT License
+#
+#Copyright (c) 2019 Antonin Raffin
+#
+#Permission is hereby granted, free of charge, to any person obtaining a copy
+#of this software and associated documentation files (the "Software"), to deal
+#in the Software without restriction, including without limitation the rights
+#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#copies of the Software, and to permit persons to whom the Software is
+#furnished to do so, subject to the following conditions:
+#
+#The above copyright notice and this permission notice shall be included in
+#all copies or substantial portions of the Software.
+#
+#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#THE SOFTWARE.
+
+# Modifications Copyright (c) 2023 Advanced Micro Devices, Inc. All Rights Reserved.
 
 class PatchedPPO(PPO):
 
@@ -366,6 +389,8 @@ class PatchedPPO(PPO):
 
         if _init_setup_model:
             PPO._setup_model(self)  
+
+# End of Adapted Code
 
 
 cached_get_action_dim = preprocessing.get_action_dim

@@ -5,7 +5,8 @@ The Schola project is an effort to build a toolkit/plugin for controlling Object
 
 ### Install Unreal Engine
 
-This project is designed for Unreal Engine 5.4+ which is available for [Download](https://www.unrealengine.com/en-US/download). It is tested on 5.4.3 and 5.4.4.
+Release 1.0 of this this project is designed for Unreal Engine 5.4 which is available for [Download](https://www.unrealengine.com/en-US/download) and is tested on 5.4.3 and 5.4.4. Release 1.1 supports Unreal Engine 5.5 (It is not compatible with Unreal Engine 5.4).
+
 
 > **Important for Visual Studio Users**
 > Only MSVC v143 Build Tools should be selected during install including other build tools will cause linking errors. Sepcifically, use `MSVC14.X` where `X>34` from Visual Studio 2022, and `Windows 10.0.22621.0 SDK` to avoid linking errors

@@ -113,7 +113,7 @@ class DiscreteSpace(gymnasium.spaces.Discrete, UnrealSpace):
         --------
         merge_discrete_like_spaces : Merge multiple Discrete or MultiDiscrete spaces into a single MultiDiscrete space.
         """
-        return merge_discrete_like_spaces(spaces)
+        return merge_discrete_like_spaces(*spaces)
 
     def __len__(self):
         return 1

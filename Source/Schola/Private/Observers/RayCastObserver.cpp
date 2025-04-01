@@ -185,6 +185,28 @@ void URayCastObserver::CollectObservations(FBoxPoint& OutObservations)
 	}
 }
 
+FString URayCastObserver::GenerateId() const
+{
+	FString Output = FString("Ray");
+	// Add the number of rays
+	Output.Appendf(TEXT("_Num_%d"), NumRays);
+	// Add the angle of the rays
+	Output.Appendf(TEXT("_Deg_%.2f"), RayDegrees);
+	//Add the Max distance
+	Output.Appendf(TEXT("_Max_%.2f"), RayLength);
+	Output.Append("_").Append(UEnum::GetValueAsString<ECollisionChannel>(CollisionChannel));
+	// Add the tags
+	if (TrackedTags.Num() > 0)
+	{
+		Output.Append("_Tags");
+		for (const FName& Tag : TrackedTags)
+		{
+			Output.Appendf(TEXT("_%s"), *Tag.ToString());
+		}
+	}
+	return Output;
+}
+
 #if WITH_EDITOR
 void URayCastObserver::DrawDebugLines()
 {

@@ -116,7 +116,7 @@ documentation/*.bkp
 !/Docs/Sphinx/API/python_generated.rst
 !/Docs/Sphinx/API/python_core.rst
 !/Docs/Sphinx/API/python_extensions.rst
-!/Docs/Sphinx/API/python_scripting.rst
+!/Docs/Sphinx/API/python_scripts.rst
 
 
 

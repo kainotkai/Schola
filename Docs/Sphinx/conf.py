@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Schola'
-copyright = '2023-2024, Advanced Micro Devices Inc.'
+copyright = "Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All Rights Reserved."
 author = 'Advanced Micro Devices'
 
 import sys
@@ -72,6 +72,35 @@ html_theme_options = {
     'logo_only': True,
 }
 
+PYTHON_VERSION = "Python 3.9 to 3.12 "
+UNREAL_VERSION = "Unreal Engine 5.5"
+UNREAL_VERSION_EXACT = "5.5.2"
+
+rst_prolog =f"""
+.. |py_version| replace:: {PYTHON_VERSION} 
+.. _`py_version`: https://www.python.org/downloads/release/python-3919/
+
+.. |unreal_version| replace:: ({UNREAL_VERSION_EXACT} is recommended for reproducibility)
+
+.. |unreal_version_win| replace:: {UNREAL_VERSION}
+.. _`unreal_version_win`: https://www.unrealengine.com/en-US/download 
+
+.. |unreal_version_linux| replace:: {UNREAL_VERSION}
+.. _`unreal_version_linux`: https://www.unrealengine.com/en-US/download
+
+
+.. |ubuntu_version| replace:: Ubuntu 22.04
+.. _`ubuntu_version`: https://releases.ubuntu.com/jammy/
+.. |ubuntu_version_exact| replace:: (22.04.4 Desktop x86 64-bit is recommended for reproducibility)
+
+.. |windows_11| replace:: Windows 11
+.. _`windows_11`: https://www.microsoft.com/en-us/software-download/windows11
+
+.. |windows_10| replace:: Windows 10
+.. _`windows_10`: https://www.microsoft.com/en-us/software-download/windows10
+
+.. |vs_version| replace:: (Visual Studio Professional 2022 (64-bit) - LTSC 17.8 is recommended for reproducibility)
+"""
 
 # -- Options for todo extension ----------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/extensions/todo.html#configuration

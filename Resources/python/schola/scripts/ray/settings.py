@@ -160,7 +160,8 @@ class ResourceSettings():
     num_learners: Optional[int] = 0 #: The number of learner processes to use for the training job. This specifies how many parallel learner processes will be used to train the model. Each learner will process a portion of the training data and update the model weights independently. This can help to speed up training times by leveraging multiple CPU cores or GPUs.
     num_cpus_for_main_process: Optional[int] = 1 #: The number of CPUs to allocate for the main process. This is the number of CPU cores that will be allocated to the main process that manages the training job. This can be used to ensure that the main process has enough resources to handle the workload and manage the learner processes effectively.
     num_cpus_per_learner: Optional[int] = 1 #: The number of CPUs to allocate for each learner process. This specifies how many CPU cores will be allocated to each individual learner process that is used for training. This can be used to ensure that each learner has enough resources to handle its workload and process the training data efficiently.
-    num_gpus_per_learner: Optional[int] = 0 #: The number of GPUs to allocate for each learner process. This specifies how many GPUs will be allocated to each individual learner process that is used for training. uster: Optional[bool] = False
+    num_gpus_per_learner: Optional[int] = 0 #: The number of GPUs to allocate for each learner process. This specifies how many GPUs will be allocated to each individual learner process that is used for training.
+    using_cluster: Optional[bool] = False #: Whether Ray is running on a predefined cluster, or if one should be created as part of the launch script.
 
     @property
     def name(self) -> str:

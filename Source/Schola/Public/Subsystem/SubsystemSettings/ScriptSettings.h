@@ -106,7 +106,7 @@ public:
 	 * @brief Get the path to the script to run
 	 * @return The path to the script to run
 	 */
-	FFilePath GetScriptPath() const;
+	FString GetScriptPath() const;
 
 	FLaunchableScript GetLaunchableScript() const;
 

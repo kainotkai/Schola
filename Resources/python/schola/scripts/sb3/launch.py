@@ -27,8 +27,9 @@ from schola.scripts.common import (
     add_unreal_process_args,
     add_checkpoint_args,
 )
+from stable_baselines3.common import utils
 from schola.scripts.sb3.settings import PPOSettings, SACSettings, SB3ScriptArgs
-from stable_baselines3.common.logger import HumanOutputFormat, Logger
+from stable_baselines3.common.logger import HumanOutputFormat, TensorBoardOutputFormat, Logger
 
 def make_parser() -> ArgumentParser:
     """
@@ -198,7 +199,6 @@ def main(args: SB3ScriptArgs) -> Optional[Tuple[float,float]]:
                     env = env,
                     verbose = args.sb3_verbosity,
                     policy_kwargs = policy_kwargs,
-                    tensorboard_log = args.log_dir if args.enable_tensorboard else None,
                     **asdict(args.algorithm_settings)
                 )
             # Set a variable here that we can use later when exporting to onnx 
@@ -226,6 +226,17 @@ def main(args: SB3ScriptArgs) -> Optional[Tuple[float,float]]:
 
             callbacks = []
 
+            # grab all loggers that we can find installed in the pc,
+            output_formats = []
+            for plugin in args.plugins:
+                output_formats += plugin.get_extra_KVWriters()
+                callbacks += plugin.get_extra_callbacks()
+
+            # This is a bit of a hack, since output_formats doesn't have a getter/setter but it this is totally safe otherwise
+            logger = utils.configure_logger(args.sb3_verbosity, args.log_dir if args.enable_tensorboard else None, args.algorithm_settings.name, args.reset_timestep)
+            logger.output_formats += output_formats
+            model.set_logger(logger)
+
             if args.enable_tensorboard:
                 reward_callback = RewardCallback(
                     verbose=args.callback_verbosity,
@@ -246,17 +257,6 @@ def main(args: SB3ScriptArgs) -> Optional[Tuple[float,float]]:
             if args.pbar:
                 pbar_callback = CustomProgressBarCallback()
                 callbacks.append(pbar_callback)
-            
-            # grab all loggers that we can find installed in the pc,
-            output_formats = [HumanOutputFormat(sys.stdout)]
-            for plugin in args.plugins:
-                output_formats += plugin.get_extra_KVWriters()
-                callbacks += plugin.get_extra_callbacks()
-            loggers = Logger(
-                folder=None,
-                output_formats=output_formats,
-            )
-            model.set_logger(loggers)
 
             model.learn(
                 total_timesteps=args.timesteps,

@@ -52,6 +52,7 @@ if __name__ == "__main__":
     setup(
         name="schola",
         version=get_version(),
+        python_requires=">=3.9, <3.13",
         author="Advanced Micro Devices, Inc.",
         author_email="alexcann@amd.com",
         packages=find_packages(),
@@ -61,7 +62,7 @@ if __name__ == "__main__":
         install_requires=[
         "protobuf>=3.20",
         "grpcio>=1.51.1",
-        "onnx>=1.11, <1.16.2",
+        "onnx>=1.11",
         "gymnasium==0.29.1"
         ],
         extras_require={

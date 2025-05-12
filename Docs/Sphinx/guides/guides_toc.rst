@@ -8,6 +8,9 @@ Guides
    setup_schola
    setup_examples
    running_schola
+   setting_up_inference
+   running_from_cli
+   choosing_an_environment_type
    setup_distributed_training
    extending_launch
-   choosing_an_environment_type
+   tips_and_tricks

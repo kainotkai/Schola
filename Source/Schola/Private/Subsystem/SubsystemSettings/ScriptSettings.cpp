@@ -35,7 +35,7 @@ FString FScriptSettings::GetTrainingArgs(int Port) const
 	return ArgBuilder.Build();
 }
 
-FFilePath FScriptSettings::GetScriptPath() const
+FString FScriptSettings::GetScriptPath() const
 {
 	switch (ScriptType)
 	{
@@ -43,43 +43,51 @@ FFilePath FScriptSettings::GetScriptPath() const
 			switch (PythonScriptType)
 			{
 				case (EPythonScript::SB3):
-					return FFilePath{ IPluginManager::Get().FindPlugin(TEXT("Schola"))->GetBaseDir() + FString("/Resources/python/schola/scripts/sb3/launch.py") };
+					return FString("-m schola.scripts.sb3.launch");
 
 				case (EPythonScript::RLLIB):
-					return FFilePath{ IPluginManager::Get().FindPlugin(TEXT("Schola"))->GetBaseDir() + FString("/Resources/python/schola/scripts/ray/launch.py") };
+					return FString("-m schola.scripts.ray.launch");
 
 				default:
-					return CustomPythonScriptSettings.LaunchScript;
+					return WithQuotes(CustomPythonScriptSettings.LaunchScript.FilePath);
 			}
 
 		default:
-			return CustomScriptSettings.LaunchScript;
+			return WithQuotes(CustomScriptSettings.LaunchScript.FilePath);
 	}
 }
 
 FLaunchableScript FScriptSettings::GetLaunchableScript() const
-{
+{	
+	FString ScriptCommand = this->GetScriptPath();
 	switch (ScriptType)
 	{
 		case (EScriptType::Python):
 			switch (EnvType)
 			{
 				case (EPythonEnvironmentType::Conda):
-					return FLaunchableScript(FString("conda"), FString("run --live-stream -n ") + this->CondaEnvName + FString(" python ") + WithQuotes(this->GetScriptPath().FilePath));
-
+					return FLaunchableScript(FString("conda"), FString("run --live-stream -n ") + this->CondaEnvName + FString(" python ") + ScriptCommand);
 				case (EPythonEnvironmentType::VEnv):
-					return FLaunchableScript(this->CustomPythonPath.FilePath, WithQuotes(this->GetScriptPath().FilePath));
+					//Convert to absolute file path
+					if (this->CustomPythonPath.FilePath.StartsWith(TEXT("..")))
+					{
+						return FLaunchableScript(FPaths::ConvertRelativePathToFull(this->CustomPythonPath.FilePath), ScriptCommand);
+					}
+					else
+					{
+						return FLaunchableScript(this->CustomPythonPath.FilePath, ScriptCommand);
+					}
 
 				case (EPythonEnvironmentType::SystemPath):
-					return FLaunchableScript(FString("python"), WithQuotes(this->GetScriptPath().FilePath));
+					return FLaunchableScript(FString("python"), ScriptCommand);
 
 				default:
 					EnsureScholaIsInstalled();
-					return FLaunchableScript(GetBuiltInPythonPath(), WithQuotes(this->GetScriptPath().FilePath));
+					return FLaunchableScript(GetBuiltInPythonPath(), ScriptCommand);
 			}
 
 		default:
-			return FLaunchableScript(this->GetScriptPath().FilePath);
+			return FLaunchableScript(ScriptCommand);
 	}
 }
 

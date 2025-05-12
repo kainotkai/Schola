@@ -12,7 +12,7 @@ Before we begin, ensure that you have the following prerequisites installed on y
 
    .. group-tab:: Linux
 
-      - `Ubuntu 22.04 <https://releases.ubuntu.com/jammy/>`_ (22.04.4 Desktop x86 64-bit is recommended for reproducibility)
+      - |ubuntu_version|_ |ubuntu_version_exact|
       - `Docker <https://docs.docker.com/engine/install/ubuntu/>`_ (Ensure Docker is installed and running)
       - `MicroK8s <https://microk8s.io/docs/>`_ (A lightweight Kubernetes distribution)
       - `Ray <https://docs.ray.io/en/latest/installation.html>`_ (A framework for building and running distributed applications)

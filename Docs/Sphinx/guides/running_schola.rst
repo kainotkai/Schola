@@ -1,38 +1,43 @@
 Running Schola
 ==============
 
-Schola uses subclasses of :py:class:`~schola.core.unreal_connections.UnrealConnection` to interact with Unreal Engine. It supports both creating a standalone instance of Unreal Engine 
-running as a child process of your python script, or connecting to a running Unreal Engine process.
+Schola V2 uses a protocol-simulator architecture to interact with Unreal Engine. It supports both creating a standalone instance of Unreal Engine 
+running as a child process of your Python script, or connecting to a running Unreal Engine process. The architecture separates:
+
+* **Protocols** (:py:class:`~schola.core.protocols.base.BaseRLProtocol`) - Handle communication with Unreal Engine
+* **Simulators** (:py:class:`~schola.core.simulators.base.BaseSimulator`) - Manage the Unreal Engine process lifecycle
 
 
 Launch An Unreal Environment From Python
 ----------------------------------------
 
-Schola supports running environments entirely from python using a :py:class:`~schola.core.unreal_connections.StandaloneUnrealConnection`.
+Schola supports running environments entirely from Python using the :py:class:`~schola.core.simulators.unreal.UnrealExecutable` simulator 
+combined with a communication protocol like :py:class:`~schola.core.protocols.protobuf.gRPC.gRPCProtocol`.
 
 .. code-block:: python
 
-    from schola.core.unreal_connection import StandaloneConnection
+    from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+    from schola.core.simulators.unreal import UnrealExecutable
 
-    url="localhost" # Connect to the engine over localhost
-    ue_path="Path to your Game Binary"
-    port=None # Leave blank to use an arbitrary open port
-    headless_mode = True # Should we skip rendering the Unreal Engine game?
-    display_logs = False # Should we open a terminal to show Unreal Engine logs?
-    _map=None # Run the default map for the selected executable, set to "/game/<path to map>" to use a different map.
-    set_fps=60 # Set a fixed framerate for the game.
-    disable_script=True # Ignore the RunScriptOnLaunch setting for the UnrealEngineGame.
+    # Define the communication protocol
+    protocol = gRPCProtocol(
+        url="localhost",     # Connect to the engine over localhost
+        port=50051           # Port for gRPC communication (default: 50051)
+    )
 
-    unreal_connection = StandaloneConnection(url=url,
-                                            port=port,
-                                            headless_mode=headless_mode,
-                                            display_logs=display_logs,
-                                            map=_map,
-                                            set_fps=set_fps)
+    # Define the simulator to manage the Unreal Engine executable
+    simulator = UnrealExecutable(
+        executable_path="Path/To/Your/Game.exe",  # Path to your packaged game binary
+        headless_mode=True,          # Skip rendering (faster training)
+        display_logs=True,           # Show Unreal Engine logs in terminal
+        map=None,                    # Use default map, or specify "/Game/<MapName>"
+        set_fps=60,                  # Fixed framerate for deterministic training
+        disable_script=True          # Ignore RunScriptOnLaunch setting
+    )
 
 
-Initialize the Environment
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Initialize the Standalone Environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. tabs::
 
@@ -40,53 +45,96 @@ Initialize the Environment
         
         .. code-block:: python
 
-            from schola.gym.env import VecEnv
-            from schola.core.unreal_connection import StandaloneConnection
+            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.simulators.unreal import UnrealExecutable
+            from schola.gym import GymVectorEnv
 
-            unreal_connection = StandaloneConnection("localhost","Path To Game Binaries", headless_mode=True)
-            env = VecEnv(unreal_connection)
-            ... # Your Code Here
+            # Setup protocol and simulator
+            protocol = gRPCProtocol(url="localhost", port=50051)
+            simulator = UnrealExecutable(
+                executable_path="Path/To/Your/Game.exe",
+                headless_mode=True
+            )
 
-    .. group-tab:: Ray
+            # Create vectorized Gymnasium environment
+            env = GymVectorEnv(simulator=simulator, protocol=protocol)
+            
+            # Use the environment
+            obs, info = env.reset()
+            actions = env.action_space.sample()
+            obs, rewards, terminated, truncated, info = env.step(actions)
+
+    .. group-tab:: Ray RLlib
         
         .. code-block:: python
 
-            from schola.ray.env import BaseEnv
-            from schola.core.unreal_connection import StandaloneConnection
+            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.simulators.unreal import UnrealExecutable
+            from schola.rllib import RayEnv, RayVecEnv
 
-            unreal_connection = StandaloneConnection("localhost","Path To Game Binaries", headless_mode=True)
-            env = BaseEnv(unreal_connection)
-            ... # Your Code Here
+            # Setup protocol and simulator
+            protocol = gRPCProtocol(url="localhost", port=50051)
+            simulator = UnrealExecutable(
+                executable_path="Path/To/Your/Game.exe",
+                headless_mode=True
+            )
+
+            # For single environment (local runner)
+            env = RayEnv(protocol=protocol, simulator=simulator)
+            
+            # For multiple parallel environments (distributed training)
+            # env = RayVecEnv(protocol=protocol, simulator=simulator)
+            
+            # Use the environment
+            obs, info = env.reset()
+            actions = {agent_id: env.action_space.sample() for agent_id in env.get_agent_ids()}
+            obs, rewards, terminated, truncated, info = env.step(actions)
 
     .. group-tab:: Stable Baselines 3
 
         .. code-block:: python
 
-            from schola.sb3.env import VecEnv
-            from schola.core.unreal_connection import StandaloneConnection
+            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.simulators.unreal import UnrealExecutable
+            from schola.sb3 import VecEnv
 
-            unreal_connection = StandaloneConnection("localhost","Path To Game Binaries", headless_mode=True)
-            env = VecEnv(unreal_connection)
-            ... # Your Code Here
+            # Setup protocol and simulator
+            protocol = gRPCProtocol(url="localhost", port=50051)
+            simulator = UnrealExecutable(
+                executable_path="Path/To/Your/Game.exe",
+                headless_mode=True
+            )
+
+            # Create vectorized environment for SB3
+            env = VecEnv(simulator=simulator, protocol=protocol)
+            
+            # Use with SB3 algorithms
+            from stable_baselines3 import PPO
+            model = PPO("MultiInputPolicy", env, verbose=1)
+            model.learn(total_timesteps=10000)
 
 
 Connect To a Running Unreal Environment
 ---------------------------------------
 
-Schola supports connecting to an already running Editor or Game, for debugging and Unreal Engine driven workflows using a :py:class:`~schola.core.unreal_connections.UnrealEditorConnection`
-
+Schola supports connecting to an already running Editor or Game, for debugging and Unreal Engine driven workflows using the :py:class:`~schola.core.simulators.unreal.UnrealEditor` simulator.
 
 .. code-block:: python
 
-    from schola.core.unreal_connection import UnrealEditorConnection
+    from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+    from schola.core.simulators.unreal import UnrealEditor
 
-    url="localhost" # Connect to the engine over localhost
-    port=8002 # Must match the port selected in your Unreal Engine Plugin Settings for Schola
+    # Define the communication protocol
+    protocol = gRPCProtocol(
+        url="localhost",  # Connect to the engine over localhost
+        port=50051        # Must match the port in your Unreal Engine Schola Plugin Settings
+    )
     
-    unreal_connection = UnrealEditorConnection(url, port)
+    # Define the simulator (no process management needed for editor)
+    simulator = UnrealEditor()
 
-Initialize the Environment
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+Initialize the Editor Environment
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. tabs::
 
@@ -94,31 +142,58 @@ Initialize the Environment
         
         .. code-block:: python
 
-            from schola.gym.env import VecEnv
-            from schola.core.unreal_connection import UnrealEditorConnection
+            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.simulators.unreal import UnrealEditor
+            from schola.gym import GymVectorEnv
 
-            unreal_connection = UnrealEditorConnection("localhost",8002)
-            env = VecEnv(unreal_connection)
-            ... # Your Code Here
+            # Setup protocol and simulator
+            protocol = gRPCProtocol(url="localhost", port=50051)
+            simulator = UnrealEditor()
 
-    .. group-tab:: Ray
+            # Create vectorized Gymnasium environment
+            env = GymVectorEnv(simulator=simulator, protocol=protocol)
+            
+            # Use the environment
+            obs, info = env.reset()
+            actions = env.action_space.sample()
+            obs, rewards, terminated, truncated, info = env.step(actions)
+
+    .. group-tab:: Ray RLlib
         
         .. code-block:: python
 
-            from schola.ray.env import BaseEnv
-            from schola.core.unreal_connection import UnrealEditorConnection
+            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.simulators.unreal import UnrealEditor
+            from schola.rllib import RayEnv
 
-            unreal_connection = UnrealEditorConnection("localhost",8002)
-            env = BaseEnv(unreal_connection)
-            ... # Your Code Here
+            # Setup protocol and simulator
+            protocol = gRPCProtocol(url="localhost", port=50051)
+            simulator = UnrealEditor()
+
+            # Create Ray environment
+            env = RayEnv(protocol=protocol, simulator=simulator)
+            
+            # Use the environment
+            obs, info = env.reset()
+            actions = {agent_id: env.action_space.sample() for agent_id in env.get_agent_ids()}
+            obs, rewards, terminated, truncated, info = env.step(actions)
 
     .. group-tab:: Stable Baselines 3
 
         .. code-block:: python
 
-            from schola.sb3.env import VecEnv
-            from schola.core.unreal_connection import UnrealEditorConnection
+            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.simulators.unreal import UnrealEditor
+            from schola.sb3 import VecEnv
 
-            unreal_connection = UnrealEditorConnection("localhost",8002)
-            env = VecEnv(unreal_connection)
-            ... # Your Code Here
+            # Setup protocol and simulator
+            protocol = gRPCProtocol(url="localhost", port=50051)
+            simulator = UnrealEditor()
+
+            # Create vectorized environment for SB3
+            env = VecEnv(simulator=simulator, protocol=protocol)
+            
+            # Use with SB3 algorithms
+            from stable_baselines3 import PPO
+            model = PPO("MultiInputPolicy", env, verbose=1)
+            model.learn(total_timesteps=10000)

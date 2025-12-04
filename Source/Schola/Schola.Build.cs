@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -10,22 +10,14 @@ public class Schola : ModuleRules
 
         PublicIncludePaths.AddRange(new string[] { });
 
-
-
-        PrivateIncludePaths.AddRange(new string[] { "Schola/Private" });
+        PrivateIncludePaths.AddRange(new string[] { "Schola/Private"});
 
         PublicDependencyModuleNames.AddRange(new string[] {
             "Core",
             "InputCore",
-            "HeadMountedDisplay",
-            "NavigationSystem",
             "AIModule",
-            "EnhancedInput",
-            "Sockets",
-            "Networking",
-            "gRPC",
-            "DeveloperSettings",
-            "NNE","Json", "JsonUtilities"
+            "Json", 
+            "JsonUtilities",
         });
 
         PrivateIncludePathModuleNames.AddRange(new string[] { });
@@ -34,10 +26,15 @@ public class Schola : ModuleRules
             "Engine",
             "Slate",
             "SlateCore",
-            "Projects",
+            "Projects"
         });
-
-
+        
+        // BlueprintGraph is only needed for the editor so we can raise BlueprintErrors
+        if (Target.bBuildEditor)
+        {
+            PrivateDependencyModuleNames.Add("BlueprintGraph");
+        }
+        
         DynamicallyLoadedModuleNames.AddRange(new string[] { });
     }
 }

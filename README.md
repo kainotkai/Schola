@@ -6,22 +6,23 @@ The Schola project is an effort to build a toolkit/plugin for controlling Object
 ### Install Unreal Engine
 As Schola is an Unreal Engine Project, you will need to first install Unreal Engine. Refer to the below table to identify the correct version of Unreal Engine for each version of Schola. 
 
->**Note**
+>[!NOTE]
 > Each Schola release may be compatible with other versions of Unreal Engine beyond the ones listed here, however these are the version(s) tested for each release.
 
 | Schola version | Unreal Version |
 | -------------- | -------------- |
+| 2.0 | 5.5-5.6 |
 | 1.3 | 5.5-5.6 |
 | 1.2 | 5.5 |
 | 1.1 | 5.5 |
 | 1.0 | 5.4 |
 
 
-> **Important for Visual Studio Users**
-> Only MSVC v143 Build Tools should be selected during install including other build tools will cause linking errors. Sepcifically, use `MSVC14.X` where `X>34` from Visual Studio 2022, and `Windows 10.0.22621.0 SDK` to avoid linking errors
-
 ### Installing Schola Into Your Project
-To use schola in an existing Unreal Engine Project copy this repository to the `/Plugins` folder of your project, and pip install the schola python package in `/Resources/python` using `pip install -e <path to folder containing setup.py>[all]`
+To use schola in an existing Unreal Engine Project copy this repository to the `/Plugins` folder of your project, and pip install the schola python package in `/Resources/python` using `pip install -e <path to folder containing setup.py>[all]`.
+
+> [!IMPORTANT]
+> Since Schola is provided as C++ source you must recompile your project after adding it. Otherwise, you will receive a warning about Schola being built for another version of Unreal Engine regardless of what version you are using.
 
 ### Dependencies
 
@@ -33,10 +34,10 @@ See `setup.py` for a comprehensive list of dependencies. The following flags are
 | ---- | ---- |
 | "sb3" | Installs dependencies for running training with StableBaselines 3 |
 | "rllib" | Installs dependencies for running training with RLlib |
-| "imitation" | Installs dependencies for doing imitation learning with the imitation library, includes sb3. |
-| "all" | shortcut for setting sb3, rllib and imitation flags. |
+| "minari" | Installs dependencies for collecting Minari datasets with Schola |
+| "all" | Installs for setting sb3, rllib and imitation flags. |
 | "docs" | Installs dependencies for building documentation with Sphinx |
-| "test" | Intalls pytest and dependencies for running the tests |
+| "test" | Installs pytest and dependencies for running the tests |
 
 #### C++
 
@@ -44,23 +45,24 @@ All C++ dependencies for using Schola are bundled with the plugin under `/Source
 
 ## Build and Test
 
+>[!IMPORTANT]
+> Schola comes with all dependencies included. Only run these if you encounter issues during the setup.
+
 ### Building Third Party Dependencies
 
 Third party dependencies, specifically gRPC and Protobuf can be built using `Schola\Plugins\Schola\Resources\Build\windows_dependencies.bat` or `Schola\Plugins\Schola\Resources\Build\linux_dependencies.sh` depending on your OS. This will update the plugin ThirdParty folder to include copies of the dependencies including .lib/.a files, and copy protoc, and relevant plugins to the tools directory.
 
 ### Generating gRPC/Protobuf Code
 
-To generate code for gRPC and Protobuf run `/proto/compile.py`. This will generate `*.pb.cc`, `*.pb.h` and `*.pb.py` files to the correct folders as well as fix several bugs in the default generator (e.g. ignore warnings in C++ code, and fix relative imports for python)
+To generate code for gRPC and Protobuf run `schola compile-proto`. This will generate `*.pb.cc`, `*.pb.h` and `*.pb.py` files to the correct folders as well as fix several bugs in the default generator (e.g. ignore warnings in C++ code, and fix relative imports for python)
 
 ### Generating Documentation
 
 Documentation for Schola is build using a combination of Doxygen + Sphinx + Breathe.
 
 1. Install Doxygen from [the website](https://www.doxygen.nl/) 
-2. Install sphinx, breathe, and the Read The Docs theme for sphinx using pip `pip install sphinx breathe sphinx_rtd_theme sphinx-tabs sphinx-copybutton`
-3. Generate xml to `/Docs/Doxygen/xml` using the Doxyfile in `/Docs/Doxygen`
-4. From the `Docs/Sphinx` folder run `breathe-apidoc -o API/Unreal ../Doxygen/xml`
-5. Run sphinx-build or make to generate the unified docs.
+2. Install documentation requirements for Schola using pip `pip install -e .<Path to schola python package>[docs] `
+3. Run the command `schola build-docs --builder html` from the root of this project (or supply the path to the plugin folder)
 
 ## Contributing
 
@@ -89,4 +91,4 @@ Docstrings in python are in [numpydoc](https://numpydoc.readthedocs.io/en/latest
 
 ### Testing
 
-Testing is implemented through pytests in the ScholaExamples repository. These tests build a fresh copy of this project before running unit tests on Python + Unreal. This tests whether all examples run with each framework and are functional based on the API.
+Schola includes unit tests for both python and C++ source. The primary method of testing is using python+pytest, even for the C++ code. Python only tests are available in the `/Test` folder. C++ tests are implemented for each module as Unreal Automation tests in `Source/<Module>/Private/Test` and will be collected and invoked by Pytest. These tests are also available through the editor.

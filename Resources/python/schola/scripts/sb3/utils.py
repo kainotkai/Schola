@@ -290,3 +290,5 @@ class CustomProgressBarCallback(BaseCallback):
         # Flush and close progress bar
         self.pbar.refresh()
         self.pbar.close()
+
+# end of adapted code

@@ -11,12 +11,6 @@
 #include "BlueprintEditor.h"
 #include "UnrealEd.h"
 
-
-#include "Training/AbstractTrainer.h"
-#include "Environment/AbstractEnvironment.h"
-#include "Environment/StaticEnvironment.h"
-#include "Environment/DynamicEnvironment.h"
-#include "Observers/AbstractObservers.h"
 #include "Common/UtilityFunctions.h"
 
 

@@ -58,11 +58,11 @@ class IdManager:
 
     """
 
-    def __init__(self, ids: List[List[int]]):
+    def __init__(self, ids: List[List[str]]):
         self.ids = ids
 
-    def flatten_id_dict(
-        self, nested_id_dict: Dict[int, Dict[int, T]], default: Optional[T] = None
+    def flatten_dict_of_dicts(
+        self, nested_id_dict: Dict[int, Dict[str, T]], default: Optional[T] = None
     ) -> List[T]:
         """
         Flatten a dictionary of nested ids into a list of values.
@@ -85,7 +85,30 @@ class IdManager:
                 output_list[self.id_map[first_id][second_id]] = value
         return output_list
 
-    def nest_id_list(
+    def flatten_list_of_dicts(self, nested_id_list: List[Dict[str,T]], default: Optional[T] = None):
+        """
+        Flatten a list of dictionaries with nested ids into a single list.
+
+        Parameters
+        ----------
+        nested_id_list : List[Dict[str, T]]
+            A list of dictionaries to flatten, where the list index represents
+            the first id and dictionary keys represent the second ids.
+        default : Optional[T], optional
+            The default value to use if a key is not found, by default None.
+
+        Returns
+        -------
+        List[T]
+            A flattened list of the values found in the nested structure. Ordered by UID.
+        """
+        output_list = [default for i in range(0, self.num_ids)]
+        for first_id, nested_ids in enumerate(nested_id_list):
+            for second_id, value in nested_ids.items():
+                output_list[self.id_map[first_id][second_id]] = value
+        return output_list
+    
+    def nest_list_to_dict_of_dicts(
         self, id_list: List[T], default: Optional[T] = None
     ) -> Dict[int, Dict[int, T]]:
         """
@@ -137,7 +160,7 @@ class IdManager:
         )
 
     @__getitem__.register
-    def _(self, key: int) -> Tuple[int, int]:
+    def _(self, key: int) -> Tuple[int, str]:
         return self.id_list[key]
 
     @__getitem__.register
@@ -145,7 +168,7 @@ class IdManager:
         assert len(key) == 2, "if supplying tuple key must supply a key of length 2"
         return self.id_map[key[0]][key[1]]
 
-    def get_nested_id(self, flat_id: int) -> Tuple[int, int]:
+    def get_nested_id(self, flat_id: int) -> Tuple[int, str]:
         """
         Get the nested id from a flattened id.
 
@@ -161,7 +184,7 @@ class IdManager:
         """
         return self[flat_id]
 
-    def get_flattened_id(self, first_id: int, second_id: int) -> int:
+    def get_flattened_id(self, first_id: int, second_id: str) -> int:
         """
         Get the flattened id from a nested id.
 
@@ -180,13 +203,13 @@ class IdManager:
         return self[first_id, second_id]
 
     @cached_property
-    def id_list(self) -> List[Tuple[int, int]]:
+    def id_list(self) -> List[Tuple[int, str]]:
         """
         List of nested ids, for lookups from flattened id to nested ids.
 
         Returns
         -------
-        List[Tuple[int, int]]
+        List[Tuple[int, str]]
             List of nested ids.
         """
         id_list = []
@@ -196,13 +219,13 @@ class IdManager:
         return id_list
 
     @cached_property
-    def id_map(self) -> List[Dict[int, int]]:
+    def id_map(self) -> List[Dict[str, int]]:
         """
         List of dictionaries mapping nested ids to flattened ids.
 
         Returns
         -------
-        List[Dict[int,int]]
+        List[Dict[int,str]]
             List of dictionaries mapping nested ids to flattened ids.
         """
         id_map = [{} for first_id in self.ids]
@@ -213,7 +236,7 @@ class IdManager:
                 uid += 1
         return id_map
 
-    def partial_get(self, first_id: int) -> List[int]:
+    def partial_get(self, first_id: int) -> List[str]:
         """
         Get the second ids for a given first id.
 
@@ -240,3 +263,7 @@ class IdManager:
             The number of ids.
         """
         return sum(map(len, self.ids))
+
+    @property
+    def num_envs(self) -> int:
+        return len(self.ids)

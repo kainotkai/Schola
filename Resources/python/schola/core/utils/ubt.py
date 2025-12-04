@@ -56,7 +56,7 @@ class UBTCommand:
     unattended: bool = True  # Run in unattended mode (-unattended)
     staging_dir: Optional[str] = None  # Directory to stage build output
     force_monolithic: bool = True  # Build as a monolithic executable (-ForceMonolithic)
-    maps: Optional[List[str]] = field(
+    maps: List[str] = field(
         default_factory=list
     )  # List of maps to cook/package
     stdout: bool = True  # Whether to route build process output to stdout
@@ -136,6 +136,19 @@ class UBTCommand:
 
 
 def get_ue_version(project_file: Path) -> str:
+    """
+    Extract the Unreal Engine version from a .uproject file.
+
+    Parameters
+    ----------
+    project_file : Path
+        Path to the .uproject file.
+
+    Returns
+    -------
+    str
+        The Unreal Engine version string (e.g., "5.5").
+    """
     with open(project_file, "r") as f:
         # read the file as JSON
         import json
@@ -146,7 +159,20 @@ def get_ue_version(project_file: Path) -> str:
     return ue_version
 
 
-def get_project_file(project_folder) -> Path:
+def get_project_file(project_folder: Path) -> Path:
+    """
+    Find the .uproject file in a project folder.
+
+    Parameters
+    ----------
+    project_folder : str or Path
+        Path to the project folder to search.
+
+    Returns
+    -------
+    Path or None
+        Path to the .uproject file if found, None otherwise.
+    """
     for file in os.listdir(project_folder):
         if file.endswith(".uproject"):
             return Path(os.path.join(project_folder, file))
@@ -154,6 +180,19 @@ def get_project_file(project_folder) -> Path:
 
 
 def get_engine_path_from_sln(sln_file: Path) -> Path:
+    """
+    Extract the Unreal Engine path from a Visual Studio solution file.
+
+    Parameters
+    ----------
+    sln_file : Path
+        Path to the .sln file.
+
+    Returns
+    -------
+    Path
+        Path to the Unreal Engine installation directory.
+    """
     with open(sln_file, "r") as f:
         for line in f:
             if '"UnrealBuildTool"' in line:
@@ -164,6 +203,19 @@ def get_engine_path_from_sln(sln_file: Path) -> Path:
 
 
 def get_sln_file_from_project(project_folder: Path) -> Optional[Path]:
+    """
+    Find the Visual Studio solution file in a project folder.
+
+    Parameters
+    ----------
+    project_folder : Path
+        Path to the project folder to search.
+
+    Returns
+    -------
+    Optional[Path]
+        Path to the .sln file if found, None otherwise.
+    """
     for file in os.listdir(project_folder):
         if file.endswith(".sln"):
             return project_folder / file
@@ -171,6 +223,21 @@ def get_sln_file_from_project(project_folder: Path) -> Optional[Path]:
 
 
 def get_ubt_path(project_folder: Path, ue_version: str = "5.5") -> Path:
+    """
+    Get the path to the Unreal Build Tool (UBT) RunUAT script.
+
+    Parameters
+    ----------
+    project_folder : Path
+        Path to the project folder.
+    ue_version : str, default="5.5"
+        The Unreal Engine version to use for fallback default path.
+
+    Returns
+    -------
+    Path
+        Path to the RunUAT batch/shell script.
+    """
     # try and load it from a sln file
     sln_file = get_sln_file_from_project(project_folder)
     if sln_file is not None:
@@ -193,29 +260,101 @@ def get_ubt_path(project_folder: Path, ue_version: str = "5.5") -> Path:
             )
 
 
-def build_executable(project_file: str, build_dir: str, ubt_path: str):
+def get_editor_executable_path(engine_path: Path) -> Path:
+    """
+    Get the path to the Unreal Editor command-line executable.
+
+    Parameters
+    ----------
+    engine_path : Path
+        Path to the Unreal Engine installation directory.
+
+    Returns
+    -------
+    Path
+        Path to the UnrealEditor-Cmd executable.
+    """
+    editor_tool = (
+        "UnrealEditor-Cmd.exe"
+        if platform.system() == "Windows"
+        else "UnrealEditor-Cmd"
+    )
+    bin_dir = "Win64" if platform.system() == "Windows" else "Linux"
+    return engine_path / "Engine" / "Binaries" / bin_dir / editor_tool
+
+
+def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: Path | str):
+    """
+    Build an Unreal Engine project executable using the Unreal Build Tool.
+
+    Parameters
+    ----------
+    project_file : str
+        Path to the .uproject file.
+    build_dir : str
+        Directory where the built executable will be staged.
+    ubt_path : str
+        Path to the Unreal Build Tool (RunUAT) script.
+
+    Returns
+    -------
+    subprocess.CompletedProcess
+        The result of the build process.
+    """
     args = UBTCommand(
         ubt_path=ubt_path, project_file=project_file, staging_dir=build_dir
     ).build_args()
-    comp_process = subprocess.run(args, capture_output=True)
+    comp_process = subprocess.run(args,capture_output=True)
     return comp_process
 
 
 def quick_build_unreal_project(
     project_folder: str, build_dir: str, ubt_path: Optional[str] = None
 ):
+    """
+    Build function with reasonable defaults to build an Unreal Engine project and return the path to the executable.
 
-    uproject_file = None
+    This function automates the process of building an Unreal project by:
+    1. Finding the .uproject file
+    2. Determining the UE version
+    3. Locating the build tool
+    4. Building the executable
+    5. Returning the path to the built executable
+
+    Parameters
+    ----------
+    project_folder : str
+        Path to the project folder containing the .uproject file.
+    build_dir : str
+        Directory where the built executable will be staged.
+    ubt_path : Optional[str], optional
+        Path to the Unreal Build Tool. If None, it will be auto-detected.
+
+    Returns
+    -------
+    Path
+        Path to the built executable file.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the .uproject file is not found, or the UBT path cannot be determined from the project folder.
+    ValueError
+        If the UE version cannot be determined from the .uproject file.
+    """
+
+    
     uproject_file = get_project_file(project_folder)
-    assert uproject_file is not None, "No .uproject file found in the project folder"
+    if uproject_file is None:
+        raise FileNotFoundError("No .uproject file found in the project folder")
     ue_version = get_ue_version(uproject_file)
-    assert (
-        ue_version is not None
-    ), "Could not determine Unreal Engine version from .uproject file"
+    if ue_version is None:
+        raise ValueError("Could not determine Unreal Engine version from .uproject file")
     ubt_path = (
         get_ubt_path(project_folder, ue_version) if ubt_path is None else Path(ubt_path)
     )
-    assert ubt_path is not None, "Could not find Unreal Build Tool (UBT) path"
+    if ubt_path is None:
+        raise FileNotFoundError("Could not find Unreal Build Tool (UBT) path from project folder.")
 
     build_executable(
         project_file=str(uproject_file),

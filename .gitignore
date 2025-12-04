@@ -87,6 +87,7 @@ documentation/*.bkp
 
 #ONNX files
 *.onnx
+!/basic_test_model.onnx
 
 # Don't ignore Bundled third party dependencies
 !/Source/ThirdParty/**/*.lib
@@ -119,5 +120,10 @@ documentation/*.bkp
 !/Docs/Sphinx/API/python_extensions.rst
 !/Docs/Sphinx/API/python_scripts.rst
 
+#ignore ai app storage
+.cline_storage
+.cursor/*
 
-
+# ignore pytest temporary files
+.pytest_tmp/*
+.pytest_cache/*

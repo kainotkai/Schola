@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 
@@ -8,15 +8,13 @@ public class ScholaEditor : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
-
 		PublicIncludePaths.AddRange(new string[] { });
-		PrivateIncludePaths.AddRange(new string[] { "Schola/Private", "ScholaEditor/Private" });
+		PrivateIncludePaths.AddRange(new string[] { "ScholaEditor/Private"});
 		//TODO figure out if these can be moved to private
-		PublicDependencyModuleNames.AddRange(new string[] { "Kismet", "BlueprintEditorLibrary", "Schola" });
-
+		PublicDependencyModuleNames.AddRange(new string[] { "Kismet", "NNE", "BlueprintEditorLibrary", "Schola", "KismetCompiler", });
 
 		PrivateIncludePathModuleNames.AddRange(new string[] { });
-		PrivateDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "BlueprintGraph", "UnrealEd", "CoreUObject" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "BlueprintGraph", "UnrealEd", "CoreUObject", "AutomationController", "KismetCompiler", "Schola", "gRPC", "ScholaTraining", "Slate", "SlateCore", "ToolMenus" });
 		DynamicallyLoadedModuleNames.AddRange(new string[] { });
 	}
 }

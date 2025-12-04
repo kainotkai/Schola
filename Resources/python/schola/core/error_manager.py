@@ -125,7 +125,10 @@ class ScholaErrorContextManager(ContextDecorator):
 
 class NoAgentsException(ScholaException):
     """
-    An Exception that occurs when there are no agents in the environment.
+    An Exception that occurs when no environments are detected in Unreal Engine.
+
+    This exception is raised when the connection to Unreal is successful, and the definition 
+    contained environment(s), but some environment(s) had no agents.
     """
 
     def __init__(self, env_id):
@@ -136,6 +139,13 @@ class NoAgentsException(ScholaException):
 
 
 class NoEnvironmentsException(ScholaException):
+    """
+    An Exception that occurs when no environments are detected in Unreal Engine.
+
+    This exception is raised when the connection to Unreal is successful but
+    no environment definitions are received, indicating that no environment
+    objects are present in the loaded map.
+    """
 
     def __init__(self):
         pass

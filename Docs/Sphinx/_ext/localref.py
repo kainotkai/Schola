@@ -1,3 +1,5 @@
+# Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
+
 from docutils import nodes  
 from docutils.parsers.rst import roles  
 from sphinx.util.nodes import split_explicit_title  
@@ -23,4 +25,4 @@ def setup(app):
         'version': '0.1',  
         'parallel_read_safe': True,  
         'parallel_write_safe': True,  
-    } 
+    }

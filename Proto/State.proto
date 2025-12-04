@@ -6,40 +6,44 @@ package Schola;
 
 import "Points.proto";
 
-enum Status {
-    RUNNING = 0;
-    TRUNCATED = 1;
-    COMPLETED = 2;
-}
 
 message AgentState {
-    DictPoint observations = 1; // Observation mapping for agents
+    Point observations = 1; // Observation mapping for agents
     float reward = 2;
-    Status status = 3;
-    map<string,string> info = 4;
+    bool terminated = 3;
+    bool truncated = 4;
+    map<string, string> info = 5;
 }
 
 message EnvironmentState {
-    map<int32, AgentState> agent_states = 1;
+    map<string, AgentState> agent_states = 1;
 }
 
 message TrainingState {
-    repeated EnvironmentState environment_states = 1;
+    repeated EnvironmentState environment_states = 1; // We allways send EnvStates during training
 }
 
-
 message InitialAgentState {
-    DictPoint observations = 1;
+    Point observations = 1;
     map<string,string> info = 4;
 }
 
 message InitialEnvironmentState {
-    map<int32, InitialAgentState> agent_states = 1;
+    map<string, InitialAgentState> agent_states = 1;
 }
 
-message InitialTrainingState {
+message InitialState {
     map<int32, InitialEnvironmentState> environment_states = 1;
 }
 
-
-
+message State {
+    oneof optional_training_state 
+    {
+        TrainingState training_state = 1;
+    }
+    
+    oneof optional_initial_state
+    {
+        InitialState initial_state = 2;
+    }
+}

@@ -80,20 +80,14 @@ class SB3ScholaModel(ScholaModel):
     def forward(self, *args) -> Tuple[th.Tensor, th.Tensor]:
         state = args[-1]
         x = args[:-1]
+       
+        if isinstance(self.policy.observation_space, gym.spaces.Dict):
+            x = {k: v for k, v in zip(self.policy.observation_space.spaces.keys(), x)}
+        else:
+            x = x[0] # unpack x from a tuple, 
+        logits = self.get_logits(x)
 
-        tensor_dict = {}
-        for i, key in enumerate(self.policy.observation_space):
-            tensor_dict[key] = x[i]
-        logits = self.get_logits(tensor_dict)
-        curr_dim = 0
-        outputs = []
-        for space_name, space in self.action_space.items():
-            space_size = flatdim(space)
-            outputs.append(logits[:, curr_dim : curr_dim + space_size])
-            curr_dim += space_size
-        outputs.append(state)
-        # For non-RNN policies, the state calculation is a no-op
-        return tuple(outputs)
+        return logits, state
 
     def save_as_onnx(self, export_path: str, onnx_opset: int = 17) -> None:
         # For non-RNN policies, the state is not used values are set to arbitrary dummy values
@@ -107,24 +101,24 @@ class SB3ScholaModel(ScholaModel):
 
         input_names = []
         inputs = []
-        assert (
-            isinstance(self.policy.observation_space, gym.spaces.Dict),
-            "Top Level Observation Space must be a Dict",
-        )
 
         if not isinstance(self.policy.action_space, gym.spaces.Dict):
             output_names = ["action"]
         else:
-            output_names = [k for k, v in self.action_space.spaces.items()]
+            output_names = list(self.action_space.spaces.keys())
 
         # Output is flattened so we only ever output 2 items
         output_names += ["state_out"]
-
-        for obs_space_name, obs_space in self.policy.observation_space.spaces.items():
-            input_names.append(obs_space_name)
-            # Just flatten discrete and boolean spaces
-            if not isinstance(obs_space, gym.spaces.Box):
-                obs_space = gym.spaces.utils.flatten_space(obs_space)
+        if isinstance(self.policy.observation_space, gym.spaces.Dict):
+            for obs_space_name, obs_space in self.policy.observation_space.spaces.items():
+                input_names.append(obs_space_name)
+                # Just flatten discrete and boolean spaces
+                if not isinstance(obs_space, gym.spaces.Box):
+                    obs_space = gym.spaces.utils.flatten_space(obs_space)
+                inputs.append(th.rand(1, *obs_space.shape))
+        else:
+            input_names.append("obs")
+            obs_space = gym.spaces.utils.flatten_space(self.policy.observation_space)
             inputs.append(th.rand(1, *obs_space.shape))
 
         # add the state input
@@ -206,17 +200,17 @@ def get_scholasb3_model(model: BaseAlgorithm) -> ScholaModel:
         The ScholaModel for the given model.
     """
     if isinstance(model, sb3.PPO):
-        return SB3PPOModel(model.policy, model.__original_action_space)
+        return SB3PPOModel(model.policy, model.policy.action_space)
     elif isinstance(model, sb3.A2C):
-        return SB3A2CModel(model.policy, model.__original_action_space)
+        return SB3A2CModel(model.policy, model.policy.action_space)
     elif isinstance(model, sb3.SAC):
-        return SB3SACModel(model.policy, model.__original_action_space)
+        return SB3SACModel(model.policy, model.policy.action_space)
     elif isinstance(model, sb3.TD3):
-        return SB3TD3Model(model.policy, model.__original_action_space)
+        return SB3TD3Model(model.policy, model.policy.action_space)
     elif isinstance(model, sb3.DDPG):
-        return SB3DDPGModel(model.policy, model.__original_action_space)
+        return SB3DDPGModel(model.policy, model.policy.action_space)
     elif isinstance(model, sb3.DQN):
-        return SB3DQNModel(model.policy, model.__original_action_space)
+        return SB3DQNModel(model.policy, model.policy.action_space)
     else:
         raise ValueError(f"Unsupported model type: {type(model)}")
 

@@ -17,11 +17,7 @@ class blueprint(nodes.General, nodes.Element):
 
 #Don't need to define a role
 
-
-
-
 class BlueprintDirective(SphinxDirective):
-    """A directive to say hello!"""
 
     has_content=True
     required_arguments = 0
@@ -59,9 +55,9 @@ class BlueprintFileDirective(SphinxDirective):
     }
     
     def run(self) -> list[nodes.Node]: 
-        if ("html" in self.env.app.builder.name):
-            bp_dir = Path(self.env.app.config.blueprint_dir)
-            file_path = bp_dir / Path(self.arguments[0])
+        bp_dir = self.env.app.confdir / Path(self.env.app.config.blueprint_dir)
+        file_path = bp_dir / Path(self.arguments[0])
+        if ("html" in self.env.app.builder.name) and file_path.exists():
             height = self.options["height"] if "height" in self.options else 500
             zoom = self.options["zoom"] if "zoom" in self.options else 0
             heading = self.options["heading"] if "heading" in self.options else ""
@@ -108,6 +104,8 @@ def depart_blueprint_node(self : HTML5Translator, node: blueprint):
     </ueb-blueprint>
     """)
 
+
+
 class BlueprintNodeSearcher(nodes.SparseNodeVisitor):
 
     def visit_blueprint(self, node):
@@ -139,7 +137,7 @@ def setup(app: Sphinx) -> ExtensionMetadata:
     )
 
     app.connect("html-page-context", update_context)
-
+    
     return {
         'version': '0.1',
         'parallel_read_safe': True,

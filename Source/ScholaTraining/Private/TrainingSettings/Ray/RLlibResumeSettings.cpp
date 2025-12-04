@@ -1,0 +1,13 @@
+// Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All Rights Reserved.
+
+#pragma once
+#include "TrainingSettings/Ray/RLlibResumeSettings.h"
+
+void FRLlibResumeSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) const
+{
+	ArgBuilder.AddConditionalStringArg(TEXT("resume-settings.resume-from"), this->ModelPath.FilePath, bLoadModel);
+}
+
+FRLlibResumeSettings::~FRLlibResumeSettings()
+{
+}

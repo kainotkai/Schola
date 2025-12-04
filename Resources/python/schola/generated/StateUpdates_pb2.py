@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 import schola.generated.Points_pb2 as Points__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12StateUpdates.proto\x12\x06Schola\x1a\x0cPoints.proto\"6\n\x10\x41gentStateUpdate\x12\"\n\x07\x61\x63tions\x18\x01 \x01(\x0b\x32\x11.Schola.DictPoint\"\x92\x01\n\x0f\x45nvironmentStep\x12\x35\n\x07updates\x18\x01 \x03(\x0b\x32$.Schola.EnvironmentStep.UpdatesEntry\x1aH\n\x0cUpdatesEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12\'\n\x05value\x18\x02 \x01(\x0b\x32\x18.Schola.AgentStateUpdate:\x02\x38\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x12StateUpdates.proto\x12\x06Schola\x1a\x0cPoints.proto\"\x87\x01\n\x0f\x45nvironmentStep\x12\x35\n\x07updates\x18\x01 \x03(\x0b\x32$.Schola.EnvironmentStep.UpdatesEntry\x1a=\n\x0cUpdatesEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\x1c\n\x05value\x18\x02 \x01(\x0b\x32\r.Schola.Point:\x02\x38\x01\"\xa1\x01\n\x13\x45nvironmentSettings\x12\x0e\n\x04seed\x18\x01 \x01(\x05H\x00\x12\x39\n\x07options\x18\x02 \x03(\x0b\x32(.Schola.EnvironmentSettings.OptionsEntry\x1a.\n\x0cOptionsEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\x42\x0f\n\roptional_seed\"\x90\x01\n\x05Reset\x12\x35\n\x0c\x65nvironments\x18\x01 \x03(\x0b\x32\x1f.Schola.Reset.EnvironmentsEntry\x1aP\n\x11\x45nvironmentsEntry\x12\x0b\n\x03key\x18\x01 \x01(\x05\x12*\n\x05value\x18\x02 \x01(\x0b\x32\x1b.Schola.EnvironmentSettings:\x02\x38\x01\"5\n\x04Step\x12-\n\x0c\x65nvironments\x18\x01 \x03(\x0b\x32\x17.Schola.EnvironmentStep\"\x81\x01\n\x0bStateUpdate\x12\x1e\n\x05reset\x18\x01 \x01(\x0b\x32\r.Schola.ResetH\x00\x12\x1c\n\x04step\x18\x02 \x01(\x0b\x32\x0c.Schola.StepH\x00\x12*\n\x06status\x18\x03 \x01(\x0e\x32\x1a.Schola.CommunicatorStatusB\x08\n\x06update*5\n\x12\x43ommunicatorStatus\x12\x08\n\x04GOOD\x10\x00\x12\t\n\x05\x45RROR\x10\x01\x12\n\n\x06\x43LOSED\x10\x02\x62\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'StateUpdates_pb2', globals())
@@ -23,10 +23,26 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _ENVIRONMENTSTEP_UPDATESENTRY._options = None
   _ENVIRONMENTSTEP_UPDATESENTRY._serialized_options = b'8\001'
-  _AGENTSTATEUPDATE._serialized_start=44
-  _AGENTSTATEUPDATE._serialized_end=98
-  _ENVIRONMENTSTEP._serialized_start=101
-  _ENVIRONMENTSTEP._serialized_end=247
-  _ENVIRONMENTSTEP_UPDATESENTRY._serialized_start=175
-  _ENVIRONMENTSTEP_UPDATESENTRY._serialized_end=247
+  _ENVIRONMENTSETTINGS_OPTIONSENTRY._options = None
+  _ENVIRONMENTSETTINGS_OPTIONSENTRY._serialized_options = b'8\001'
+  _RESET_ENVIRONMENTSENTRY._options = None
+  _RESET_ENVIRONMENTSENTRY._serialized_options = b'8\001'
+  _COMMUNICATORSTATUS._serialized_start=680
+  _COMMUNICATORSTATUS._serialized_end=733
+  _ENVIRONMENTSTEP._serialized_start=45
+  _ENVIRONMENTSTEP._serialized_end=180
+  _ENVIRONMENTSTEP_UPDATESENTRY._serialized_start=119
+  _ENVIRONMENTSTEP_UPDATESENTRY._serialized_end=180
+  _ENVIRONMENTSETTINGS._serialized_start=183
+  _ENVIRONMENTSETTINGS._serialized_end=344
+  _ENVIRONMENTSETTINGS_OPTIONSENTRY._serialized_start=281
+  _ENVIRONMENTSETTINGS_OPTIONSENTRY._serialized_end=327
+  _RESET._serialized_start=347
+  _RESET._serialized_end=491
+  _RESET_ENVIRONMENTSENTRY._serialized_start=411
+  _RESET_ENVIRONMENTSENTRY._serialized_end=491
+  _STEP._serialized_start=493
+  _STEP._serialized_end=546
+  _STATEUPDATE._serialized_start=549
+  _STATEUPDATE._serialized_end=678
 # @@protoc_insertion_point(module_scope)

@@ -3,27 +3,37 @@ syntax = "proto3";
 
 package Schola;
 
+import "DType.proto";
+
 message BoxPoint {
     repeated float values = 1;
+    DType dtype = 2;
+    repeated int32 shape = 3;
 }
 
 message DiscretePoint {
+    int32 value = 1;
+}
+
+message MultiDiscretePoint {
     repeated int32 values = 1;
 }
 
-message BinaryPoint {
+message MultiBinaryPoint {
     repeated bool values = 1;
 }
 
-message FundamentalPoint {
+message DictPoint {
+    map<string, Point> values = 1;
+}
+
+message Point {
     oneof point {
         BoxPoint box_point = 1;
         DiscretePoint discrete_point = 2;
-        BinaryPoint binary_point = 3;
+        MultiDiscretePoint multi_discrete_point = 3;
+        MultiBinaryPoint multi_binary_point = 4;
+        DictPoint dict_point = 5;
     }
 }
 
-message DictPoint {
-   //This will be converted to a Dict on the python side
-   repeated FundamentalPoint values = 1;
-}

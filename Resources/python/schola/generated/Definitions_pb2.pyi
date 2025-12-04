@@ -7,18 +7,14 @@ from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Map
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class AgentDefinition(_message.Message):
-    __slots__ = ["action_space", "name", "normalize_actions", "normalize_obs", "obs_space"]
+    __slots__ = ["action_space", "agent_type", "obs_space"]
     ACTION_SPACE_FIELD_NUMBER: _ClassVar[int]
-    NAME_FIELD_NUMBER: _ClassVar[int]
-    NORMALIZE_ACTIONS_FIELD_NUMBER: _ClassVar[int]
-    NORMALIZE_OBS_FIELD_NUMBER: _ClassVar[int]
+    AGENT_TYPE_FIELD_NUMBER: _ClassVar[int]
     OBS_SPACE_FIELD_NUMBER: _ClassVar[int]
-    action_space: _Spaces_pb2.DictSpace
-    name: str
-    normalize_actions: bool
-    normalize_obs: bool
-    obs_space: _Spaces_pb2.DictSpace
-    def __init__(self, name: _Optional[str] = ..., obs_space: _Optional[_Union[_Spaces_pb2.DictSpace, _Mapping]] = ..., action_space: _Optional[_Union[_Spaces_pb2.DictSpace, _Mapping]] = ..., normalize_obs: bool = ..., normalize_actions: bool = ...) -> None: ...
+    action_space: _Spaces_pb2.Space
+    agent_type: str
+    obs_space: _Spaces_pb2.Space
+    def __init__(self, obs_space: _Optional[_Union[_Spaces_pb2.Space, _Mapping]] = ..., action_space: _Optional[_Union[_Spaces_pb2.Space, _Mapping]] = ..., agent_type: _Optional[str] = ...) -> None: ...
 
 class EnvironmentDefinition(_message.Message):
     __slots__ = ["agent_definitions"]
@@ -26,12 +22,12 @@ class EnvironmentDefinition(_message.Message):
         __slots__ = ["key", "value"]
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: int
+        key: str
         value: AgentDefinition
-        def __init__(self, key: _Optional[int] = ..., value: _Optional[_Union[AgentDefinition, _Mapping]] = ...) -> None: ...
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[AgentDefinition, _Mapping]] = ...) -> None: ...
     AGENT_DEFINITIONS_FIELD_NUMBER: _ClassVar[int]
-    agent_definitions: _containers.MessageMap[int, AgentDefinition]
-    def __init__(self, agent_definitions: _Optional[_Mapping[int, AgentDefinition]] = ...) -> None: ...
+    agent_definitions: _containers.MessageMap[str, AgentDefinition]
+    def __init__(self, agent_definitions: _Optional[_Mapping[str, AgentDefinition]] = ...) -> None: ...
 
 class TrainingDefinition(_message.Message):
     __slots__ = ["environment_definitions"]

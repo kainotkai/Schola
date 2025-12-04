@@ -2,7 +2,7 @@
 
 #include "Schola.h"
 #include "Developer/Settings/Public/ISettingsModule.h"
-#include "Subsystem/SubsystemSettings/SubsystemSettings.h"
+//#include "TrainingSettings/SubsystemSettings.h"
 
 
 #define LOCTEXT_NAMESPACE "FScholaModule"
@@ -10,6 +10,7 @@
 void FScholaModule::StartupModule()
 {
 	// register settings
+	/** 
 	ISettingsModule* SettingsModule = FModuleManager::GetModulePtr<ISettingsModule>("Settings");
 
 	if (SettingsModule != nullptr)
@@ -19,6 +20,7 @@ void FScholaModule::StartupModule()
 			LOCTEXT("ScholaSettingsDescription", "Project settings for Schola plugin"),
 			GetMutableDefault<UScholaManagerSubsystemSettings>());
 	}
+	*/
 }
 
 void FScholaModule::ShutdownModule()
@@ -27,7 +29,7 @@ void FScholaModule::ShutdownModule()
 
 	if (SettingsModule != nullptr)
 	{
-		SettingsModule->UnregisterSettings("Project", "Plugins", "Schola");
+		//SettingsModule->UnregisterSettings("Project", "Plugins", "Schola");
 	}
 }
 

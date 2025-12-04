@@ -24,17 +24,14 @@ extensions = [
     'sphinx.ext.viewcode',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
-    'sphinx_tabs.tabs',
     'sphinx.ext.intersphinx',
-    'sphinx_copybutton',
-    'sphinx.ext.autosectionlabel', 
-    'argparseautodoc.ext',
+    'sphinx_tabs.tabs',
     'breathe',
     "blueprint",
-    "localref"
+    "localref",
 ]
 
-autosectionlabel_prefix_document = True
+# autosectionlabel_prefix_document = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
@@ -52,8 +49,8 @@ autodoc_typehints = "description"
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
-
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
+#html_theme = "sphinx_rtd_theme"
 html_static_path = ['_static']
 html_logo = './_static/AMD_Schola_Lockup_RGB_Blk.png'
 html_css_files = ['schola_theme.css']
@@ -63,18 +60,16 @@ html_favicon = "./_static/icon.png"
 html_domain_indices = False
 
 html_theme_options = {
-    # Toc options
-    'collapse_navigation': False,
-    'sticky_navigation': True,
-    'navigation_depth': 5,
-    'includehidden': True,
-    'titles_only': False,
-    'logo_only': True,
+    # sphinx_book_theme options
+    'show_navbar_depth': 1,
+    'show_toc_level': 2,
+    'navigation_with_keys': False,
+    'home_page_in_toc': True,
 }
 
 PYTHON_VERSION = "Python 3.9 to 3.12 "
-UNREAL_VERSION = "Unreal Engine 5.5"
-UNREAL_VERSION_EXACT = "5.5.2"
+UNREAL_VERSION = "Unreal Engine 5.6"
+UNREAL_VERSION_EXACT = "5.6.1"
 
 rst_prolog =f"""
 .. |py_version| replace:: {PYTHON_VERSION} 
@@ -127,12 +122,15 @@ breathe_default_members = ('members', 'undoc-members')
 sphinx_tabs_disable_tab_closing = True
 
 # -- Options for intersphinx extension ---------------------------------------
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None), 
-    'ray': ('https://docs.ray.io/en/master/', None),
-    'gym': ('https://gymnasium.farama.org/', None),
-    'stable_baselines3': ('https://stable-baselines3.readthedocs.io/en/master/', None)
-    }
+USE_INTERSPHINX = False # quick toggle to speed up build time while debugging
+if USE_INTERSPHINX:
+    intersphinx_mapping = {
+        'python': ('https://docs.python.org/3', None), 
+        'ray': ('https://docs.ray.io/en/master/', None),
+        'gym': ('https://gymnasium.farama.org/', None),
+        'stable_baselines3': ('https://stable-baselines3.readthedocs.io/en/master/', None),
+        "cyclopts": ('https://cyclopts.readthedocs.io/en/v4.2.2/', None)
+        }
 
 # -- Options for blueprints extension -----------------------------------------
 blueprint_dir = './blueprints'

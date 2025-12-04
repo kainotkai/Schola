@@ -15,13 +15,13 @@ The most common cause of extremely slow training in the editor (e.g. less than 1
 Getting More CPU/GPU Utilization
 --------------------------------
 
-If you find that training is running too slowly for your purposes, you can try building your environment into a standalone executable, and then running training from a separate python process, using the ``--launch-unreal`` flag.
+If you find that training is running too slowly for your purposes, you can try building your environment into a standalone executable, and then running training from a separate python process.
 
 .. note:: 
     
-    If you are using a custom training script, then you can instantiate your environment with a :py:class:`~schola.core.unreal_connections.StandaloneUnrealConnection` to achieve the same effect.
+    If you are using a custom training script, you can instantiate your environment with a :py:class:`~schola.core.simulators.unreal.UnrealExecutable` simulator to achieve the same effect.
 
-If your environment doesn't utilize camera sensors or other Unreal Engine features, requiring rendering, you can also try running the training in headless mode. This can be done by setting the ``--headless`` flag for launch.py, or setting `headless` to ``True`` when instantiating your :py:class:`~schola.core.unreal_connections.StandaloneUnrealConnection`. When running in headless mode, the Unreal Engine will not render the environment, which can significantly increase training speed. 
+If your environment doesn't utilize camera sensors or other Unreal Engine features requiring rendering, you can also try running the training in headless mode. This can be done by setting the ``headless_mode`` parameter to ``True`` when instantiating your :py:class:`~schola.core.simulators.unreal.UnrealExecutable`, or by using the "--headless" flag with the CLI. When running in headless mode, the Unreal Engine will not render the environment, which can significantly increase training speed. 
 
 
 Training Runs at a High FPS but My Agent Doesn't Train
@@ -29,15 +29,15 @@ Training Runs at a High FPS but My Agent Doesn't Train
 
 When training at a very high FPS, actions that are scaled based on the framerate (e.g. Movement Input) may lead to the agent not training properly. This is caused by the agent's actions having very little impact on the game world, as they have all been scaled down, leading to a large number of very similar datapoints during training. 
 
-To resolve this, you can either reduce the FPS of the training, or use the ``--set-fps FPS`` option to set the simulation timestep of the Unreal Engine Process. As an example, if you set ``--set-fps 30``, the simulation will run at 30 FPS, regardless of the actual FPS of the training, so each action will impact the game world exactly as if the game was running at 30fps.
+To resolve this, you can either reduce the FPS of the training, or set a fixed simulation timestep for the Unreal Engine Process using the ``set_fps`` parameter when instantiating your :py:class:`~schola.core.simulators.unreal.UnrealExecutable`. As an example, if you set ``set_fps=30``, the simulation will run at 30 FPS, regardless of the actual FPS of the training, so each action will impact the game world exactly as if the game was running at 30fps.
 
 
-Training is Complete but launch.py hangs
-----------------------------------------
+Training is Complete but Training Script Hangs
+----------------------------------------------
 
-If you find that the training progress bar in launch.py reports that training finished but launch.py is hanging, it is likely that the post-training evaluation is still running. This can happen if you run with a very small number of training steps, and evaluation enabled (``--disable-eval`` is not set). If this is the case, due to deterministic decision making, the agent can get stuck in a loop or position where it never completes the environment.
+If you find that the training progress bar reports that training finished but the training script is hanging, it is likely that the post-training evaluation is still running. This can happen if you run with a very small number of training steps, and evaluation enabled (``--disable-eval`` is not set). If this is the case, due to deterministic decision making, the agent can get stuck in a loop or position where it never completes the environment.
 
-To resolve this, you can either increase the number of training steps, or disable evaluation by setting ``--disable-eval`` when running launch.py, or setup your :cpp:func:`~ABlueprintTrainer::ComputeStatus` to return :cpp:enum:`EAgentTrainingStatus::Truncated` after a fixed number of steps.
+To resolve this, you can either increase the number of training steps, or disable evaluation by setting ``--disable-eval`` when running your training script, or implement episode truncation logic in your environment's ``Step`` function to set ``bTruncated`` to ``true`` in the :cpp:struct:`FAgentState` after a fixed number of steps.
 
 Understanding Algorithm Parameters and Options
 ----------------------------------------------
@@ -57,9 +57,9 @@ Schola supports multiple algorithms for training: PPO and SAC for Stable Baselin
 
             .. group-tab:: Ray RLlib
                 
-                * :py:class:`schola.scripts.ray.settings.PPOSettings`
-                * :py:class:`schola.scripts.ray.settings.APPOSettings`
-                * :py:class:`schola.scripts.ray.settings.IMPALASettings`
+                * :py:class:`schola.scripts.rllib.settings.PPOSettings`
+                * :py:class:`schola.scripts.rllib.settings.APPOSettings`
+                * :py:class:`schola.scripts.rllib.settings.IMPALASettings`
     
     .. group-tab:: Unreal Engine Settings Structs
 
@@ -75,18 +75,6 @@ Schola supports multiple algorithms for training: PPO and SAC for Stable Baselin
                 * :cpp:struct:`FRLlibPPOSettings`
                 * :cpp:struct:`FRLlibAPPOSettings`
                 * :cpp:struct:`FRLlibIMPALASettings`
-     
-    .. group-tab:: CLI Documentation
-
-        .. tabs:: 
-
-            .. group-tab:: Stable Baselines 3
-                
-                * :doc:`/scripts/schola-sb3`
-
-            .. group-tab:: Ray RLlib
-
-                * :doc:`/scripts/schola-rllib`
 
 The order of precedence for default settings is Unreal Settings (only when launching the training process from Unreal), the CLI defaults, and then python dataclass default values. For example, the dataclass default values will be overriden by any values given a default in the CLI.
 

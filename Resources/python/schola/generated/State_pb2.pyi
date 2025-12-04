@@ -1,17 +1,13 @@
 import schola.generated.Points_pb2 as _Points_pb2
 from google.protobuf.internal import containers as _containers
-from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from typing import ClassVar as _ClassVar, Iterable as _Iterable, Mapping as _Mapping, Optional as _Optional, Union as _Union
 
-COMPLETED: Status
 DESCRIPTOR: _descriptor.FileDescriptor
-RUNNING: Status
-TRUNCATED: Status
 
 class AgentState(_message.Message):
-    __slots__ = ["info", "observations", "reward", "status"]
+    __slots__ = ["info", "observations", "reward", "terminated", "truncated"]
     class InfoEntry(_message.Message):
         __slots__ = ["key", "value"]
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -22,12 +18,14 @@ class AgentState(_message.Message):
     INFO_FIELD_NUMBER: _ClassVar[int]
     OBSERVATIONS_FIELD_NUMBER: _ClassVar[int]
     REWARD_FIELD_NUMBER: _ClassVar[int]
-    STATUS_FIELD_NUMBER: _ClassVar[int]
+    TERMINATED_FIELD_NUMBER: _ClassVar[int]
+    TRUNCATED_FIELD_NUMBER: _ClassVar[int]
     info: _containers.ScalarMap[str, str]
-    observations: _Points_pb2.DictPoint
+    observations: _Points_pb2.Point
     reward: float
-    status: Status
-    def __init__(self, observations: _Optional[_Union[_Points_pb2.DictPoint, _Mapping]] = ..., reward: _Optional[float] = ..., status: _Optional[_Union[Status, str]] = ..., info: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    terminated: bool
+    truncated: bool
+    def __init__(self, observations: _Optional[_Union[_Points_pb2.Point, _Mapping]] = ..., reward: _Optional[float] = ..., terminated: bool = ..., truncated: bool = ..., info: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class EnvironmentState(_message.Message):
     __slots__ = ["agent_states"]
@@ -35,12 +33,12 @@ class EnvironmentState(_message.Message):
         __slots__ = ["key", "value"]
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: int
+        key: str
         value: AgentState
-        def __init__(self, key: _Optional[int] = ..., value: _Optional[_Union[AgentState, _Mapping]] = ...) -> None: ...
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[AgentState, _Mapping]] = ...) -> None: ...
     AGENT_STATES_FIELD_NUMBER: _ClassVar[int]
-    agent_states: _containers.MessageMap[int, AgentState]
-    def __init__(self, agent_states: _Optional[_Mapping[int, AgentState]] = ...) -> None: ...
+    agent_states: _containers.MessageMap[str, AgentState]
+    def __init__(self, agent_states: _Optional[_Mapping[str, AgentState]] = ...) -> None: ...
 
 class InitialAgentState(_message.Message):
     __slots__ = ["info", "observations"]
@@ -54,8 +52,8 @@ class InitialAgentState(_message.Message):
     INFO_FIELD_NUMBER: _ClassVar[int]
     OBSERVATIONS_FIELD_NUMBER: _ClassVar[int]
     info: _containers.ScalarMap[str, str]
-    observations: _Points_pb2.DictPoint
-    def __init__(self, observations: _Optional[_Union[_Points_pb2.DictPoint, _Mapping]] = ..., info: _Optional[_Mapping[str, str]] = ...) -> None: ...
+    observations: _Points_pb2.Point
+    def __init__(self, observations: _Optional[_Union[_Points_pb2.Point, _Mapping]] = ..., info: _Optional[_Mapping[str, str]] = ...) -> None: ...
 
 class InitialEnvironmentState(_message.Message):
     __slots__ = ["agent_states"]
@@ -63,14 +61,14 @@ class InitialEnvironmentState(_message.Message):
         __slots__ = ["key", "value"]
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
-        key: int
+        key: str
         value: InitialAgentState
-        def __init__(self, key: _Optional[int] = ..., value: _Optional[_Union[InitialAgentState, _Mapping]] = ...) -> None: ...
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[InitialAgentState, _Mapping]] = ...) -> None: ...
     AGENT_STATES_FIELD_NUMBER: _ClassVar[int]
-    agent_states: _containers.MessageMap[int, InitialAgentState]
-    def __init__(self, agent_states: _Optional[_Mapping[int, InitialAgentState]] = ...) -> None: ...
+    agent_states: _containers.MessageMap[str, InitialAgentState]
+    def __init__(self, agent_states: _Optional[_Mapping[str, InitialAgentState]] = ...) -> None: ...
 
-class InitialTrainingState(_message.Message):
+class InitialState(_message.Message):
     __slots__ = ["environment_states"]
     class EnvironmentStatesEntry(_message.Message):
         __slots__ = ["key", "value"]
@@ -83,11 +81,16 @@ class InitialTrainingState(_message.Message):
     environment_states: _containers.MessageMap[int, InitialEnvironmentState]
     def __init__(self, environment_states: _Optional[_Mapping[int, InitialEnvironmentState]] = ...) -> None: ...
 
+class State(_message.Message):
+    __slots__ = ["initial_state", "training_state"]
+    INITIAL_STATE_FIELD_NUMBER: _ClassVar[int]
+    TRAINING_STATE_FIELD_NUMBER: _ClassVar[int]
+    initial_state: InitialState
+    training_state: TrainingState
+    def __init__(self, training_state: _Optional[_Union[TrainingState, _Mapping]] = ..., initial_state: _Optional[_Union[InitialState, _Mapping]] = ...) -> None: ...
+
 class TrainingState(_message.Message):
     __slots__ = ["environment_states"]
     ENVIRONMENT_STATES_FIELD_NUMBER: _ClassVar[int]
     environment_states: _containers.RepeatedCompositeFieldContainer[EnvironmentState]
     def __init__(self, environment_states: _Optional[_Iterable[_Union[EnvironmentState, _Mapping]]] = ...) -> None: ...
-
-class Status(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
-    __slots__ = []

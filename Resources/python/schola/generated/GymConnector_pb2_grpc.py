@@ -4,6 +4,7 @@ import grpc
 
 import schola.generated.Definitions_pb2 as Definitions__pb2
 import schola.generated.GymConnector_pb2 as GymConnector__pb2
+import schola.generated.StateUpdates_pb2 as StateUpdates__pb2
 import schola.generated.State_pb2 as State__pb2
 
 
@@ -18,13 +19,8 @@ class GymServiceStub(object):
         """
         self.UpdateState = channel.unary_unary(
                 '/Schola.GymService/UpdateState',
-                request_serializer=GymConnector__pb2.TrainingStateUpdate.SerializeToString,
-                response_deserializer=State__pb2.TrainingState.FromString,
-                )
-        self.RequestInitialTrainingState = channel.unary_unary(
-                '/Schola.GymService/RequestInitialTrainingState',
-                request_serializer=GymConnector__pb2.InitialTrainingStateRequest.SerializeToString,
-                response_deserializer=State__pb2.InitialTrainingState.FromString,
+                request_serializer=StateUpdates__pb2.StateUpdate.SerializeToString,
+                response_deserializer=State__pb2.State.FromString,
                 )
         self.RequestTrainingDefinition = channel.unary_unary(
                 '/Schola.GymService/RequestTrainingDefinition',
@@ -47,12 +43,6 @@ class GymServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def RequestInitialTrainingState(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def RequestTrainingDefinition(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -70,13 +60,8 @@ def add_GymServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'UpdateState': grpc.unary_unary_rpc_method_handler(
                     servicer.UpdateState,
-                    request_deserializer=GymConnector__pb2.TrainingStateUpdate.FromString,
-                    response_serializer=State__pb2.TrainingState.SerializeToString,
-            ),
-            'RequestInitialTrainingState': grpc.unary_unary_rpc_method_handler(
-                    servicer.RequestInitialTrainingState,
-                    request_deserializer=GymConnector__pb2.InitialTrainingStateRequest.FromString,
-                    response_serializer=State__pb2.InitialTrainingState.SerializeToString,
+                    request_deserializer=StateUpdates__pb2.StateUpdate.FromString,
+                    response_serializer=State__pb2.State.SerializeToString,
             ),
             'RequestTrainingDefinition': grpc.unary_unary_rpc_method_handler(
                     servicer.RequestTrainingDefinition,
@@ -110,25 +95,8 @@ class GymService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/Schola.GymService/UpdateState',
-            GymConnector__pb2.TrainingStateUpdate.SerializeToString,
-            State__pb2.TrainingState.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def RequestInitialTrainingState(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.GymService/RequestInitialTrainingState',
-            GymConnector__pb2.InitialTrainingStateRequest.SerializeToString,
-            State__pb2.InitialTrainingState.FromString,
+            StateUpdates__pb2.StateUpdate.SerializeToString,
+            State__pb2.State.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

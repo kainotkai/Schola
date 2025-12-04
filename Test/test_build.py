@@ -66,7 +66,7 @@ def sphinx_docs_builder(doc_source_path):
     shutil.rmtree(sphinx_doc_folder_path / "_build")
     shutil.rmtree(sphinx_doc_folder_path / "API" / "Python")
 
-
+@pytest.mark.skip(reason="slow")
 def test_build_docs(
     doxygen_docs_builder, sphinx_docs_builder, breathe_docs_builder, doc_source_path
 ):

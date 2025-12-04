@@ -6,7 +6,7 @@ import sys
 
 def get_ray_deps():
     return [
-        "ray[tune]==2.38",  # Encountering TuneError with ray < 2.30, 2.35 is know to be stable. Other versions might work
+        "ray[tune]>=2.43", #>=2.43 for vectorized multiagent on new stack
         "dm_tree",
         "lz4",
         "scikit-image",
@@ -18,39 +18,27 @@ def get_ray_deps():
 
 
 def get_sb3_deps():
-    return ["stable-baselines3==2.1.0", "tqdm", "rich"]
+    return ["stable-baselines3>=2.6", "tqdm", "rich"]
 
 
 def get_docs_deps():
-    return ["sphinx", "breathe", "sphinx_rtd_theme", "sphinx-tabs", "sphinx-copybutton"]
+    return ["sphinx", "breathe", "sphinx_rtd_theme", "sphinx_book_theme", "sphinx-tabs", "sphinx-copybutton"]
+
+
+def get_minari_deps():
+    return ["minari[hdf5,create]"]
 
 
 def get_test_deps():
-    return ["pytest", "pytest-timeout", "pytest-cov"]
+    return ["pytest", "pytest-timeout", "pytest-cov", "minigrid"]
 
 
 def merge_deps(*dep_lists):
     return list(set(chain.from_iterable(dep_lists)))
 
 
-def get_imitation_deps():
-    return merge_deps(get_sb3_deps(), ["imitation"])
-
-
 def get_all_deps():
-    return merge_deps(get_sb3_deps(), get_ray_deps(), get_imitation_deps())
-
-
-def get_version():
-    # PATCH: allow for version to be passed on the command line
-    KWD = "--version="
-    opt = [x for x in sys.argv if x.startswith(KWD)]
-    if len(opt) > 0:
-        version = opt[0][len(KWD) :]
-        sys.argv.remove(opt[0])
-        return version
-    else:
-        return "1.0"
+    return merge_deps(get_sb3_deps(), get_ray_deps())
 
 
 if __name__ == "__main__":
@@ -62,7 +50,7 @@ if __name__ == "__main__":
 
     setup(
         name="schola",
-        version=get_version(),
+        version="2.0.0",
         python_requires=">=3.9, <3.13",
         author="Advanced Micro Devices, Inc.",
         author_email="alexcann@amd.com",
@@ -74,24 +62,21 @@ if __name__ == "__main__":
             "protobuf>=3.20",
             "grpcio>=1.51.1",
             "onnx>=1.11, <1.16.2",
-            "gymnasium==0.29.1",
+            "gymnasium>=1.1.0",
             "backports.strenum; python_version<'3.11'",
+            "cyclopts>=4.0"
         ],
         extras_require={
             "sb3": get_sb3_deps(),
             "rllib": get_ray_deps(),  # these are the ray[rllib] requirements ignoring the gym one
-            "imitation": get_imitation_deps(),
+            "minari": get_minari_deps(),
             "all": get_all_deps(),
             "docs": get_docs_deps(),
             "test": get_test_deps(),
         },
         entry_points={
             "console_scripts": [
-                "schola-rllib = schola.scripts.ray.launch:debug_main_from_cli",
-                "schola-sb3 = schola.scripts.sb3.launch:debug_main_from_cli",
-                "schola-build-proto = schola.scripts.utils.compile_proto:main_from_cli",
-                "schola-bc-rllib = schola.imitation.ray.launch_imitation:debug_main_from_cli",
-                "schola-bc-sb3 = schola.imitation.sb3.launch_imitation:debug_main_from_cli",
+                "schola = schola.scripts.launch:main"
             ]
         },
     )

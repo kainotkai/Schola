@@ -6,16 +6,14 @@ package Schola;
 import "Spaces.proto";
 
 message AgentDefinition {
-    string name = 1;
-    DictSpace obs_space = 2;
-    DictSpace action_space = 4;
-    bool normalize_obs = 6;
-    bool normalize_actions = 7;
+    Space obs_space = 1;
+    Space action_space = 2;
+    string agent_type = 3;
 }
 
 message EnvironmentDefinition
 {
-    map<int32, AgentDefinition> agent_definitions = 1;
+    map<string, AgentDefinition> agent_definitions = 1;
 }
 
 message TrainingDefinition

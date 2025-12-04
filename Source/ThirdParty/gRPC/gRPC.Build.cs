@@ -1,5 +1,4 @@
-
-//from https://github.com/RobinKa/UE4ProtobufExample/blob/master/Source/ThirdParty/protobuf/protobuf.Build.cs
+// Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
 using System;
@@ -13,7 +12,7 @@ public class gRPC : ModuleRules
         Type = ModuleType.External;
 
         PublicSystemIncludePaths.Add(Path.Combine(ModuleDirectory, Target.Platform.ToString(), "include"));
-        PublicIncludePaths.Add(Path.Combine(ModuleDirectory, Target.Platform.ToString(), "include"));
+        //PublicIncludePaths.Add(Path.Combine(ModuleDirectory, Target.Platform.ToString(), "include"));
         string LibraryPath = Path.Combine(ModuleDirectory, Target.Platform.ToString(), "lib");
 
         if (Target.Platform == UnrealTargetPlatform.Win64)

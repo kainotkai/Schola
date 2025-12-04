@@ -76,12 +76,17 @@ EXIT /B %ERRORLEVEL%
 :: ABSL, CARES and RE2 building as modules are new additions
 :CMAKE
     if NOT EXIST "%CMAKE_BUILD_DIR%" (mkdir "%CMAKE_BUILD_DIR%")
-    cd "%CMAKE_BUILD_DIR%"
+    pushd "%CMAKE_BUILD_DIR%"
     call cmake .. -G "Visual Studio 17 2022" -A x64 ^
+        -DCMAKE_POLICY_VERSION_MINIMUM=3.5 ^
+        -DCMAKE_CXX_STANDARD=17 ^
+        -DABSL_PROPAGATE_CXX_STD=ON ^
         -DCMAKE_CXX_STANDARD_LIBRARIES="Crypt32.Lib User32.lib Advapi32.lib" ^
         -DCMAKE_BUILD_TYPE=Release ^
         -DCMAKE_CONFIGURATION_TYPES=Release ^
         -Dprotobuf_BUILD_TESTS=OFF ^
+        -DgRPC_BUILD_TESTS=OFF ^
+        -DgRPC_BUILD_CSHARP_EXT=OFF ^
         -DgRPC_ABSL_PROVIDER=module ^
         -DgRPC_CARES_PROVIDER=module ^
         -DgRPC_RE2_PROVIDER=module ^
@@ -100,11 +105,15 @@ EXIT /B %ERRORLEVEL%
         -DSSL_EAY_LIBRARY_RELEASE="%UE_ROOT%\Engine\Source\ThirdParty\OpenSSL\%OPENSSL_VERSION%\Lib\Win64\VS2015\Release\libssl.lib" ^
         -DSSL_EAY_RELEASE="%UE_ROOT%\Engine\Source\ThirdParty\OpenSSL\%OPENSSL_VERSION%\Lib\Win64\VS2015\Release\libssl.lib" ^
         -DgRPC_PROTOBUF_PROVIDER=module
+    :: Return to previous dir
+    popd
 EXIT /B %ERRORLEVEL%
 
 :BUILD
-    cd "%CMAKE_BUILD_DIR%"
+    pushd "%CMAKE_BUILD_DIR%"
     call cmake --build . --config Release --clean-first -j8
+    :: Return to previous dir
+    popd
 EXIT /B %ERRORLEVEL%
 
 

@@ -24,14 +24,7 @@ def mock_main(mocker):
     """Mock the main training function to prevent actual training."""
     return mocker.patch("schola.scripts.rllib.train.main")
 
-
-@pytest.fixture
-def mock_ray(mocker):
-    """Mock ray to prevent initialization during tests."""
-    mocker.patch("schola.scripts.rllib.train.ray")
-
-
-def test_ppo_default_arguments(mock_main, mock_ray):
+def test_ppo_default_arguments(mock_main):
     """Test PPO command with default arguments."""
     # Call with empty list to avoid reading from sys.argv
     train_app(["ppo"], result_action="return_value")
@@ -61,7 +54,7 @@ def test_ppo_default_arguments(mock_main, mock_ray):
     assert isinstance(args.environment_settings.simulator, UnrealEditorSimulatorArgs)
 
 
-def test_ppo_custom_training_parameters(mock_main, mock_ray):
+def test_ppo_custom_training_parameters(mock_main):
     """Test PPO command with custom training parameters."""
     train_app([
         "ppo",
@@ -85,7 +78,7 @@ def test_ppo_custom_training_parameters(mock_main, mock_ray):
     assert args.training_settings.num_sgd_iter == 10
 
 
-def test_ppo_custom_algorithm_parameters(mock_main, mock_ray):
+def test_ppo_custom_algorithm_parameters(mock_main):
     """Test PPO command with custom PPO-specific parameters."""
     train_app([
         "ppo",
@@ -103,7 +96,7 @@ def test_ppo_custom_algorithm_parameters(mock_main, mock_ray):
     assert args.algorithm_settings.use_gae is False
 
 
-def test_sac_default_arguments(mock_main, mock_ray):
+def test_sac_default_arguments(mock_main):
     """Test SAC command with default arguments."""
     train_app(["sac"], result_action="return_value")
     
@@ -119,7 +112,7 @@ def test_sac_default_arguments(mock_main, mock_ray):
     assert args.algorithm_settings.twin_q is True
 
 
-def test_sac_custom_parameters(mock_main, mock_ray):
+def test_sac_custom_parameters(mock_main):
     """Test SAC command with custom SAC-specific parameters."""
     train_app([
         "sac",
@@ -139,7 +132,7 @@ def test_sac_custom_parameters(mock_main, mock_ray):
     assert args.algorithm_settings.twin_q is False
 
 
-def test_impala_default_arguments(mock_main, mock_ray):
+def test_impala_default_arguments(mock_main):
     """Test IMPALA command with default arguments."""
     train_app(["impala"], result_action="return_value")
     
@@ -153,7 +146,7 @@ def test_impala_default_arguments(mock_main, mock_ray):
     assert args.algorithm_settings.vtrace_clip_pg_rho_threshold == 1.0
 
 
-def test_impala_custom_parameters(mock_main, mock_ray):
+def test_impala_custom_parameters(mock_main):
     """Test IMPALA command with custom IMPALA-specific parameters."""
     train_app([
         "impala",
@@ -171,7 +164,7 @@ def test_impala_custom_parameters(mock_main, mock_ray):
     assert args.algorithm_settings.vtrace_clip_pg_rho_threshold == 1.5
 
 
-def test_resource_settings(mock_main, mock_ray):
+def test_resource_settings(mock_main):
     """Test resource allocation parameters."""
     train_app([
         "ppo",
@@ -193,7 +186,7 @@ def test_resource_settings(mock_main, mock_ray):
     assert args.resource_settings.num_gpus_per_learner == 1
 
 
-def test_network_architecture_settings(mock_main, mock_ray):
+def test_network_architecture_settings(mock_main):
     """Test network architecture parameters."""
     train_app([
         "ppo",
@@ -213,7 +206,7 @@ def test_network_architecture_settings(mock_main, mock_ray):
     assert args.network_architecture_settings.fcnet_hiddens == [256, 256], "FCNet hiddens should be [256, 256]"
 
 
-def test_logging_settings(mock_main, mock_ray):
+def test_logging_settings(mock_main):
     """Test logging verbosity parameters."""
     train_app([
         "ppo",
@@ -229,7 +222,7 @@ def test_logging_settings(mock_main, mock_ray):
     assert args.logging_settings.rllib_verbosity == 3
 
 
-def test_checkpoint_settings(mock_main, mock_ray, tmp_path):
+def test_checkpoint_settings(mock_main, tmp_path):
     """Test checkpoint configuration parameters."""
     checkpoint_dir = tmp_path / "checkpoints"
     checkpoint_dir.mkdir()
@@ -254,7 +247,7 @@ def test_checkpoint_settings(mock_main, mock_ray, tmp_path):
     assert args.checkpoint_settings.export_onnx is True
 
 
-def test_ppo_with_executable_simulator(mock_main, mock_ray, tmp_path):
+def test_ppo_with_executable_simulator(mock_main, tmp_path):
     """Test executable simulator type is correctly parsed."""
     executable_path = tmp_path / "UnrealGame.exe"
     executable_path.touch()  # Create fake executable
@@ -275,7 +268,7 @@ def test_ppo_with_executable_simulator(mock_main, mock_ray, tmp_path):
     assert isinstance(args.environment_settings.simulator, UnrealExecutableSimulatorArgs)
 
 
-def test_protocol_settings(mock_main, mock_ray):
+def test_protocol_settings(mock_main):
     """Test protocol configuration parameters."""
     train_app([
         "ppo",
@@ -289,7 +282,7 @@ def test_protocol_settings(mock_main, mock_ray):
     assert args.environment_settings.protocol.port == 12345
 
 
-def test_parse_args_without_execution(mock_ray):
+def test_parse_args_without_execution():
     """Test parsing arguments without executing the command."""
     from schola.scripts.rllib.train import ppo
     command, bound, _ = train_app.parse_args(["ppo", "--training-settings.timesteps", "5000"])
@@ -299,7 +292,7 @@ def test_parse_args_without_execution(mock_ray):
     assert bound.arguments["args"].training_settings.timesteps == 5000
 
 
-def test_multiple_algorithms_return_different_settings(mock_main, mock_ray):
+def test_multiple_algorithms_return_different_settings(mock_main):
     """Test that different algorithm commands create different settings."""
     # Test PPO
     train_app(["ppo"], result_action="return_value")
@@ -323,7 +316,7 @@ def test_multiple_algorithms_return_different_settings(mock_main, mock_ray):
     assert isinstance(impala_args.algorithm_settings, IMPALASettings)
 
 
-def test_complex_configuration(mock_main, mock_ray, tmp_path):
+def test_complex_configuration(mock_main, tmp_path):
     """Test a complex configuration with many parameters."""
     checkpoint_dir = tmp_path / "checkpoints"
     checkpoint_dir.mkdir()

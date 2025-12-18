@@ -9,8 +9,6 @@ from pathlib import Path
 from typing import Annotated, Literal, Union
 import traceback
 
-import ray
-from ray.rllib.algorithms.algorithm import Algorithm
 
 from schola.scripts.common import (
     UnrealEditorSimulatorArgs,
@@ -87,7 +85,10 @@ def main(args: RLlibScriptArgs) -> 'ray.tune.ExperimentAnalysis':
     tune.ExperimentAnalysis
         The results of the training
     """
+    # Import ray and rllib dependencies lazily when the command is actually executed
+    import ray
     from ray import air, tune
+    from ray.rllib.algorithms.algorithm import Algorithm
     from ray.rllib.policy.policy import PolicySpec
     from ray.rllib.algorithms.ppo import PPOConfig
     from ray.rllib.algorithms.sac.sac import SACConfig

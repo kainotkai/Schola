@@ -26,6 +26,11 @@ struct SCHOLA_API FPoint
 	GENERATED_BODY()
 
 	/**
+	 * @brief Virtual destructor for proper cleanup of derived types.
+	 */
+	virtual ~FPoint() = default;
+
+	/**
 	 * @brief Accepts a mutable visitor for the visitor pattern.
 	 * @param[in,out] Visitor The visitor to accept.
 	 */

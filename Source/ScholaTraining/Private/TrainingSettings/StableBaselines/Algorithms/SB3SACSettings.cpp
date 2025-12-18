@@ -1,6 +1,5 @@
 // Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
-#pragma once
 #include "TrainingSettings/StableBaselines/Algorithms/SB3SACSettings.h"
 
 void FSB3SACSettings::GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const

@@ -5,9 +5,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Points/Point.h"
+#include "Points/BoxPoint.h"
 #include "BoxPointBlueprintLibrary.generated.h"
-
-struct FBoxPoint;
 
 /**
  * @class UBoxPointBlueprintLibrary

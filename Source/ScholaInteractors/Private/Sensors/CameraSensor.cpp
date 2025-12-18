@@ -38,7 +38,7 @@ void UCameraSensor::GetObservationSpace_Implementation(FInstancedStruct& OutObse
 
 int UCameraSensor::GetNumChannels() const
 {
-	uint8 EnabledValidChannels = EnabledChannels & !GetInvalidChannels();
+	uint8 EnabledValidChannels = EnabledChannels & ~GetInvalidChannels();
 	bool  bHasR = (EnabledValidChannels & static_cast<uint8>(EChannels::R));
 	bool  bHasG = (EnabledValidChannels & static_cast<uint8>(EChannels::G));
 	bool  bHasB = (EnabledValidChannels & static_cast<uint8>(EChannels::B));

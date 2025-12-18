@@ -258,6 +258,8 @@ def get_ubt_path(project_folder: Path, ue_version: str = "5.5") -> Path:
                 + ue_version
                 + "/Engine/Build/BatchFiles/RunUAT.bat"
             )
+        else:
+            return None
 
 
 def get_editor_executable_path(engine_path: Path) -> Path:
@@ -283,7 +285,7 @@ def get_editor_executable_path(engine_path: Path) -> Path:
     return engine_path / "Engine" / "Binaries" / bin_dir / editor_tool
 
 
-def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: Path | str):
+def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: Path | str, **kwargs):
     """
     Build an Unreal Engine project executable using the Unreal Build Tool.
 
@@ -295,6 +297,8 @@ def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: 
         Directory where the built executable will be staged.
     ubt_path : str
         Path to the Unreal Build Tool (RunUAT) script.
+    **kwargs
+        Additional arguments to pass to the UBTCommand constructor.
 
     Returns
     -------
@@ -302,7 +306,7 @@ def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: 
         The result of the build process.
     """
     args = UBTCommand(
-        ubt_path=ubt_path, project_file=project_file, staging_dir=build_dir
+        ubt_path=ubt_path, project_file=project_file, staging_dir=build_dir, **kwargs
     ).build_args()
     comp_process = subprocess.run(args,capture_output=True)
     return comp_process

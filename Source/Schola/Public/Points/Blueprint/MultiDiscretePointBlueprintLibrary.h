@@ -5,9 +5,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Points/Point.h"
+#include "Points/MultiDiscretePoint.h"
 #include "MultiDiscretePointBlueprintLibrary.generated.h"
-
-struct FMultiDiscretePoint;
 
 /**
  * @class UMultiDiscretePointBlueprintLibrary

@@ -20,7 +20,7 @@ inline void RaiseInvalidInstancedStructError(const FString& InFunctionName)
 	{
 		const FString ErrorMessage = FString::Printf(TEXT("%s: Invalid InstancedStruct passed."), *InFunctionName);
 	#if WITH_EDITOR
-		const FBlueprintExceptionInfo ExceptionInfo(EBlueprintExceptionType::UserRaisedError, FText::FromString(ErrorMessage));
+		const FBlueprintExceptionInfo ExceptionInfo(EBlueprintExceptionType::NonFatalError, FText::FromString(ErrorMessage));
 		FBlueprintCoreDelegates::ThrowScriptException(TopFrame->Object, *TopFrame, ExceptionInfo);
 	#else
 		UE_LOG(LogBlueprintUserMessages, Error, TEXT("%s:\n%s"), *ErrorMessage, *TopFrame->GetStackTrace());
@@ -46,7 +46,7 @@ inline void RaiseInstancedStructTypeMismatchError(const TInstancedStruct<T>& InS
 		const FString ErrorMessage = FString::Printf(TEXT("%s: Type mismatch. Expected %s but received %s."), 
 			*InFunctionName, *ExpectedType, *InStruct.GetScriptStruct()->GetName());
 	#if WITH_EDITOR
-		const FBlueprintExceptionInfo ExceptionInfo(EBlueprintExceptionType::UserRaisedError, FText::FromString(ErrorMessage));
+		const FBlueprintExceptionInfo ExceptionInfo(EBlueprintExceptionType::NonFatalError, FText::FromString(ErrorMessage));
 		FBlueprintCoreDelegates::ThrowScriptException(TopFrame->Object, *TopFrame, ExceptionInfo);
 	#else
 		UE_LOG(LogBlueprintUserMessages, Error, TEXT("%s:\n%s"), *ErrorMessage, *TopFrame->GetStackTrace());

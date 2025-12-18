@@ -1,6 +1,5 @@
 // Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
-#pragma once
 #include "TrainingSettings/Ray/RLlibNetworkArchitectureSettings.h"
 
 void FRLlibNetworkArchSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) const

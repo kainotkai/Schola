@@ -163,6 +163,4 @@ public:
 	 */
 	static bool SawNonGameThread();
 	
-	/** @brief Counter for number of Think calls (for testing) */
-	std::atomic<uint32> GThinkCounter{ 0 };
 };

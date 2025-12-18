@@ -62,10 +62,8 @@ void ABasicTestMultiAgentEnvironment::Step_Implementation(const TMap<FString, FI
 		if (ActionPtr->IsValid())
 		{
 			const FDiscretePoint& Action = ActionPtr->Get<FDiscretePoint>();
-			UE_LOG(LogTemp, Log, TEXT("[BasicTestEnvironment] Step received ActionValue=%d (PositionX before=%f)"), Action.Value, PositionX);
 			if (Action.Value == 1) { PositionX += StepDelta; }
 			else if (Action.Value == 2) { PositionX -= StepDelta; }
-			UE_LOG(LogTemp, Log, TEXT("[BasicTestEnvironment] PositionX after action=%f"), PositionX);
 		}
 	}
 
@@ -114,7 +112,7 @@ ABasicTestSingleAgentEnvironment::ABasicTestSingleAgentEnvironment()
 	}
 }
 
-void ABasicTestSingleAgentEnvironment::Handle_InitializeEnvironment_Implementation(FInteractionDefinition& OutAgentDefinition)
+void ABasicTestSingleAgentEnvironment::InitializeEnvironment_Implementation(FInteractionDefinition& OutAgentDefinition)
 {
 
 	TInstancedStruct<FSpace>& BoxSpaceInst = OutAgentDefinition.ObsSpaceDefn;
@@ -129,18 +127,17 @@ void ABasicTestSingleAgentEnvironment::Handle_InitializeEnvironment_Implementati
 
 }
 
-void ABasicTestSingleAgentEnvironment::Handle_Reset_Implementation(FInitialAgentState& OutAgentState)
+void ABasicTestSingleAgentEnvironment::Reset_Implementation(FInitialAgentState& OutAgentState)
 {
 	PositionX = 0.0f;
 	BuildObservation(OutAgentState.Observations);
 }
 
-void ABasicTestSingleAgentEnvironment::Handle_Step_Implementation(const TInstancedStruct<FPoint>& InActions, FAgentState& OutAgentState)
+void ABasicTestSingleAgentEnvironment::Step_Implementation(const FInstancedStruct& InActions, FAgentState& OutAgentState)
 {
 	if (InActions.IsValid())
 	{
 		const FDiscretePoint& Action = InActions.Get<FDiscretePoint>();
-		UE_LOG(LogTemp, Log, TEXT("[BasicTestEnvironment] Step received ActionValue=%d (PositionX before=%f)"), Action.Value, PositionX);
 		if (Action.Value == 1)
 		{
 			PositionX += StepDelta;
@@ -149,7 +146,6 @@ void ABasicTestSingleAgentEnvironment::Handle_Step_Implementation(const TInstanc
 		{
 			PositionX -= StepDelta;
 		}
-		UE_LOG(LogTemp, Log, TEXT("[BasicTestEnvironment] PositionX after action=%f"), PositionX);
 	}
 	
 	bool bTerminated = false;

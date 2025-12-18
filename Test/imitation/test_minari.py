@@ -2,21 +2,16 @@
 import gymnasium as gym
 import shutil
 import os
-
-
-from schola.core.protocols.protobuf.offlinegRPC import gRPCImitationProtocol
-from schola.minari.datacollector import ScholaDataCollector
-from schola.core.simulators.unreal.editor import UnrealEditor
-from minari import DataCollector
 import numpy as np
 
-# Minari integration tests
-try:
-    import minari
-    from minari.utils import get_dataset_path
-    MINARI_AVAILABLE = True
-except ImportError:
-    MINARI_AVAILABLE = False
+# Minari is required for these tests - fail immediately if not available
+import minari
+from minari import DataCollector
+from minari.utils import get_dataset_path
+from schola.minari.datacollector import ScholaDataCollector
+
+from schola.core.protocols.protobuf.offlinegRPC import gRPCImitationProtocol
+from schola.core.simulators.unreal.editor import UnrealEditor
 
 def wrap(env, wrappers):
     if not isinstance(env, gym.Env):

@@ -209,7 +209,11 @@ def test_baserayenv_possible_agents_static(make_rllib_env):
                for agent_id in observations.keys()}
     
     for _ in range(10):
-        env.step(actions)
+        obs, rewards, terminateds, truncateds, infos = env.step(actions)
+        if terminateds.get("__all__", False) or truncateds.get("__all__", False):
+            obs, _ = env.reset()
+            actions = {agent_id: env.single_action_spaces[agent_id].sample() 
+                       for agent_id in obs.keys()}
         current_possible = env.possible_agents.copy()
         assert initial_possible == current_possible, \
             "possible_agents should remain static during steps"

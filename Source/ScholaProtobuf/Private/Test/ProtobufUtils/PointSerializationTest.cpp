@@ -113,9 +113,7 @@ bool FProtobufDictPointSerializationTest::RunTest(const FString& Parameters)
 {
 	// Create inner discrete point
 	TInstancedStruct<FPoint> Inner;
-	Inner.InitializeAs<FDiscretePoint>();
-	FDiscretePoint* InnerDiscrete = Inner.GetMutablePtr<FDiscretePoint>();
-	InnerDiscrete->Value = 42;
+	Inner.InitializeAs<FDiscretePoint>(42);
 
 	// Create dict point and add entry "inner"
 	TInstancedStruct<FPoint> Inst;

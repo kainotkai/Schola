@@ -7,7 +7,6 @@ type: software
 authors:
   - given-names: Alexander
     family-names: Cann
-    name-particle: Alexander
     email: alexcann@amd.com
     affiliation: AMD
   - given-names: Tian Yue
@@ -17,6 +16,10 @@ authors:
   - given-names: Nathan
     family-names: Hung
     email: Nathan.Hung@amd.com
+    affiliation: AMD
+  - given-names: Noah
+    family-names: Monti
+    email: Noah.Monti@amd.com
     affiliation: AMD
   - given-names: Mehdi
     family-names: Saeedi
@@ -35,5 +38,5 @@ keywords:
   - Unreal Engine 5
   - Python
 license: MIT
-version: '1.3'
-date-released: '2025-08-01'
+version: '2.0.1'
+date-released: '2025-12-16'

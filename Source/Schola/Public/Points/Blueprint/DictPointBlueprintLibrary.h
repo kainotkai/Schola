@@ -5,9 +5,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Points/Point.h"
+#include "Points/DictPoint.h"
 #include "DictPointBlueprintLibrary.generated.h"
-
-struct FDictPoint;
 
 /**
  * @class UDictPointBlueprintLibrary

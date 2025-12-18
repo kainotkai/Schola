@@ -77,7 +77,7 @@ class PettingZooToGymServiceServicer(GymServiceServicer):
         Initialize the PettingZoo servicer.
         
         Args:
-            env_id: Either a string (e.g., 'pistonball_v6') or a callable that returns a PettingZoo env
+            env_factory: A callable that returns a PettingZoo env
             wrappers: Optional list of wrapper classes to apply
         """
         self._env_factory = env_factory

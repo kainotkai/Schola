@@ -62,14 +62,14 @@ public:
 
 
 	// IScholaEnvironment overrides
-	void Handle_InitializeEnvironment_Implementation(FInteractionDefinition& OutAgentDefinitions);
+	void InitializeEnvironment_Implementation(FInteractionDefinition& OutAgentDefinitions) override;
 
-	void SeedEnvironment_Implementation(int Seed) {}
+	void SeedEnvironment_Implementation(int Seed) override {}
 
-	void SetEnvironmentOptions_Implementation(const TMap<FString, FString>& InOptions) {}
+	void SetEnvironmentOptions_Implementation(const TMap<FString, FString>& InOptions) override {}
 
-	void Handle_Reset_Implementation(FInitialAgentState& OutAgentState);
+	void Reset_Implementation(FInitialAgentState& OutAgentState) override;
 
-	void Handle_Step_Implementation(const TInstancedStruct<FPoint>& InActions, FAgentState& OutAgentStates);
+	void Step_Implementation(const FInstancedStruct& InAction, FAgentState& OutAgentState) override;
 
 };

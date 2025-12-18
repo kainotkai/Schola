@@ -5,9 +5,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Spaces/Space.h"
+#include "Spaces/BoxSpace.h"
 #include "BoxSpaceBlueprintLibrary.generated.h"
-
-struct FBoxSpace;
 
 /**
  * @class UBoxSpaceBlueprintLibrary

@@ -1,19 +1,18 @@
 # Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
-from concurrent import futures
 from datetime import datetime
 import json
 import subprocess
 from typing import Callable, List, Literal, TypedDict
-from attr import dataclass
-import grpc
+from dataclasses import dataclass
+import sys
+import os
 
 import pytest
 import pathlib
 import re
 from functools import cache
 from typing import Dict, List, Optional, Any, Tuple
-import pytest
 
 from schola.core.utils.ubt import (
     get_project_file,
@@ -118,25 +117,27 @@ class UnrealTestResult:
         )
     
 
-
 def run_unreal_tests(
     editor_path, uproject_path, report_path: pathlib.Path, tests_to_run
 ):
+    """Run Unreal automation tests using a simple blocking subprocess call."""
 
-    timeout = 600  # leave in seconds
+    timeout = int(os.getenv("SCHOLA_UNREAL_TIMEOUT", "600"))  # seconds
 
     tests_to_run_cmd = f"-ExecCmds=Automation RunTest {tests_to_run};Quit"
     
     command = [
         str(editor_path),
-        str(uproject_path),
+        f"-project={uproject_path}",
         "-unattended",
-        "-silent",
-        f"{tests_to_run_cmd}",
         "-nullrhi",
+        "-NoTrace",
         f"-ReportExportPath={report_path}",
         "-log",
+        f"{tests_to_run_cmd}",
     ]
+
+    print(f"Running Unreal Test Command: {' '.join(command)}")
 
     try:
         result = subprocess.run(
@@ -144,14 +145,18 @@ def run_unreal_tests(
             timeout=timeout,
             capture_output=True,
         )
+        
+        stdout_str = result.stdout.decode("utf-8", errors="replace")
+        stderr_str = result.stderr.decode("utf-8", errors="replace")
+        
         # 0 is success, 255 is some test came back as failed but the overall test run was successful
         if result.returncode != 0 and result.returncode != 255:
-            raise subprocess.CalledProcessError(result.returncode, command, result.stdout, result.stderr)
+            raise Exception(f"Unreal Automation Test failed with error {result.returncode}\nstdout: {stdout_str}\nstderr: {stderr_str}")
+            
         print(f"Unreal Automation Test Results Saved To: {report_path}")
-    except subprocess.TimeoutExpired as e:
-        raise Exception(f"Unreal Automation Test timed out after {timeout} seconds.\nstdout: {e.stdout}\nstderr: {e.stderr}")
-    except subprocess.CalledProcessError as e:
-        raise Exception(f"Unreal Automation Test failed with error {e.returncode}\nstdout: {e.stdout}\nstderr: {e.stderr}")
+        
+    except subprocess.TimeoutExpired:
+        raise Exception(f"Unreal Automation Test timed out after {timeout} seconds.")
 
 
 def load_unreal_test_results(report_path: pathlib.Path) -> Dict[str, UnrealTestResult]:
@@ -175,6 +180,9 @@ def get_engine_path_from_config(config) -> pathlib.Path:
     return pathlib.Path(engine_path)
 
 def get_build_unreal_from_config(config) -> bool:
+    # --no-build-unreal takes precedence
+    if config.getoption("--no-build-unreal"):
+        return False
     build_option = config.getoption("--build-unreal")
     if build_option is not None:
         return build_option
@@ -206,6 +214,16 @@ def pytest_addoption(parser):
             action="store_true",
             default=None,
             help="Build Unreal project before running tests",
+        )
+    except ValueError:
+        pass  # Option already exists
+
+    try:
+        parser.addoption(
+            "--no-build-unreal",
+            action="store_true",
+            default=False,
+            help="Skip building Unreal project before running tests",
         )
     except ValueError:
         pass  # Option already exists
@@ -244,6 +262,10 @@ def pytest_sessionstart(session):
 class UnrealTestFile(pytest.File):
 
     def collect(self):
+        # Skip C++ test collection on Linux
+        if sys.platform != "win32":
+            return
+            
         test_details = []
         
         with open(self.path, "r", encoding="utf-8", errors="ignore") as f:
@@ -327,9 +349,21 @@ def is_cpp_test_file(file_path: pathlib.Path) -> bool:
     return file_path.name.endswith("Test" + file_path.suffix)
 
 def pytest_collect_file(parent, file_path : pathlib.Path):
-    return UnrealTestFile.from_parent(parent=parent, path=file_path)
+    # Skip C++ test collection on Linux
+    if sys.platform != "win32":
+        return None
+        
+    # Only custom-collect C++ automation tests; let pytest's normal Python collectors
+    # handle .py tests in `Test/` and doctests in `Resources/python/schola`.
+    if file_path.suffix.lower() in CPP_EXTENSIONS:
+        return UnrealTestFile.from_parent(parent=parent, path=file_path)
+    return None
 
 def pytest_ignore_collect(collection_path: pathlib.Path, config):
+    # Skip C++ test files on Linux
+    if sys.platform != "win32" and is_cpp_test_file(collection_path):
+        return True  # Ignore C++ test files on Linux
+        
     if is_cpp_test_file(collection_path):
         return False # Forcibly do not ignore C++ test files
     return None # Punt on everything else
@@ -421,6 +455,15 @@ class UnrealTestRunner:
             raise Exception("Could not determine Unreal Engine version from .uproject file")
         
         ubt_path = get_ubt_path(project_folder, ue_version)
+
+        # Try to use the engine path if we couldn't find UBT via the project files
+        if not ubt_path and self.unreal_path:
+            import platform
+            script_name = "RunUAT.bat" if platform.system() == "Windows" else "RunUAT.sh"
+            possible_path = self.unreal_path / "Engine" / "Build" / "BatchFiles" / script_name
+            if possible_path.exists():
+                ubt_path = possible_path
+
         if not ubt_path:
             raise Exception("Could not find Unreal Build Tool (UBT) path")
         
@@ -436,6 +479,9 @@ class UnrealTestRunner:
             project_file=str(uproject_path),
             build_dir=str(build_dir),
             ubt_path=str(ubt_path),
+            should_package=False,
+            should_cook=True,
+            force_monolithic=False,
         )
         print("="*10 + " Unreal Build Output " + "="*10)
         print(result.stdout.decode('utf-8', errors='ignore'))
@@ -459,12 +505,16 @@ def pytest_runtestloop(session):
 
     unreal_items = [item for item in session.items if isinstance(item, UnrealTestItem)]
 
-    # Run Unreal tests in batch if we have any
-    if unreal_items:
+    # Run Unreal tests in batch if we have any (only on Windows)
+    if unreal_items and sys.platform == "win32":
+        # Ensure report directory exists (create if pytest_sessionstart wasn't called)
+        if not hasattr(session.config, '_unreal_report_dir'):
+            tmp_path_factory = session.config._tmp_path_factory
+            session.config._unreal_report_dir = tmp_path_factory.mktemp("unreal_test_reports")
         report_dir = session.config._unreal_report_dir
         runner = UnrealTestRunner(session, unreal_items, report_dir)
         runner.run_batch_tests()
-
+    
     # Run all tests (including the now-populated Unreal tests)
     _run_all_tests(session)
 

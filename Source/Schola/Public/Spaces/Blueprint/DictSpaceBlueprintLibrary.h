@@ -5,9 +5,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Spaces/Space.h"
+#include "Spaces/DictSpace.h"
 #include "DictSpaceBlueprintLibrary.generated.h"
-
-struct FDictSpace;
 
 /**
  * @class UDictSpaceBlueprintLibrary

@@ -172,16 +172,18 @@ class ScholaRLModule(th.nn.Module):
         # Get the input dim from the model
         # input_dim = gym.spaces.utils.flatten_space(model.observation_space).shape
         # Export the model to ONNX
-
-        with open(export_path, "w+b") as f:
-            th.onnx.export(
-                self,
-                tuple(inputs),
-                f,
-                opset_version=onnx_opset,
-                input_names=input_names,
-                output_names=output_names,
-            )
+        # Pass the path as a string (not a file object) for compatibility with newer PyTorch ONNX exporters
+        # Use dynamo=False for legacy exporter which properly handles input_names parameter
+        th.onnx.export(
+            self,
+            tuple(inputs),
+            str(export_path),
+            opset_version=onnx_opset,
+            input_names=input_names,
+            output_names=output_names,
+            dynamic_axes={k: {0: "batch_size"} for k in input_names},
+            dynamo=False,
+        )
         print("Model exported to ONNX")
 
     def make_fundamental_output(self, space, logits, space_start):
@@ -339,7 +341,7 @@ class RLLibScholaModel(ScholaModel):
             curr_dim += space_end
         return outputs, curr_dim
 
-    def save_as_onnx(self, export_path: pathlib.Path, onnx_oppset: int = 17) -> None:
+    def save_as_onnx(self, export_path: pathlib.Path, onnx_opset: int = 17) -> None:
         policy = self._policy
         export_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -391,16 +393,18 @@ class RLLibScholaModel(ScholaModel):
         output_names.append("state_out")
         # Note that the seq_lens gets dropped from the exported model
         
+        # Pass the path as a string (not a file object) for compatibility with newer PyTorch ONNX exporters
+        # Use dynamo=False for legacy exporter which properly handles input_names parameter
         th.onnx.export(
             self,
             tuple(inputs),
-            export_path,
+            str(export_path),
             export_params=True,
-            opset_version=onnx_oppset,
-            do_constant_folding=True,
+            opset_version=onnx_opset,
             input_names=input_names,
             output_names=output_names,
             dynamic_axes={k: {0: "batch_size"} for k in input_names},
+            dynamo=False,
         )
 
 # end of adapted code

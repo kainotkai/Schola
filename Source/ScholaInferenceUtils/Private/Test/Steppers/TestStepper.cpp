@@ -5,11 +5,13 @@
 #include "Points/MultiDiscretePoint.h"
 #include "Spaces/MultiDiscreteSpace.h"
 #include "Points/Point.h"
+#include "Misc/ScopeExit.h"
 
 // Static tracking variables (internal linkage)
 static TSet<uint32> GTestPolicyThreadIds; // threads that executed Think
 static std::atomic<bool> GTestPolicySawNonGameThread { false };
 static uint32 GTestPolicyGameThreadId = 0; // captured at first reset
+static std::atomic<uint32> GThinkCounter{ 0 }; // Global think counter
 
 
 UTestAgent::UTestAgent()
@@ -163,6 +165,7 @@ void UTestPolicy::ResetThreadTracking()
 	GTestPolicyThreadIds.Reset();
 	GTestPolicySawNonGameThread.store(false, std::memory_order_relaxed);
 	GTestPolicyGameThreadId = FPlatformTLS::GetCurrentThreadId(); // snapshot
+	GThinkCounter.store(0, std::memory_order_relaxed);
 }
 
 TSet<uint32> UTestPolicy::GetThreadIdsCopy()

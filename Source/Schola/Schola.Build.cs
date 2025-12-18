@@ -8,6 +8,16 @@ public class Schola : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        // Suppress Clang warning for USTRUCTs with virtual functions (FPoint and FSpace hierarchies)
+        // on UE 5.5 Linux. This warning is triggered by Unreal's TCppStructOps::Destruct calling
+        // explicit destructor on non-final types with virtual functions.
+        // The code is correct (virtual destructors exist), but Clang is strict about non-final types.
+        // Note: UE 5.6 does not have this issue.
+        if (Target.Platform == UnrealTargetPlatform.Linux && Target.Version.MajorVersion == 5 && Target.Version.MinorVersion == 5)
+        {
+            bWarningsAsErrors = false;
+        }
+
         PublicIncludePaths.AddRange(new string[] { });
 
         PrivateIncludePaths.AddRange(new string[] { "Schola/Private"});

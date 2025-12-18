@@ -1,6 +1,5 @@
 // Copyright (c) 2024-2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
-#pragma once
 #include "TrainingSettings/StableBaselines/Algorithms/SB3PPOSettings.h"
 
 void FSB3PPOSettings::GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const

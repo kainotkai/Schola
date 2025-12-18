@@ -28,8 +28,8 @@ void URPCImitationConnector::Init(const FTrainingDefinition& TrainingDefns)
 		
 		this->CommunicationManager = NewObject<UCommunicationManager>();
 		
-		int Port;
-		if (!FParse::Value(FCommandLine::Get(), TEXT("ScholaPort"), Port))
+		int32 Port = 0;
+		if (!FParse::Value(FCommandLine::Get(), TEXT("ScholaPort="), Port))
 		{
 			// Parse failed so we fall back to the default
 			Port = this->ServerSettings.Port;

@@ -80,6 +80,26 @@ def old_stack_algo_config(request):
         raise ValueError(f"Unknown algorithm: {algo_name}")
 
 
+def check_onnx_model(model_path, observation_space, action_space):
+    """Check that the ONNX model exists and has the correct input and output names."""
+    assert model_path.exists(), f"ONNX file not created at {model_path}"
+
+    model = onnx.load(model_path)
+
+    input_names = [input.name for input in model.graph.input]
+    output_names = [output.name for output in model.graph.output]
+
+    if isinstance(observation_space, gym.spaces.Dict):
+        assert set(input_names) == set(observation_space.spaces.keys()) | {"state_in"}, "Input names should be the keys of the observation space or 'state_in'"
+    else:
+        assert input_names == ["obs", "state_in"], f"Model inputs should be ['obs', 'state_in'], if observation space is not a dict. Got {input_names}"
+
+    if isinstance(action_space, gym.spaces.Dict):
+        assert set(output_names) == set(action_space.spaces.keys()) | {"state_out"}, "Output names should be the keys of the action space or 'state_out'"
+    else:
+        assert output_names == ["action", "state_out"], f"Model outputs should be ['action', 'state_out'], if action space is not a dict. Got {output_names}"
+
+
 # Define test spaces
 default_box_space = gym.spaces.Box(low=-1, high=1, shape=(4,), dtype=np.float32)
 default_discrete_space = gym.spaces.Discrete(2)
@@ -165,8 +185,7 @@ def test_export_rllib_policy_to_onnx(tmp_path, env_class, old_stack_algo_config)
         export_onnx_from_policy(policy, onnx_file)
         
         # Verify the ONNX file was created
-        
-        assert onnx_file.exists(), f"ONNX file not created at {onnx_file}"
+        check_onnx_model(onnx_file, env_class().observation_space, env_class().action_space)
         
     finally:
         # Clean up
@@ -229,20 +248,7 @@ def test_export_rllib_rl_module_to_onnx(tmp_path, env_class, algo_config):
         export_onnx_from_policy(algo.get_module(), onnx_file)
         
         # Verify the ONNX file was created
-        assert onnx_file.exists(), f"ONNX file not created at {onnx_file}"
-        model = onnx.load(str(onnx_file))
-        input_names = [input.name for input in model.graph.input]
-        output_names = [output.name for output in model.graph.output]
-        # if observation space is dict 
-        if isinstance(env_class().observation_space, gym.spaces.Dict):
-            assert set(input_names) == set(env_class().observation_space.spaces.keys()) | {"state_in"}, "Input names should be the keys of the observation space or 'state_in'"
-        else:
-            assert input_names == ["obs","state_in"], "Input name should be ['obs','state_in']"
-        # if action space is dict, then the output names should be the keys of the action space
-        if isinstance(env_class().action_space, gym.spaces.Dict):
-            assert set(output_names) == set(env_class().action_space.spaces.keys()) | {"state_out"}, "Output names should be the keys of the action space or 'state_out'"
-        else:
-            assert output_names == ["action","state_out"], "Output name should be ['action','state_out']"
+        check_onnx_model(onnx_file, env_class().observation_space, env_class().action_space)
     finally:
         # Clean up
         algo.stop()
@@ -309,19 +315,11 @@ def test_export_rllib_rl_module_with_state_to_onnx(tmp_path, env_class, algo_con
         assert onnx_file.exists(), f"ONNX file not created at {onnx_file}"
         
         # Verify the ONNX model has state inputs/outputs
-        model = onnx.load(str(onnx_file))
-        input_names = [input.name for input in model.graph.input]
-        output_names = [output.name for output in model.graph.output]
+        check_onnx_model(onnx_file, env_class().observation_space, env_class().action_space)
         
-        assert "state_in" in input_names, "ONNX model should have 'state_in' input"
-        assert "state_out" in output_names, "ONNX model should have 'state_out' output"
-        
-
-
     finally:
         # Clean up
         algo.stop()
-
 
 
 @pytest.mark.parametrize(
@@ -404,18 +402,5 @@ def test_export_rllib_algorithm_to_onnx(tmp_path, env_class, algo_config):
     export_onnx_from_policy(algo_from_checkpoint, onnx_file)
     
     # Verify the ONNX file was created
-    assert onnx_file.exists(), f"ONNX file not created at {onnx_file}"
-    model = onnx.load(str(onnx_file))
-    input_names = [input.name for input in model.graph.input]
-    output_names = [output.name for output in model.graph.output]
-    # if observation space is dict 
-    if isinstance(env_class().observation_space, gym.spaces.Dict):
-        assert set(input_names) == set(env_class().observation_space.spaces.keys()) | {"state_in"}, "Input names should be the keys of the observation space or 'state_in'"
-    else:
-        assert input_names == ["obs","state_in"], "Input name should be ['obs','state_in']"
-    # if action space is dict, then the output names should be the keys of the action space
-    if isinstance(env_class().action_space, gym.spaces.Dict):
-        assert set(output_names) == set(env_class().action_space.spaces.keys()) | {"state_out"}, "Output names should be the keys of the action space or 'state_out'"
-    else:
-        assert output_names == ["action", "state_out"], f"Output names should be ['action', 'state_out'], got {output_names}"
+    check_onnx_model(onnx_file, env_class().observation_space, env_class().action_space)
     

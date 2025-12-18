@@ -13,250 +13,304 @@
 #include "Points/BoxPoint.h"
 
 
-struct FSimpleGymConnectorTestContext
+// Helper functions for the tests
+
+static UManualGymConnector* SpawnConnector(UWorld* World, FAutomationTestBase* Test)
 {
-	ABasicTestEnvironment* Env = nullptr;
-	UManualGymConnector* Connector = nullptr;
-	int TargetSteps = 3;
-	int StepNumber = 0;
-	// initial number of steps for logging
-	int InitialSteps = 0;
-	FAutomationTestBase* Test = nullptr; // for assertions
-};
-
-
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FSpawnConnectorCommand, TSharedPtr<FSimpleGymConnectorTestContext>, Context);
-bool FSpawnConnectorCommand::Update()
-{
-	if (!GEditor->IsPlayingSessionInEditor()) // wait for PIE
-	{
-		return false;
-	}
-
-	UWorld* World = GEditor->GetPIEWorldContext()->World();
-	
 	if (!World)
 	{
-		return false;
+		return nullptr;
 	}
-	if (!Context->Connector)
-	{
-		Context->Connector = NewObject<UManualGymConnector>(World->GetWorldSettings());
-		TArray<TScriptInterface<IBaseScholaEnvironment>> Envs;
-		Context->Connector->UAbstractGymConnector::CollectEnvironments(Envs);
-		Context->Connector->UAbstractGymConnector::Init(Envs);
-		UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Created & enabled ManualGymConnector %s"), *Context->Connector->GetName());
-	}
-	return true;
+
+	UManualGymConnector* Connector = NewObject<UManualGymConnector>(World->GetWorldSettings());
+	TArray<TScriptInterface<IBaseScholaEnvironment>> Envs;
+	Connector->UAbstractGymConnector::CollectEnvironments(Envs);
+	Test->AddInfo(FString::Printf(TEXT("Collected %d environment(s)"), Envs.Num()));
+	Connector->UAbstractGymConnector::Init(Envs);
+	
+	return Connector;
 }
 
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FSpawnMultiAgentEnvCommand, TSharedPtr<FSimpleGymConnectorTestContext>, Context);
-bool FSpawnMultiAgentEnvCommand::Update()
+static ABasicTestMultiAgentEnvironment* SpawnMultiAgentEnv(UWorld* World, FAutomationTestBase* Test)
 {
-	if (!GEditor->IsPlayingSessionInEditor()) // wait for PIE
-	{
-		return false;
-	}
-
-	UWorld* World = GEditor->GetPIEWorldContext()->World();
-
 	if (!World)
 	{
-		return false;
+		return nullptr;
 	}
-	if (!Context->Env)
+
+	ABasicTestMultiAgentEnvironment* Env = World->SpawnActor<ABasicTestMultiAgentEnvironment>();
+	if (!Env)
 	{
-		Context->Env = World->SpawnActor<ABasicTestMultiAgentEnvironment>();
-		if (!Context->Env)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to spawn ABasicMultiAgentTestEnvironment"));
-			return true; // abort
-		}
-		else
-		{
-			FVector Loc = Context->Env->GetActorLocation();
-			UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Spawned ABasicMultiAgentTestEnvironment at X=%f Y=%f Z=%f"), Loc.X, Loc.Y, Loc.Z);
-		}
+		Test->AddError(TEXT("Failed to spawn ABasicMultiAgentTestEnvironment"));
 	}
-	return true;
+	else
+	{
+		FVector Loc = Env->GetActorLocation();
+		Test->AddInfo(FString::Printf(TEXT("Spawned ABasicMultiAgentTestEnvironment at X=%f Y=%f Z=%f"), Loc.X, Loc.Y, Loc.Z));
+	}
+	
+	return Env;
 }
 
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FSpawnSingleAgentEnvCommand, TSharedPtr<FSimpleGymConnectorTestContext>, Context);
-bool FSpawnSingleAgentEnvCommand::Update()
+static ABasicTestSingleAgentEnvironment* SpawnSingleAgentEnv(UWorld* World, FAutomationTestBase* Test)
 {
-	if (!GEditor->IsPlayingSessionInEditor()) // wait for PIE
-	{
-		return false;
-	}
-
-	UWorld* World = GEditor->GetPIEWorldContext()->World();
-
 	if (!World)
 	{
-		return false;
+		return nullptr;
 	}
 
-	if (!Context->Env)
+	ABasicTestSingleAgentEnvironment* Env = World->SpawnActor<ABasicTestSingleAgentEnvironment>();
+	if (!Env)
 	{
-		Context->Env = World->SpawnActor<ABasicTestSingleAgentEnvironment>();
-		if (!Context->Env)
-		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to spawn ABasicSingleAgentTestEnvironment"));
-			return true; // abort
-		}
-		else
-		{
-			FVector Loc = Context->Env->GetActorLocation();
-			UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Spawned ABasicSingleAgentTestEnvironment at X=%f Y=%f Z=%f"), Loc.X, Loc.Y, Loc.Z);
-		}
+		Test->AddError(TEXT("Failed to spawn ABasicSingleAgentTestEnvironment"));
 	}
-	return true;
+	else
+	{
+		FVector Loc = Env->GetActorLocation();
+		Test->AddInfo(FString::Printf(TEXT("Spawned ABasicSingleAgentTestEnvironment at X=%f Y=%f Z=%f"), Loc.X, Loc.Y, Loc.Z));
+	}
+	
+	return Env;
 }
 
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FStepConnectorCommand, TSharedPtr<FSimpleGymConnectorTestContext>, Context);
-bool FStepConnectorCommand::Update()
+static void StepConnector(UManualGymConnector* Connector, ABasicTestEnvironment* Env, int StepNumber, FAutomationTestBase* Test)
 {
-	if (!Context->Connector)
+	if (!Connector || !Env)
 	{
-		return true;
+		return;
 	}
 
-	// Drive manual steps synchronously (Tick not required since we call Step)
-	float BeforeX = Context->Env ? Context->Env->GetActorLocation().X : 0.f;
+	float BeforeX = Env->GetActorLocation().X;
+	float BeforeLogicalX = Env->GetLogicalPositionX();
 	
-	UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Step %d BEGIN (remaining before=%d) EnvX=%f"), Context->StepNumber, Context->TargetSteps - Context->StepNumber, BeforeX);
-	
+	Test->AddInfo(FString::Printf(TEXT("Step %d BEGIN EnvX=%f LogicalX=%f"), StepNumber, BeforeX, BeforeLogicalX));
 
-	int32			 ActionValue = (Context->StepNumber % 2 == 1) ? 1 : 0;
-	//TArray<TMap<FString, TInstancedStruct<FPoint>>> Actions;
+	int32 ActionValue = (StepNumber % 2 == 1) ? 1 : 0;
 	TMap<FString, TInstancedStruct<FPoint>> Actions;
-	Actions.Emplace(Context->Env->AgentName, TInstancedStruct<FPoint>::Make<FDiscretePoint>(ActionValue));
+	Actions.Emplace(Env->AgentName, TInstancedStruct<FPoint>::Make<FDiscretePoint>(ActionValue));
+	
+	Test->AddInfo(FString::Printf(TEXT("Submitting action for agent '%s' with value=%d"), *Env->AgentName, ActionValue));	
+
 	FInitialState InitState;
 	FTrainingState TrainState;
-	Context->Connector->ManualStep({ Actions }, InitState, TrainState);
+	Connector->ManualStep({ Actions }, InitState, TrainState);
 
-	float AfterX = Context->Env ? Context->Env->GetActorLocation().X : 0.f;
-	Context->StepNumber++;
+	float AfterX = Env->GetActorLocation().X;
+	float AfterLogicalX = Env->GetLogicalPositionX();
 	
-	UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Step %d END   (remaining=%d)  EnvX=%f"), Context->StepNumber, Context->TargetSteps - Context->StepNumber, AfterX);
-	
-	bool bDone = Context->StepNumber >= Context->TargetSteps;
-	
-	if (bDone)
-	{
-		UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Completed all %d steps"), Context->InitialSteps);
-	}
-	
-	return bDone; // complete after requested steps
+	Test->AddInfo(FString::Printf(TEXT("Step %d END EnvX=%f LogicalX=%f (Delta=%f)"), StepNumber, AfterX, AfterLogicalX, AfterLogicalX - BeforeLogicalX));	
 }
 
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FResetConnectorCommand, TSharedPtr<FSimpleGymConnectorTestContext>, Context);
-bool FResetConnectorCommand::Update()
+static void ResetConnector(UManualGymConnector* Connector)
 {
-	if (!Context->Connector)
+	if (!Connector)
 	{
-		return true;
+		return;
 	}
 
-	int32 ActionValue = (Context->StepNumber % 2 == 1) ? 1 : 0;
-	FInitialState  InitState;
-	Context->Connector->ManualReset(TMap<int32,int32>(),TMap<int,TMap<FString,FString>>(), InitState);
-
-	return true; // complete after requested steps
+	FInitialState InitState;
+	Connector->ManualReset(TMap<int32,int32>(), TMap<int,TMap<FString,FString>>(), InitState);
 }
 
-DEFINE_LATENT_AUTOMATION_COMMAND_ONE_PARAMETER(FVerifyEnvPositionCommand, TSharedPtr<FSimpleGymConnectorTestContext>, Context);
-bool FVerifyEnvPositionCommand::Update()
+static bool VerifyEnvPosition(ABasicTestEnvironment* Env, FAutomationTestBase* Test)
 {
-	if (!Context->Env)
+	if (!Env)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Environment missing in verification"));
-		if (Context->Test) 
-		{ 
-			UE_LOG(LogTemp, Error, TEXT("Environment missing in verification"));
-		}
-		
-		return true;
+		Test->AddError(TEXT("Environment missing in verification"));
+		return false;
 	}
 	
-	float X = Context->Env->GetActorLocation().X;
-	float LogicalX = Context->Env->GetLogicalPositionX();
+	float X = Env->GetActorLocation().X;
+	float LogicalX = Env->GetLogicalPositionX();
 	
-	UE_LOG(LogTemp, Log, TEXT("Env X after steps: World=%f Logical=%f"), X, LogicalX);
+	Test->AddInfo(FString::Printf(TEXT("Env X after steps: World=%f Logical=%f"), X, LogicalX));
+
+	bool bSuccess = true;
 	
 	if (LogicalX <= 0.f)
 	{
-		UE_LOG(LogTemp, Display, TEXT("Environment logical X did not move positive. Check action generation (expected > 0)."));
-		
-		if (Context->Test) 
-		{ 
-			UE_LOG(LogTemp, Display, TEXT("Logical position did not advance > 0")); 
+		if (Test)
+		{
+			Test->AddError(TEXT("Environment logical X did not move positive. Check action generation (expected > 0)."));
 		}
+		bSuccess = false;
 	}
 	if (FMath::Abs(LogicalX - X) > KINDA_SMALL_NUMBER)
 	{
-		UE_LOG(LogTemp, Display, TEXT("World transform X (%f) did not reflect logical X (%f)."), X, LogicalX);
-		if (Context->Test) 
+		if (Test) 
 		{ 
-			UE_LOG(LogTemp, Display, TEXT("World X (%f) != Logical X (%f)"), X, LogicalX); 
+			Test->AddError(FString::Printf(TEXT("World X (%f) != Logical X (%f)"), X, LogicalX));
 		}
+		bSuccess = false;
 	}
-	return true;
+	
+	return bSuccess;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimpleMultiAgentGymConnectorTest, "Schola.GymConnectors.Basic.Multi Agent Env Interface", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
 bool FSimpleMultiAgentGymConnectorTest::RunTest(const FString& Parameters)
 {
-	TSharedPtr<FSimpleGymConnectorTestContext> Context = MakeShareable(new FSimpleGymConnectorTestContext());
-	Context->TargetSteps = 3;
-	Context->InitialSteps = Context->TargetSteps;
-	Context->Test = this; // store pointer for latent command assertions
-	
-	UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Starting test with %d target steps"), Context->TargetSteps);
+	const int32 TargetSteps = 3;
 
-	// Load up the blank map used for testing
-	AutomationOpenMap(TEXT("/Schola/EmptyTestMap"));
-	// Allow world to initialize
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(0.5f));
-	ADD_LATENT_AUTOMATION_COMMAND(FSpawnMultiAgentEnvCommand(Context));
-	// Spawn environment and connector
-	ADD_LATENT_AUTOMATION_COMMAND(FSpawnConnectorCommand(Context));
-	ADD_LATENT_AUTOMATION_COMMAND(FResetConnectorCommand(Context)); // allow connector to initialize
+	AddInfo(FString::Printf(TEXT("Starting test with %d target steps"), TargetSteps));
+
+	// Create test world using FTestWorldWrapper
+	FTestWorldWrapper WorldWrapper;
+	if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
+	{
+		AddError(TEXT("Failed to create test world"));
+		return false;
+	}
+
+	UWorld* World = WorldWrapper.GetTestWorld();
+	if (!World)
+	{
+		AddError(TEXT("Failed to get test world"));
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+
+	// Begin play in the test world
+	if (!WorldWrapper.BeginPlayInTestWorld())
+	{
+		AddError(TEXT("Failed to begin play in test world"));
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+	
+	// Tick the world to allow initialization
+	for (int32 i = 0; i < 5; ++i)
+	{
+		WorldWrapper.TickTestWorld(0.016f); // ~60 FPS
+	}
+
+	// Spawn environment
+	ABasicTestMultiAgentEnvironment* Env = SpawnMultiAgentEnv(World, this);
+	if (!Env)
+	{
+		AddError(TEXT("Failed to spawn multi-agent environment"));
+		WorldWrapper.EndPlayInTestWorld();
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+
+	// Tick to allow environment to initialize
+	WorldWrapper.TickTestWorld(0.016f);
+
+	// Spawn connector
+	UManualGymConnector* Connector = SpawnConnector(World, this);
+	if (!Connector)
+	{
+		AddError(TEXT("Failed to spawn connector"));
+		WorldWrapper.EndPlayInTestWorld();
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+
+	// Reset connector to initialize
+	ResetConnector(Connector);
+	WorldWrapper.TickTestWorld(0.016f);
+
 	// Step connector multiple times
-	ADD_LATENT_AUTOMATION_COMMAND(FStepConnectorCommand(Context));
+	for (int32 StepNum = 0; StepNum < TargetSteps; ++StepNum)
+	{
+		StepConnector(Connector, Env, StepNum, this);
+		WorldWrapper.TickTestWorld(0.016f);
+	}
+	AddInfo(FString::Printf(TEXT(" Completed all %d steps"), TargetSteps));
+
 	// Verify environment position updated
-	ADD_LATENT_AUTOMATION_COMMAND(FVerifyEnvPositionCommand(Context));
-	// End PIE
-	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
-	return true;
+	bool bVerified = VerifyEnvPosition(Env, this);
+
+	// Clean up test world
+	WorldWrapper.EndPlayInTestWorld();
+	WorldWrapper.DestroyTestWorld(true);
+
+	return bVerified;
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSimpleSingleAgentGymConnectorTest, "Schola.GymConnectors.Basic.Single Agent Env Interface", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 
 bool FSimpleSingleAgentGymConnectorTest::RunTest(const FString& Parameters)
 {
-	TSharedPtr<FSimpleGymConnectorTestContext> Context = MakeShareable(new FSimpleGymConnectorTestContext());
-	Context->TargetSteps = 3;
-	Context->InitialSteps = Context->TargetSteps;
-	Context->Test = this; // store pointer for latent command assertions
+	const int32 TargetSteps = 3;
 
-	UE_LOG(LogTemp, Log, TEXT("[ManualConnectorTest] Starting test with %d target steps"), Context->TargetSteps);
+	AddInfo(FString::Printf(TEXT("Starting test with %d target steps"), TargetSteps));
 
-	// Load up the blank map used for testing
-	AutomationOpenMap(TEXT("/Schola/EmptyTestMap"));
-	// Start PIE session
-	ADD_LATENT_AUTOMATION_COMMAND(FStartPIECommand(true));
-	// Allow world to initialize
-	ADD_LATENT_AUTOMATION_COMMAND(FWaitLatentCommand(0.5f));
-	ADD_LATENT_AUTOMATION_COMMAND(FSpawnSingleAgentEnvCommand(Context));
-	// Spawn environment and connector
-	ADD_LATENT_AUTOMATION_COMMAND(FSpawnConnectorCommand(Context));
-	ADD_LATENT_AUTOMATION_COMMAND(FResetConnectorCommand(Context));
+	// Create test world using FTestWorldWrapper
+	FTestWorldWrapper WorldWrapper;
+	if (!WorldWrapper.CreateTestWorld(EWorldType::Game))
+	{
+		AddError(TEXT("Failed to create test world"));
+		return false;
+	}
+
+	UWorld* World = WorldWrapper.GetTestWorld();
+	if (!World)
+	{
+		AddError(TEXT("Failed to get test world"));
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+
+	// Begin play in the test world
+	if (!WorldWrapper.BeginPlayInTestWorld())
+	{
+		AddError(TEXT("Failed to begin play in test world"));
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+	
+	// Tick the world to allow initialization
+	for (int32 i = 0; i < 5; ++i)
+	{
+		WorldWrapper.TickTestWorld(0.016f); // ~60 FPS
+	}
+
+	// Spawn environment
+	ABasicTestSingleAgentEnvironment* Env = SpawnSingleAgentEnv(World, this);
+	if (!Env)
+	{
+		AddError(TEXT("Failed to spawn single-agent environment"));
+		WorldWrapper.EndPlayInTestWorld();
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+
+	AddInfo(FString::Printf(TEXT("Single-agent environment AgentName='%s'"), *Env->AgentName));
+
+	// Tick to allow environment to initialize
+	WorldWrapper.TickTestWorld(0.016f);
+
+	// Spawn connector
+	UManualGymConnector* Connector = SpawnConnector(World, this);
+	if (!Connector)
+	{
+		AddError(TEXT("Failed to spawn connector"));
+		WorldWrapper.EndPlayInTestWorld();
+		WorldWrapper.DestroyTestWorld(true);
+		return false;
+	}
+
+	// Reset connector to initialize
+	ResetConnector(Connector);
+	WorldWrapper.TickTestWorld(0.016f);
+
 	// Step connector multiple times
-	ADD_LATENT_AUTOMATION_COMMAND(FStepConnectorCommand(Context));
+	for (int32 StepNum = 0; StepNum < TargetSteps; ++StepNum)
+	{
+		StepConnector(Connector, Env, StepNum, this);
+		WorldWrapper.TickTestWorld(0.016f);
+	}
+
+	AddInfo(FString::Printf(TEXT("Completed all %d steps"), TargetSteps));
+
 	// Verify environment position updated
-	ADD_LATENT_AUTOMATION_COMMAND(FVerifyEnvPositionCommand(Context));
-	// End PIE
-	ADD_LATENT_AUTOMATION_COMMAND(FEndPlayMapCommand());
-	return true;
+	bool bVerified = VerifyEnvPosition(Env, this);
+
+	// Clean up test world
+	WorldWrapper.EndPlayInTestWorld();
+	WorldWrapper.DestroyTestWorld(true);
+
+	return bVerified;
 }

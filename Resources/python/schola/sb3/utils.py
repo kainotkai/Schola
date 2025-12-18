@@ -127,16 +127,18 @@ class SB3ScholaModel(ScholaModel):
         # Get the input dim from the model
         # input_dim = gym.spaces.utils.flatten_space(model.observation_space).shape
         # Export the model to ONNX
-
-        with open(export_path, "w+b") as f:
-            th.onnx.export(
-                self,
-                tuple(inputs),
-                f,
-                opset_version=onnx_opset,
-                input_names=input_names,
-                output_names=output_names,
-            )
+        # Pass the path as a string (not a file object) for compatibility with newer PyTorch ONNX exporters
+        # Use dynamo=False for legacy exporter which properly handles input_names parameter
+        th.onnx.export(
+            self,
+            tuple(inputs),
+            str(export_path),
+            opset_version=onnx_opset,
+            input_names=input_names,
+            output_names=output_names,
+            dynamic_axes={k: {0: "batch_size"} for k in input_names},
+            dynamo=False,
+        )
         print("Model exported to ONNX")
 
 

@@ -16,6 +16,29 @@ from schola.core.simulators.unreal.editor import UnrealEditor
 from schola.scripts.common import gRPCProtocolArgs
 from schola.scripts.sb3.train import ppo
 from schola.scripts.sb3.settings import SB3ScriptArgs
+import onnx
+
+
+def check_onnx_model(model_path, observation_space, action_space):
+    """Check that the ONNX model exists and has the correct input and output names."""
+    assert model_path.exists(), f"ONNX file not created at {model_path}"
+
+    model = onnx.load(model_path)
+
+    input_names = [input.name for input in model.graph.input]
+    output_names = [output.name for output in model.graph.output]
+
+    # Check if input and output names are correct
+    if isinstance(observation_space, gym.spaces.Dict):
+        assert set(input_names) == set(observation_space.spaces.keys()) | {"state_in"}, "Input names should be the keys of the observation space or 'state_in'"
+    else:
+        assert input_names == ["obs", "state_in"], f"Model inputs should be ['obs','state_in'], if observation space is not a dict. Got {input_names}"
+
+    if isinstance(action_space, gym.spaces.Dict):
+        assert set(output_names) == set(action_space.spaces.keys()) | {"state_out"}, "Output names should be the keys of the action space or 'state_out'"
+    else:
+        assert output_names == ["action", "state_out"], f"Model outputs should be ['action', 'state_out'], if action space is not a dict. Got {output_names}"
+
 
 
 # Test Exporting
@@ -150,3 +173,5 @@ def test_export_sb3_policy_to_onnx(tmp_path, env_class, algo):
     model.__original_action_space = env.unwrapped.action_space
 
     save_model_as_onnx(model, tmp_path / "test.onnx")
+
+    check_onnx_model(tmp_path / "test.onnx", env_class().observation_space, env_class().action_space)

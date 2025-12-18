@@ -1,7 +1,7 @@
 {
 	"FileVersion": 3,
 	"Version": 1,
-	"VersionName": "2.0.b2",
+	"VersionName": "2.0.1",
 	"FriendlyName": "Schola",
 	"Description": "Schola is a plugin for enabling Reinforcement Learning (RL) in Unreal Engine. It provides tools to help developers create environments, define agents, and connect to python-based RL frameworks such as OpenAI Gym, RLlib or Stable Baselines 3 for training agents with RL.",
 	"Category": "AI",
@@ -46,12 +46,12 @@
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "ScholaProtobuf",
+			"Name": "ScholaInferenceUtils",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
 		{
-			"Name": "ScholaInferenceUtils",
+			"Name": "ScholaImitation",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}

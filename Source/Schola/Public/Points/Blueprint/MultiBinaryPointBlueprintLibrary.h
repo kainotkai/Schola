@@ -5,9 +5,8 @@
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "StructUtils/InstancedStruct.h"
 #include "Points/Point.h"
+#include "Points/MultiBinaryPoint.h"
 #include "MultiBinaryPointBlueprintLibrary.generated.h"
-
-struct FMultiBinaryPoint;
 
 /**
  * @class UMultiBinaryPointBlueprintLibrary

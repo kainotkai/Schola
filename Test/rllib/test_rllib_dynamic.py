@@ -6,16 +6,9 @@ from gymnasium import spaces
 from typing import Dict, Any, Optional
 from schola.rllib.env import RayEnv
 
-# Check if PettingZoo is available
-try:
-    import pettingzoo
-    from pettingzoo.utils.env import ParallelEnv
-    PETTINGZOO_AVAILABLE = True
-except ImportError:
-    PETTINGZOO_AVAILABLE = False
-
-# Skip all tests in this file if PettingZoo is not available
-pytestmark = pytest.mark.skipif(not PETTINGZOO_AVAILABLE, reason="PettingZoo not installed")
+# PettingZoo is required for these tests - fail immediately if not available
+import pettingzoo
+from pettingzoo.utils.env import ParallelEnv
 
 
 class DynamicAgentEnv(ParallelEnv):

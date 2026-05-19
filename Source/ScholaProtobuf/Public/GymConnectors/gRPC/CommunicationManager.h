@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
+#include "HAL/Platform.h"
 
 // Prevent Windows.h macro pollution before including gRPC headers
 #if PLATFORM_WINDOWS
@@ -14,12 +14,16 @@
 	#endif
 #endif
 
+THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include <grpc/grpc.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_context.h>
 #include "grpcpp/server_builder.h"
 #include <google/protobuf/map.h>
 #include <google/protobuf/message.h>
+#include "ScholaProtobufMacroGuardEnd.h"
+THIRD_PARTY_INCLUDES_END
 
 // Manually undef Windows macros that conflict with Unreal Engine's platform abstraction
 #if PLATFORM_WINDOWS
@@ -51,6 +55,8 @@
 		#undef InterlockedExchange
 	#endif
 #endif
+
+#include "CoreMinimal.h"
 
 // Include remaining Unreal headers after cleaning up Windows macros
 #include "Misc/CommandLine.h"
@@ -127,6 +133,7 @@ public:
 	/** A delegate that is called when the server shuts down */
 	FOnServerShutdownSignature OnServerShutdownDelegate;
 
+	/** Host and port used when starting the gRPC server and passed to Python clients. */
 	UPROPERTY(EditAnywhere, Category = "Schola|gRPC")
 	FRPCServerSettings ConnectionSettings = FRPCServerSettings();
 

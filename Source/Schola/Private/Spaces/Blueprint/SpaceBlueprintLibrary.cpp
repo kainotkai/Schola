@@ -7,6 +7,8 @@
 #include "Spaces/BoxSpace.h"
 #include "Spaces/DictSpace.h"
 #include "Spaces/DiscreteSpace.h"
+#include "Common/BlueprintErrorUtils.h"
+#include "Common/InstancedStructUtils.h"
 
 ESpaceType USpaceBlueprintLibrary::Space_Type(const FInstancedStruct& InSpace)
 {
@@ -41,4 +43,27 @@ ESpaceType USpaceBlueprintLibrary::Space_Type(const FInstancedStruct& InSpace)
 bool USpaceBlueprintLibrary::Space_IsOfType(const FInstancedStruct& InSpace, ESpaceType InType)
 {
 	return Space_Type(InSpace) == InType;
+}
+
+bool USpaceBlueprintLibrary::Space_Contains(const FInstancedStruct& InSpace, const FInstancedStruct& InPoint)
+{
+	if (!InSpace.IsValid() || !InPoint.IsValid())
+	{
+		RaiseInvalidInstancedStructError(TEXT("USpaceBlueprintLibrary::Space_Contains()"));
+		return false;
+	}
+
+	if (!InSpace.GetPtr<FSpace>())
+	{
+		RaiseInstancedStructTypeMismatchError(InSpace, TEXT("FSpace"), TEXT("USpaceBlueprintLibrary::Space_Contains()"));
+		return false;
+	}
+	
+	if (!InPoint.GetPtr<FPoint>())
+	{
+		RaiseInstancedStructTypeMismatchError(InPoint, TEXT("FPoint"), TEXT("USpaceBlueprintLibrary::Space_Contains()"));
+		return false;
+	}
+
+	return InSpace.GetPtr<FSpace>()->Contains(ToTypedInstancedStruct<FPoint>(InPoint));
 }

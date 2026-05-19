@@ -7,6 +7,7 @@
 #include "Spaces/DictSpace.h"
 #include "Spaces/DiscreteSpace.h"
 #include "Spaces/BoxSpace.h"
+#include "Common/InstancedStructUtils.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -19,7 +20,7 @@ bool FDictSpaceBlueprintLibrary_MapToDictSpace_BasicTest::RunTest(const FString&
     TMap<FString, FInstancedStruct> Spaces;
     
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
-    Spaces.Add(TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    Spaces.Add(TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace));
 
     TInstancedStruct<FDictSpace> Result = UDictSpaceBlueprintLibrary::MapToDictSpace(Spaces);
 
@@ -55,13 +56,13 @@ bool FDictSpaceBlueprintLibrary_MapToDictSpace_MultipleTest::RunTest(const FStri
     TMap<FString, FInstancedStruct> Spaces;
     
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
-    Spaces.Add(TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    Spaces.Add(TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace));
     
     TArray<float> Low = {-1.0f, -1.0f};
     TArray<float> High = {1.0f, 1.0f};
     TArray<int32> Shape = {2};
     TInstancedStruct<FBoxSpace> BoxSpace = UBoxSpaceBlueprintLibrary::ArraysToBoxSpace(Low, High, Shape);
-    Spaces.Add(TEXT("observation"), reinterpret_cast<FInstancedStruct&>(BoxSpace));
+    Spaces.Add(TEXT("observation"), ToUntypedInstancedStruct(BoxSpace));
 
     TInstancedStruct<FDictSpace> Result = UDictSpaceBlueprintLibrary::MapToDictSpace(Spaces);
 
@@ -104,7 +105,7 @@ bool FDictSpaceBlueprintLibrary_DictSpaceToMap_RoundTripTest::RunTest(const FStr
     TMap<FString, FInstancedStruct> OriginalSpaces;
     
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(7);
-    OriginalSpaces.Add(TEXT("key1"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    OriginalSpaces.Add(TEXT("key1"), ToUntypedInstancedStruct(DiscreteSpace));
 
     TInstancedStruct<FDictSpace> DictSpace = UDictSpaceBlueprintLibrary::MapToDictSpace(OriginalSpaces);
     TMap<FString, FInstancedStruct> Result = UDictSpaceBlueprintLibrary::DictSpaceToMap(DictSpace);
@@ -126,7 +127,7 @@ bool FDictSpaceBlueprintLibrary_Add_BasicTest::RunTest(const FString& Parameters
 
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
 
-    bool Result = UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    bool Result = UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace));
 
     TestTrue(TEXT("Add returned true"), Result);
     TestEqual(TEXT("DictSpace now has 1 element"), DictSpace.Get<FDictSpace>().Spaces.Num(), 1);
@@ -142,10 +143,10 @@ bool FDictSpaceBlueprintLibrary_Add_UpdateTest::RunTest(const FString& Parameter
     DictSpace.InitializeAs<FDictSpace>();
 
     TInstancedStruct<FDiscreteSpace> DiscreteSpace1 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace1));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace1));
 
     TInstancedStruct<FDiscreteSpace> DiscreteSpace2 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(10);
-    bool Result = UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace2));
+    bool Result = UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace2));
 
     TestTrue(TEXT("Update returned true"), Result);
     TestEqual(TEXT("DictSpace still has 1 element"), DictSpace.Get<FDictSpace>().Spaces.Num(), 1);
@@ -163,7 +164,7 @@ bool FDictSpaceBlueprintLibrary_Find_SuccessTest::RunTest(const FString& Paramet
     DictSpace.InitializeAs<FDictSpace>();
 
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace));
 
     FInstancedStruct OutValue;
     bool Result = UDictSpaceBlueprintLibrary::DictSpace_Find(DictSpace, TEXT("action"), OutValue);
@@ -199,7 +200,7 @@ bool FDictSpaceBlueprintLibrary_Contains_TrueTest::RunTest(const FString& Parame
     DictSpace.InitializeAs<FDictSpace>();
 
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace));
 
     bool Result = UDictSpaceBlueprintLibrary::DictSpace_Contains(DictSpace, TEXT("action"));
 
@@ -232,7 +233,7 @@ bool FDictSpaceBlueprintLibrary_Remove_SuccessTest::RunTest(const FString& Param
     DictSpace.InitializeAs<FDictSpace>();
 
     TInstancedStruct<FDiscreteSpace> DiscreteSpace = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace));
 
     bool Result = UDictSpaceBlueprintLibrary::DictSpace_Remove(DictSpace, TEXT("action"));
 
@@ -283,9 +284,9 @@ bool FDictSpaceBlueprintLibrary_Length_MultipleTest::RunTest(const FString& Para
     TInstancedStruct<FDiscreteSpace> DiscreteSpace2 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(10);
     TInstancedStruct<FDiscreteSpace> DiscreteSpace3 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(15);
 
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key1"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace1));
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key2"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace2));
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key3"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace3));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key1"), ToUntypedInstancedStruct(DiscreteSpace1));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key2"), ToUntypedInstancedStruct(DiscreteSpace2));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key3"), ToUntypedInstancedStruct(DiscreteSpace3));
 
     int32 Result = UDictSpaceBlueprintLibrary::DictSpace_Length(DictSpace);
 
@@ -306,8 +307,8 @@ bool FDictSpaceBlueprintLibrary_Clear_BasicTest::RunTest(const FString& Paramete
     TInstancedStruct<FDiscreteSpace> DiscreteSpace1 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
     TInstancedStruct<FDiscreteSpace> DiscreteSpace2 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(10);
 
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key1"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace1));
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key2"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace2));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key1"), ToUntypedInstancedStruct(DiscreteSpace1));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("key2"), ToUntypedInstancedStruct(DiscreteSpace2));
 
     UDictSpaceBlueprintLibrary::DictSpace_Clear(DictSpace);
 
@@ -328,8 +329,8 @@ bool FDictSpaceBlueprintLibrary_Keys_BasicTest::RunTest(const FString& Parameter
     TInstancedStruct<FDiscreteSpace> DiscreteSpace1 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
     TInstancedStruct<FDiscreteSpace> DiscreteSpace2 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(10);
 
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace1));
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("observation"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace2));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace1));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("observation"), ToUntypedInstancedStruct(DiscreteSpace2));
 
     TArray<FString> Keys;
     UDictSpaceBlueprintLibrary::DictSpace_Keys(DictSpace, Keys);
@@ -353,8 +354,8 @@ bool FDictSpaceBlueprintLibrary_Values_BasicTest::RunTest(const FString& Paramet
     TInstancedStruct<FDiscreteSpace> DiscreteSpace1 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(5);
     TInstancedStruct<FDiscreteSpace> DiscreteSpace2 = UDiscreteSpaceBlueprintLibrary::Int32ToDiscreteSpace(10);
     
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace1));
-    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("observation"), reinterpret_cast<FInstancedStruct&>(DiscreteSpace2));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("action"), ToUntypedInstancedStruct(DiscreteSpace1));
+    UDictSpaceBlueprintLibrary::DictSpace_Add(DictSpace, TEXT("observation"), ToUntypedInstancedStruct(DiscreteSpace2));
 
     TArray<FInstancedStruct> Values;
     UDictSpaceBlueprintLibrary::DictSpace_Values(DictSpace, Values);

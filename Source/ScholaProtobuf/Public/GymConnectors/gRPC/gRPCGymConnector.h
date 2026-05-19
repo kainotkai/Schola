@@ -2,19 +2,21 @@
 
 #pragma once
 
-#include "GymConnectors/ExternalGymConnector.h"
 #include "GymConnectors/gRPC/CommunicationManager.h"
+#include "GymConnectors/ExternalGymConnector.h"
 #include "ProtobufBackends/gRPC/ExchangeRPCBackend.h"
 #include "ProtobufBackends/gRPC/ConsumerRPCBackend.h"
 #include "ProtobufBackends/gRPC/ProducerRPCBackend.h"
 #include "GymConnectors/AutoResetTypeEnum.h"
-#include "TrainingSettings/ScriptSettings.h"
+#include "TrainingSettings/TrainingScriptSettings.h"
 
 THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include "GymConnector.pb.h"
 #include "GymConnector.grpc.pb.h"
 #include "StateUpdates.pb.h"
 #include "State.pb.h"
+#include "ScholaProtobufMacroGuardEnd.h"
 THIRD_PARTY_INCLUDES_END
 
 #include "gRPCGymConnector.generated.h"
@@ -65,13 +67,15 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Script Settings")
 	bool bRunScriptOnPlay = false;
 
+	/** Listen address and port for the gym gRPC service. */
 	UPROPERTY(EditAnywhere, Category = "Schola|gRPC")
 	FRPCServerSettings ServerSettings;
 
 	/** The settings for the python script to be launched */
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRunScriptOnPlay", ShowOnlyInnerProperties), Category = "Script Settings")
-	FScriptSettings ScriptSettings;
+	FTrainingScriptSettings ScriptSettings;
 
+	/** Runtime handle for the training script process when bRunScriptOnPlay is enabled. */
 	UPROPERTY()
 	FLaunchableScript Script;
 

@@ -19,13 +19,14 @@ void FRLlibNetworkArchSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuild
 			ActivationString = TEXT("Sigmoid");
 			break;
 	}
-	ArgBuilder.AddStringArg(TEXT("network-architecture-settings.activation"),ActivationString);
-	ArgBuilder.AddIntArrayArg(TEXT("network-architecture-settings.fcnet-hiddens"), this->FCNetHiddens);
+	ArgBuilder.AddStringArg(TEXT("activation"),ActivationString);
+	ArgBuilder.AddIntArrayArg(TEXT("fcnet-hiddens"), this->FCNetHiddens);
 	
-	if(this->bUseAttention)
+	if (this->bUseLSTM)
 	{
-		ArgBuilder.AddFlag(TEXT("network-architecture-settings.use-attention"));
-		ArgBuilder.AddIntArg(TEXT("network-architecture-settings.attention-dim"),this->AttentionDims);
+		ArgBuilder.AddFlag(TEXT("use-lstm"));
+		ArgBuilder.AddIntArg(TEXT("lstm-cell-size"), this->LSTMCellSize);
+		ArgBuilder.AddIntArg(TEXT("max-seq-len"), this->MaxSeqLen);
 	}
 }
 

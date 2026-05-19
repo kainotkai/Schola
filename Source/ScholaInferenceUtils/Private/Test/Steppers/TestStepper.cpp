@@ -1,6 +1,7 @@
 // Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
 #include "TestStepper.h"
+#include "LogScholaInferenceUtils.h"
 #include "Points/BoxPoint.h"
 #include "Points/MultiDiscretePoint.h"
 #include "Spaces/MultiDiscreteSpace.h"
@@ -59,37 +60,37 @@ void UTestAgent::Act_Implementation(const FInstancedStruct& InAction)
 					switch (ActionIndex)
 					{
 						case 0:
-							UE_LOG(LogTemp, Display, TEXT("Case 0"));
+							UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Case 0");
 							break;
 						case 1:
-							UE_LOG(LogTemp, Display, TEXT("Case 1"));
+							UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Case 1");
 							break;
 						case 2:
-							UE_LOG(LogTemp, Display, TEXT("Case 2"));
+							UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Case 2");
 							break;
 					}
 				}
 				else
 				{
 					// Invalid Action
-					UE_LOG(LogTemp, Error, TEXT("Invalid Action index: %d"), ActionIndex);
+					UE_LOGFMT(LogScholaInferenceUtils, Error, "TestStepper: Invalid Action index: {0}", ActionIndex);
 				}
 			}
 		}
 		else if (const FBoxPoint* BoxAction = InAction.GetPtr<FBoxPoint>())
 		{
 			// Expected a Discrete Action
-			UE_LOG(LogTemp, Error, TEXT("Got FBoxPoint Action"));
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "TestStepper: Got FBoxPoint Action");
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("Got unknown Action type"));
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "TestStepper: Got unknown Action type");
 		}
 	}
 	else
 	{
 		// Agent must be running to act
-		UE_LOG(LogTemp, Error, TEXT("Agent must be running to act"));
+		UE_LOGFMT(LogScholaInferenceUtils, Error, "TestStepper: Agent must be running to act");
 	}
 }
 
@@ -100,15 +101,15 @@ void UTestAgent::Observe_Implementation(FInstancedStruct& OutObservations)
 	
 	OutObservations.InitializeAs<FBoxPoint>(MockObservation);
 
-	UE_LOG(LogTemp, Display, TEXT("After move to OutObservations: OutObservations state: %s"), OutObservations.IsValid() ? TEXT("Valid") : TEXT("Invalid"));
+	UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: After move to OutObservations: OutObservations state: {0}", OutObservations.IsValid() ? FString(TEXT("Valid")) : FString(TEXT("Invalid")));
 
 	if (const FBoxPoint* BoxPoint = OutObservations.GetPtr<FBoxPoint>())
 	{
-		UE_LOG(LogTemp, Display, TEXT("Successfully created FBoxPoint with %d values"), BoxPoint->Values.Num());
+		UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Successfully created FBoxPoint with {0} values", BoxPoint->Values.Num());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("Failed to create FBoxPoint"));
+		UE_LOGFMT(LogScholaInferenceUtils, Error, "TestStepper: Failed to create FBoxPoint");
 	}
 }
 
@@ -121,12 +122,12 @@ bool UTestPolicy::Think(const TInstancedStruct<FPoint>& InObservations, TInstanc
 	bool Expected = false;
 	if(!bInferenceInFlight.compare_exchange_strong(Expected, true, std::memory_order_acq_rel))
 	{
-		UE_LOG(LogTemp, Verbose, TEXT("UTestPolicy::Think skipped - inference already in flight"));
+		UE_LOGFMT(LogScholaInferenceUtils, Verbose, "TestStepper: Skipped - inference already in flight");
 		return false; // signal stepper to try next tick
 	}
 	ON_SCOPE_EXIT{ bInferenceInFlight.store(false, std::memory_order_release); };
 	const uint32 Count = GThinkCounter.fetch_add(1, std::memory_order_relaxed) + 1;
-	UE_LOG(LogTemp, Display, TEXT("Think #%u ThreadId=%u"), (unsigned)Count, (unsigned)FPlatformTLS::GetCurrentThreadId());
+	UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Think #{0} ThreadId={1}", static_cast<uint32>(Count), FPlatformTLS::GetCurrentThreadId());
 
 	// Thread instrumentation
 	const uint32 CurrentTid = FPlatformTLS::GetCurrentThreadId();
@@ -143,15 +144,15 @@ bool UTestPolicy::Think(const TInstancedStruct<FPoint>& InObservations, TInstanc
 	TArray<int> ActionChoice = { 1 };
 	OutAction.InitializeAs<FMultiDiscretePoint>(ActionChoice);
 
-	UE_LOG(LogTemp, Display, TEXT("After move to OutAction: OutAction state: %s"), OutAction.IsValid() ? TEXT("Valid") : TEXT("Invalid"));
-	UE_LOG(LogTemp, Display, TEXT("Policy chose action: 1"));
+	UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: After move to OutAction: OutAction state: {0}", OutAction.IsValid() ? FString(TEXT("Valid")) : FString(TEXT("Invalid")));
+	UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Policy chose action: 1");
 	return true;
 }
 
 bool UTestPolicy::Init(const FInteractionDefinition& InPolicyDefinition)
 {
 	PolicyDefinition = InPolicyDefinition;
-	UE_LOG(LogTemp, Display, TEXT("Policy initiated"));
+	UE_LOGFMT(LogScholaInferenceUtils, Display, "TestStepper: Policy initiated");
 	return true;
 }
 

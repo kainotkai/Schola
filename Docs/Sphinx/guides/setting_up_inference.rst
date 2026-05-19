@@ -19,14 +19,18 @@ If you did not export to Onnx during training you will need to convert a checkpo
     .. group-tab:: Stable Baselines 3
         .. code-block:: bash
             
-            schola sb3 export --policy-checkpoint-path <CHECKPOINT_PATH> --output-path <ONNX_PATH>
+            schola sb3 export --policy-checkpoint-path <CHECKPOINT_PATH> --output-path <ONNX_PATH> --algorithm <ALGORITHM>
     
-    .. group-tab:: Ray
+    .. group-tab:: Ray RLlib
         .. code-block:: bash
 
-            schola rllib export --policy-checkpoint-path <CHECKPOINT_PATH> --output-path <ONNX_PATH>
+            schola rllib export --policy-checkpoint-path <CHECKPOINT_DIR> [--output-path <OUTPUT_DIR>]
 
-These commands will create an Onnx model in a standardized format compatible with Schola that can be used in the next section.
+For SB3, ``<ALGORITHM>`` must match how the checkpoint was trained (for example ``PPO`` or ``SAC``); allowed values are the same as the export command's ``--algorithm`` choices in ``schola sb3 export --help``.
+
+For RLlib, ``<CHECKPOINT_DIR>`` is the algorithm checkpoint **directory** produced by Ray. ``--output-path`` is optional; if omitted, ONNX output is written alongside the checkpoint (see ``schola rllib export --help``).
+
+These commands produce an ONNX model in Schola's export layout for use in the next section.
 
 Load an Onnx Model into Unreal Engine
 -------------------------------------

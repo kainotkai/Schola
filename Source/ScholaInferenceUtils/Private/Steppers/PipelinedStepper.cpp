@@ -8,7 +8,7 @@ void UPipelinedStepper::Step()
 {
     if (!Policy || Agents.Num() == 0)
     {
-        UE_LOG(LogScholaInferenceUtils, Error, TEXT("PipelinedStepper: Invalid state; missing policy or agents"));
+        UE_LOGFMT(LogScholaInferenceUtils, Error, "PipelinedStepper::Step(): Invalid state - missing policy or agents");
         return;
     }
 
@@ -18,16 +18,16 @@ void UPipelinedStepper::Step()
 
 	if (TickCounter > 0 && Frames[PrevFrame].bActionsReady)
 	{
-		UE_LOG(LogScholaInferenceUtils, Verbose, TEXT("PrevFrame actions ready; DispatchId=%llu TickCounter=%llu ThreadId=%u"),
-			static_cast<unsigned long long>(Frames[PrevFrame].DebugDispatchId),
-			static_cast<unsigned long long>(TickCounter),
-			(unsigned)FPlatformTLS::GetCurrentThreadId());
+		UE_LOGFMT(LogScholaInferenceUtils, Verbose, "PipelinedStepper::Step(): PrevFrame actions ready - DispatchId={0} TickCounter={1} ThreadId={2}",
+			static_cast<uint64>(Frames[PrevFrame].DebugDispatchId),
+			static_cast<uint64>(TickCounter),
+			FPlatformTLS::GetCurrentThreadId());
 
         auto& Frame = Frames[PrevFrame];
 
         if (Frame.Actions.Num() != Agents.Num())
         {
-            UE_LOG(LogScholaInferenceUtils, Error, TEXT("PipelinedStepper: Action count mismatch (%d actions for %d agents)"), Frame.Actions.Num(), Agents.Num());
+            UE_LOGFMT(LogScholaInferenceUtils, Error, "PipelinedStepper::Step(): Action count mismatch - {0} actions for {1} agents", Frame.Actions.Num(), Agents.Num());
         }
         else
         {
@@ -76,15 +76,15 @@ void UPipelinedStepper::DispatchThink(int32 FrameIndex)
     // Reserve a unique dispatch id on the Game Thread
     const uint64 DispatchId = DebugDispatchSeq.fetch_add(1, std::memory_order_relaxed) + 1;
     FramePtr->DebugDispatchId = DispatchId;
-    UE_LOG(LogScholaInferenceUtils, Verbose, TEXT("DispatchThink scheduled; DispatchId=%llu FrameIndex=%d ThreadId=%u"),
-        (unsigned long long)DispatchId, FrameIndex, (unsigned)FPlatformTLS::GetCurrentThreadId());
+    UE_LOGFMT(LogScholaInferenceUtils, Verbose, "PipelinedStepper::DispatchThink(): Scheduled - DispatchId={0} FrameIndex={1} ThreadId={2}",
+        DispatchId, FrameIndex, FPlatformTLS::GetCurrentThreadId());
 
     Async(EAsyncExecution::ThreadPool, [WeakThis, FrameIndex, Observations = MoveTemp(ObservationsCopy), PolicyLocal, DispatchId]() {
         if (!WeakThis.IsValid() || !PolicyLocal)
             return;
 
-        UE_LOG(LogScholaInferenceUtils, Verbose, TEXT("Think start; DispatchId=%llu FrameIndex=%d ThreadId=%u"),
-            (unsigned long long)DispatchId, FrameIndex, (unsigned)FPlatformTLS::GetCurrentThreadId());
+        UE_LOGFMT(LogScholaInferenceUtils, Verbose, "PipelinedStepper::DispatchThink(): Think start - DispatchId={0} FrameIndex={1} ThreadId={2}",
+            DispatchId, FrameIndex, FPlatformTLS::GetCurrentThreadId());
 
         TArray<TInstancedStruct<FPoint>> ActionsLocal;
         const bool bSuccess = PolicyLocal->BatchedThink(const_cast<TArray<TInstancedStruct<FPoint>>&>(Observations), ActionsLocal);
@@ -98,8 +98,8 @@ void UPipelinedStepper::DispatchThink(int32 FrameIndex)
             auto& Frame = WeakThis->Frames[FrameIndex];
             if (!bSuccess)
             {
-                UE_LOG(LogScholaInferenceUtils, Error, TEXT("Think failed; DispatchId=%llu FrameIndex=%d"),
-                    (unsigned long long)DispatchId, FrameIndex);
+                UE_LOGFMT(LogScholaInferenceUtils, Error, "PipelinedStepper::DispatchThink(): Think failed - DispatchId={0} FrameIndex={1}",
+                    DispatchId, FrameIndex);
                 Frame.bThinkInFlight = false;
                 return;
             }
@@ -107,8 +107,8 @@ void UPipelinedStepper::DispatchThink(int32 FrameIndex)
             Frame.bActionsReady = true;
             Frame.bThinkInFlight = false;
 
-            UE_LOG(LogScholaInferenceUtils, Verbose, TEXT("Think complete; DispatchId=%llu FrameIndex=%d ThreadId=%u"),
-                (unsigned long long)DispatchId, FrameIndex, (unsigned)FPlatformTLS::GetCurrentThreadId());
+            UE_LOGFMT(LogScholaInferenceUtils, Verbose, "PipelinedStepper::DispatchThink(): Think complete - DispatchId={0} FrameIndex={1} ThreadId={2}",
+                DispatchId, FrameIndex, FPlatformTLS::GetCurrentThreadId());
         });
     });
 }

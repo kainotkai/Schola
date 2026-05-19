@@ -1,5 +1,9 @@
 # Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
+"""
+Map Schola protobuf messages to Gymnasium spaces, points, and numpy buffers.
+"""
+
 from functools import singledispatch
 from itertools import tee
 from typing import Any, Dict, List, Tuple, Union
@@ -16,19 +20,20 @@ import gymnasium as gym
 import schola.generated.DType_pb2 as proto_dtype
 
 PROTO_DTYPE_TO_NUMPY_DTYPE_MAPPING = {
-        proto_dtype.DType.FLOAT16 : np.float16,
-        proto_dtype.DType.FLOAT32 : np.float32,
-        proto_dtype.DType.FLOAT64 : np.float64,
-        proto_dtype.DType.UINT8 : np.uint8,
-        proto_dtype.DType.UINT16 : np.uint16,
-        proto_dtype.DType.UINT32 : np.uint32,
-        proto_dtype.DType.UINT64 : np.uint64,
-        proto_dtype.DType.INT8 : np.int8,
-        proto_dtype.DType.INT16 : np.int16,
-        proto_dtype.DType.INT32 : np.int32,
-        proto_dtype.DType.INT64 : np.int64,
-        proto_dtype.DType.BOOL : np.bool
-    }
+    proto_dtype.DType.FLOAT16: np.float16,
+    proto_dtype.DType.FLOAT32: np.float32,
+    proto_dtype.DType.FLOAT64: np.float64,
+    proto_dtype.DType.UINT8: np.uint8,
+    proto_dtype.DType.UINT16: np.uint16,
+    proto_dtype.DType.UINT32: np.uint32,
+    proto_dtype.DType.UINT64: np.uint64,
+    proto_dtype.DType.INT8: np.int8,
+    proto_dtype.DType.INT16: np.int16,
+    proto_dtype.DType.INT32: np.int32,
+    proto_dtype.DType.INT64: np.int64,
+    proto_dtype.DType.BOOL: np.bool_,
+}
+
 
 def dtype_from_proto(msg: proto_dtype.DType) -> np.dtype:
     """
@@ -50,12 +55,14 @@ def dtype_from_proto(msg: proto_dtype.DType) -> np.dtype:
         If the protobuf DType is not recognized.
     """
     if not msg in PROTO_DTYPE_TO_NUMPY_DTYPE_MAPPING:
-        raise KeyError(f"DType {msg} not recognized. Valid DTypes are {list(PROTO_DTYPE_TO_NUMPY_DTYPE_MAPPING.keys())}")
+        raise KeyError(
+            f"DType {msg} not recognized. Valid DTypes are {list(PROTO_DTYPE_TO_NUMPY_DTYPE_MAPPING.keys())}"
+        )
     return PROTO_DTYPE_TO_NUMPY_DTYPE_MAPPING[msg]
 
 
 @singledispatch
-def from_proto(msg):
+def from_proto(msg) -> Any:
     """
     Deserialize a protobuf message to Python objects.
 
@@ -81,7 +88,9 @@ def from_proto(msg):
     """
     ...
 
+
 # Space deserialization
+
 
 @from_proto.register
 def _(msg: proto_spaces.BoxSpace) -> spaces.Box:
@@ -95,167 +104,238 @@ def _(msg: proto_spaces.BoxSpace) -> spaces.Box:
     else:
         shape = tuple(msg.shape_dimensions)
 
-    low = np.asarray(low, dtype=np.float32).reshape(shape)
-    high = np.asarray(high, dtype=np.float32).reshape(shape)
+    dt = dtype_from_proto(msg.dtype)
+    low_arr = np.asarray(low, dtype=dt).reshape(shape)
+    high_arr = np.asarray(high, dtype=dt).reshape(shape)
 
-    return spaces.Box(
-        low=low,
-        high=high,
-        shape=shape,
-        dtype=dtype_from_proto(msg.dtype)
-    )
+    return spaces.Box(low=low_arr, high=high_arr, shape=shape, dtype=dt)
+
 
 @from_proto.register
 def _(msg: proto_spaces.MultiBinarySpace) -> spaces.MultiBinary:
-    return spaces.MultiBinary(
-        n=msg.shape
-    )
+    return spaces.MultiBinary(n=msg.shape)
+
 
 @from_proto.register
 def _(msg: proto_spaces.DiscreteSpace) -> spaces.Discrete:
     return spaces.Discrete(msg.high)
 
+
 @from_proto.register
 def _(msg: proto_spaces.MultiDiscreteSpace) -> spaces.MultiDiscrete:
-    return spaces.MultiDiscrete(msg.high)
+    return spaces.MultiDiscrete(list(msg.high))
+
 
 @from_proto.register
 def _(msg: proto_spaces.DictSpace) -> spaces.Dict:
     space_dict = {key: from_proto(value) for key, value in msg.spaces.items()}
     return spaces.Dict(spaces=space_dict)
-    
+
+
 @from_proto.register
 def _(msg: proto_spaces.Space) -> gym.Space:
     which = msg.WhichOneof("space")
     if which is None:
-        raise ValueError("Received Space proto with no 'space' oneof field set. Upstream serialization likely passed an uninitialized FSpace / TInstancedStruct.")
+        raise ValueError(
+            "Received Space proto with no 'space' oneof field set. Upstream serialization likely passed an uninitialized FSpace / TInstancedStruct."
+        )
     return from_proto(getattr(msg, which))
 
+
 # Point Deserialization
+
 
 @from_proto.register
 def _(msg: proto_points.BoxPoint) -> np.ndarray:
     shape = msg.shape if len(msg.shape) > 0 else None
     return np.array(msg.values, dtype=dtype_from_proto(msg.dtype)).reshape(shape)
 
+
 @from_proto.register
 def _(msg: proto_points.MultiDiscretePoint) -> np.ndarray:
     return np.array(msg.values, dtype=np.int64)
 
+
 @from_proto.register
 def _(msg: proto_points.DiscretePoint) -> int:
     return msg.value
+
 
 @from_proto.register
 def _(msg: proto_points.MultiBinaryPoint) -> np.ndarray:
     # np.bool was removed in NumPy 1.24; use bool/np.bool_ for compatibility
     return np.array(msg.values, dtype=np.bool_)
 
+
 @from_proto.register
 def _(msg: proto_points.DictPoint) -> Dict[str, Any]:
     return {key: from_proto(value) for key, value in msg.values.items()}
 
+
 @from_proto.register
-def _(msg: proto_points.Point) -> Union[Dict[str,Any], np.ndarray]:
+def _(msg: proto_points.Point) -> Union[Dict[str, Any], np.ndarray]:
     which = msg.WhichOneof("point")
     if which is None:
-        raise ValueError("Received Point proto with no 'point' oneof field set. Upstream serialization likely passed an uninitialized FPoint / TInstancedStruct.")
+        raise ValueError(
+            "Received Point proto with no 'point' oneof field set. Upstream serialization likely passed an uninitialized FPoint / TInstancedStruct."
+        )
     return from_proto(getattr(msg, which))
+
 
 # Initial State Deserialization
 @from_proto.register
-def _(msg : state.InitialAgentState) -> Tuple[np.ndarray, Dict[str, str]]:
+def _(msg: state.InitialAgentState) -> Tuple[np.ndarray, Dict[str, str]]:
     return from_proto(msg.observations), dict(msg.info)
 
+
 @from_proto.register
-def _(msg: state.InitialEnvironmentState) -> Tuple[np.ndarray, Dict[str, str]]:
+def _(msg: state.InitialEnvironmentState) -> Tuple[Dict[str, Any], Dict[str, str]]:
     observations = {}
     infos = {}
     for agent_id, agent_state in msg.agent_states.items():
-        observations[agent_id],infos[agent_id] = from_proto(agent_state)
+        observations[agent_id], infos[agent_id] = from_proto(agent_state)
     return observations, infos
 
+
 @from_proto.register
-def _(msg: state.InitialState) -> Tuple[Dict[int,Dict[str, Any]], Dict[int,Dict[str, str]]]:
+def _(
+    msg: state.InitialState,
+) -> Tuple[Dict[int, Dict[str, Any]], Dict[int, Dict[str, str]]]:
     observations = {}
     infos = {}
     for env_id, env_state in msg.environment_states.items():
         observations[env_id], infos[env_id] = from_proto(env_state)
     return observations, infos
 
+
 # State Deserialization
 
+
 @from_proto.register
-def _(msg: state.AgentState) -> Tuple[Any,float, bool, bool, Dict[str, str]]:
+def _(msg: state.AgentState) -> Tuple[Any, float, bool, bool, Dict[str, str]]:
     observations = from_proto(msg.observations)
     infos = dict(msg.info)
     terminated = msg.terminated
     truncated = msg.truncated
-    return observations, msg.reward , terminated, truncated, infos
+    return observations, msg.reward, terminated, truncated, infos
+
 
 @from_proto.register
-def _(msg: state.EnvironmentState) -> Tuple[Dict[str,Any], Dict[str, float],  Dict[str, bool], Dict[str, bool], Dict[str, Dict[str,str]]]:
+def _(
+    msg: state.EnvironmentState,
+) -> Tuple[
+    Dict[str, Any],
+    Dict[str, float],
+    Dict[str, bool],
+    Dict[str, bool],
+    Dict[str, Dict[str, str]],
+]:
     observations = {}
     rewards = {}
     terminateds = {}
     truncateds = {}
     infos = {}
     for agent_id, agent_state in msg.agent_states.items():
-        observations[agent_id], rewards[agent_id], terminateds[agent_id], truncateds[agent_id], infos[agent_id] = from_proto(agent_state)
+        (
+            observations[agent_id],
+            rewards[agent_id],
+            terminateds[agent_id],
+            truncateds[agent_id],
+            infos[agent_id],
+        ) = from_proto(agent_state)
     return observations, rewards, terminateds, truncateds, infos
 
+
 @from_proto.register
-def _(msg: state.TrainingState) -> Tuple[List[Dict[str,Any]], List[float],  List[bool], List[bool], List[Dict[str, Dict[str,str]]]]:
+def _(
+    msg: state.TrainingState,
+) -> Tuple[
+    List[Dict[str, Any]],
+    List[Dict[str, float]],
+    List[Dict[str, bool]],
+    List[Dict[str, bool]],
+    List[Dict[str, Dict[str, str]]],
+]:
     observations = [{} for _ in range(len(msg.environment_states))]
     rewards = [{} for _ in range(len(msg.environment_states))]
     terminateds = [{} for _ in range(len(msg.environment_states))]
     truncateds = [{} for _ in range(len(msg.environment_states))]
     infos = [{} for _ in range(len(msg.environment_states))]
     for env_id, env_state in enumerate(msg.environment_states):
-        observations[env_id], rewards[env_id], terminateds[env_id], truncateds[env_id], infos[env_id] = from_proto(env_state)
+        (
+            observations[env_id],
+            rewards[env_id],
+            terminateds[env_id],
+            truncateds[env_id],
+            infos[env_id],
+        ) = from_proto(env_state)
     return observations, rewards, terminateds, truncateds, infos
+
 
 # Definition Deserialization
 
+
 @from_proto.register
 def _(msg: definitions.AgentDefinition) -> Tuple[str, gym.Space, gym.Space]:
-    
+
     obs_space = from_proto(msg.obs_space)
     act_space = from_proto(msg.action_space)
     agent_type = msg.agent_type
 
     return agent_type, obs_space, act_space
 
+
 @from_proto.register
-def _(msg: definitions.EnvironmentDefinition) -> Tuple[List[str], Dict[str,str], Dict[str,gym.Space], Dict[str,gym.Space]]:
-    uids =  [agent_id for agent_id in msg.agent_definitions]
+def _(
+    msg: definitions.EnvironmentDefinition,
+) -> Tuple[List[str], Dict[str, str], Dict[str, gym.Space], Dict[str, gym.Space]]:
+    uids = [agent_id for agent_id in msg.agent_definitions]
     # Create iterators for each of the fields with tee, before converting each to a dictionary with uids as keys,
     agent_types = {}
     obs_spaces = {}
     act_spaces = {}
 
     for uid in uids:
-        agent_types[uid], obs_spaces[uid], act_spaces[uid] = from_proto(msg.agent_definitions[uid])
+        agent_types[uid], obs_spaces[uid], act_spaces[uid] = from_proto(
+            msg.agent_definitions[uid]
+        )
 
     return uids, agent_types, obs_spaces, act_spaces
 
+
 @from_proto.register
-def _(msg: definitions.TrainingDefinition) -> Tuple[List[List[str]], Dict[int, Dict[str, str]], Dict[int,Dict[str,gym.Space]], Dict[int,Dict[str,gym.Space]]]:
-    
+def _(
+    msg: definitions.TrainingDefinition,
+) -> Tuple[
+    List[List[str]],
+    Dict[int, Dict[str, str]],
+    Dict[int, Dict[str, gym.Space]],
+    Dict[int, Dict[str, gym.Space]],
+]:
+
     env_uids = [[] for _ in msg.environment_definitions]
     obs_defns: Dict[int, Dict[str, gym.Space]] = {}
     action_defns: Dict[int, Dict[str, gym.Space]] = {}
     agent_types: Dict[int, Dict[str, str]] = {}
 
-    for env_id,env_defn in enumerate(msg.environment_definitions):
-        env_uids[env_id], agent_types[env_id], obs_defns[env_id], action_defns[env_id] = from_proto(env_defn)
+    for env_id, env_defn in enumerate(msg.environment_definitions):
+        (
+            env_uids[env_id],
+            agent_types[env_id],
+            obs_defns[env_id],
+            action_defns[env_id],
+        ) = from_proto(env_defn)
 
     return env_uids, agent_types, obs_defns, action_defns
 
+
 # Imitation Deserialization
 
+
 @from_proto.register
-def _(msg: imitation_state_messages.ImitationAgentState) -> Tuple[np.ndarray, float, bool, bool, Dict[str, str], Any]:
+def _(
+    msg: imitation_state_messages.ImitationAgentState,
+) -> Tuple[np.ndarray, float, bool, bool, Dict[str, str], Any]:
     observations = from_proto(msg.observations)
     reward = msg.reward
     terminated = msg.terminated
@@ -264,8 +344,18 @@ def _(msg: imitation_state_messages.ImitationAgentState) -> Tuple[np.ndarray, fl
     actions = from_proto(msg.actions)
     return observations, reward, terminated, truncated, infos, actions
 
+
 @from_proto.register
-def _(msg: imitation_state_messages.ImitationEnvironmentState) -> Tuple[Dict[str,Any], Dict[str, float],  Dict[str, bool], Dict[str, bool], Dict[str, Dict[str,str]], Dict[str, Any]]:
+def _(
+    msg: imitation_state_messages.ImitationEnvironmentState,
+) -> Tuple[
+    Dict[str, Any],
+    Dict[str, float],
+    Dict[str, bool],
+    Dict[str, bool],
+    Dict[str, Dict[str, str]],
+    Dict[str, Any],
+]:
     observations = {}
     rewards = {}
     terminateds = {}
@@ -273,11 +363,28 @@ def _(msg: imitation_state_messages.ImitationEnvironmentState) -> Tuple[Dict[str
     infos = {}
     actions = {}
     for agent_id, agent_state in msg.agent_states.items():
-        observations[agent_id], rewards[agent_id], terminateds[agent_id], truncateds[agent_id], infos[agent_id], actions[agent_id] = from_proto(agent_state)
+        (
+            observations[agent_id],
+            rewards[agent_id],
+            terminateds[agent_id],
+            truncateds[agent_id],
+            infos[agent_id],
+            actions[agent_id],
+        ) = from_proto(agent_state)
     return observations, rewards, terminateds, truncateds, infos, actions
-    
+
+
 @from_proto.register
-def _(msg: imitation_state_messages.ImitationTrainingState) -> Tuple[List[Dict[str,Any]], List[Dict[str, float]],  List[Dict[str, bool]], List[Dict[str, bool]], List[Dict[str, Dict[str,str]]], List[Dict[str, Any]]]:
+def _(
+    msg: imitation_state_messages.ImitationTrainingState,
+) -> Tuple[
+    List[Dict[str, Any]],
+    List[Dict[str, float]],
+    List[Dict[str, bool]],
+    List[Dict[str, bool]],
+    List[Dict[str, Dict[str, str]]],
+    List[Dict[str, Any]],
+]:
     observations = [{} for _ in range(len(msg.environment_states))]
     rewards = [{} for _ in range(len(msg.environment_states))]
     terminateds = [{} for _ in range(len(msg.environment_states))]
@@ -285,21 +392,51 @@ def _(msg: imitation_state_messages.ImitationTrainingState) -> Tuple[List[Dict[s
     infos = [{} for _ in range(len(msg.environment_states))]
     actions = [{} for _ in range(len(msg.environment_states))]
     for env_id, env_state in enumerate(msg.environment_states):
-        observations[env_id], rewards[env_id], terminateds[env_id], truncateds[env_id], infos[env_id], actions[env_id] = from_proto(env_state)
+        (
+            observations[env_id],
+            rewards[env_id],
+            terminateds[env_id],
+            truncateds[env_id],
+            infos[env_id],
+            actions[env_id],
+        ) = from_proto(env_state)
     return observations, rewards, terminateds, truncateds, infos, actions
 
+
 @from_proto.register
-def _(msg: imitation_state_messages.ImitationState) -> Tuple[List[Dict[str,Any]], List[Dict[str, float]],  List[Dict[str, bool]], List[Dict[str, bool]], List[Dict[str, Dict[str,str]]], Dict[int,Dict[str, Any]], Dict[int,Dict[str, str]], List[Dict[str, Any]]]:
+def _(
+    msg: imitation_state_messages.ImitationState,
+) -> Tuple[
+    List[Dict[str, Any]],
+    List[Dict[str, float]],
+    List[Dict[str, bool]],
+    List[Dict[str, bool]],
+    List[Dict[str, Dict[str, str]]],
+    Dict[int, Dict[str, Any]],
+    Dict[int, Dict[str, str]],
+    List[Dict[str, Any]],
+]:
     # Deserialize training_state if present
-    observations, rewards, terminateds, truncateds, infos, actions = from_proto(msg.training_state)
-    
+    observations, rewards, terminateds, truncateds, infos, actions = from_proto(
+        msg.training_state
+    )
+
     # Deserialize initial_state if present
     initial_observations = {}
     initial_infos = {}
-    if msg.HasField('initial_state'):
+    if msg.HasField("initial_state"):
         initial_observations, initial_infos = from_proto(msg.initial_state)
-    
-    return observations, rewards, terminateds, truncateds, infos, initial_observations, initial_infos, actions
+
+    return (
+        observations,
+        rewards,
+        terminateds,
+        truncateds,
+        infos,
+        initial_observations,
+        initial_infos,
+        actions,
+    )
 
 
 @from_proto.register

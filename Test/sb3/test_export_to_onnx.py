@@ -1,177 +1,355 @@
 # Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 """Tests for exporting SB3 policies to ONNX"""
 
+import copy
 import functools
-from typing import Literal, Optional
+from dataclasses import dataclass
+from typing import Literal, Optional, Dict, Tuple
 import pytest
 import gymnasium as gym
 import numpy as np
-from schola.sb3.utils import VecMergeDictActionWrapper, save_model_as_onnx
+from schola.sb3.export import save_model_as_onnx
 import stable_baselines3 as sb3
-
-import gymnasium as gym
-from schola.sb3.env import VecEnv
-from schola.core.protocols.protobuf.gRPC import gRPCProtocol
-from schola.core.simulators.unreal.editor import UnrealEditor
-from schola.scripts.common import gRPCProtocolArgs
-from schola.scripts.sb3.train import ppo
-from schola.scripts.sb3.settings import SB3ScriptArgs
+from schola.scripts.sb3.sb3_to_onnx import export_onnx_app
+from schola.sb3.utils import VecMergeDictActionWrapper
 import onnx
 
-
-def check_onnx_model(model_path, observation_space, action_space):
-    """Check that the ONNX model exists and has the correct input and output names."""
-    assert model_path.exists(), f"ONNX file not created at {model_path}"
-
-    model = onnx.load(model_path)
-
-    input_names = [input.name for input in model.graph.input]
-    output_names = [output.name for output in model.graph.output]
-
-    # Check if input and output names are correct
-    if isinstance(observation_space, gym.spaces.Dict):
-        assert set(input_names) == set(observation_space.spaces.keys()) | {"state_in"}, "Input names should be the keys of the observation space or 'state_in'"
-    else:
-        assert input_names == ["obs", "state_in"], f"Model inputs should be ['obs','state_in'], if observation space is not a dict. Got {input_names}"
-
-    if isinstance(action_space, gym.spaces.Dict):
-        assert set(output_names) == set(action_space.spaces.keys()) | {"state_out"}, "Output names should be the keys of the action space or 'state_out'"
-    else:
-        assert output_names == ["action", "state_out"], f"Model outputs should be ['action', 'state_out'], if action space is not a dict. Got {output_names}"
-
-
-
 # Test Exporting
-
-
-@pytest.fixture
-def env_class(request):
-    obs_space, action_space = request.param
-
-    # test env is a gym env with a dictionary observation space and dictionary action space
-    class TestEnv(gym.Env):
-        def __init__(self):
-            self.observation_space = obs_space
-            self.action_space = action_space
-            
-            super().__init__()
-
-        def reset(self, seed=None, options=None):
-            super().reset(seed=seed)
-            observation = self.observation_space.sample()
-            info = {}
-            return observation, info
-
-        def step(self, action):
-            observation = self.observation_space.sample()
-            reward = 0
-            terminated = False
-            truncated = False
-            info = {}
-            return observation, reward, terminated, truncated, info
-
-    return TestEnv
-
-from stable_baselines3 import PPO, SAC, TD3, DDPG, A2C, DQN
-
-@pytest.fixture
-def algo(request):
-    buffer_size = 10000
-    algo_name = request.param
-    if algo_name == "ppo":
-        return sb3.PPO
-    elif algo_name == "sac":
-        return lambda *args, **kwargs: sb3.SAC(*args, **kwargs, buffer_size=buffer_size)
-    elif algo_name == "td3":
-        return lambda *args, **kwargs: sb3.TD3(*args, **kwargs, buffer_size=buffer_size)
-    elif algo_name == "ddpg":
-        return lambda *args, **kwargs: sb3.DDPG(
-            *args, **kwargs, buffer_size=buffer_size
-        )
-    elif algo_name == "a2c":
-        return lambda *args, **kwargs: sb3.A2C(*args, **kwargs)
-    elif algo_name == "dqn":
-        return lambda *args, **kwargs: sb3.DQN(*args, **kwargs, buffer_size=buffer_size)
-    else:
-        raise ValueError(f"Unknown algorithm: {algo_name}")
-
 
 from stable_baselines3.common.base_class import BaseAlgorithm
 from stable_baselines3.common.env_util import make_vec_env
 
-default_box_space = gym.spaces.Box(low=0, high=1, shape=(84, 84, 3))
-default_discrete_space = gym.spaces.Discrete(2)
-default_binary_space = gym.spaces.MultiBinary(2)
-default_multi_discrete_space = gym.spaces.MultiDiscrete([2, 3])
-default_dict_space = gym.spaces.Dict(
+box_obs_space = gym.spaces.Box(low=-1, high=1, shape=(4,), dtype=np.float32)
+discrete_obs_space = gym.spaces.Discrete(2)
+binary_obs_space = gym.spaces.MultiBinary(2)
+multi_discrete_obs_space = gym.spaces.MultiDiscrete([2, 3])
+dict_obs_space = gym.spaces.Dict(
     {
-        "box": default_box_space,
-        "discrete": default_discrete_space,
-        "binary": default_binary_space,
-        "multi_discrete": default_multi_discrete_space,
+        "box": box_obs_space,
+        "discrete": discrete_obs_space,
+        "binary": binary_obs_space,
+        "multi_discrete": multi_discrete_obs_space,
+    }
+)
+# we use slightly altered action spaces, so that no-ops can't work by accident.
+box_action_space = gym.spaces.Box(low=-1, high=1, shape=(3,), dtype=np.float32)
+discrete_action_space = gym.spaces.Discrete(3)
+binary_action_space = gym.spaces.MultiBinary(3)
+multi_discrete_action_space = gym.spaces.MultiDiscrete([3, 4])
+box_dict_action_space = gym.spaces.Dict(
+    {
+        "o_box": box_action_space,
+        "o_box_2": box_action_space,
+    }
+)
+binary_dict_action_space = gym.spaces.Dict(
+    {
+        "o_binary": binary_action_space,
+        "o_binary_2": binary_action_space,
+    }
+)
+discrete_dict_action_space = gym.spaces.Dict(
+    {
+        "o_discrete": discrete_action_space,
+        "o_discrete_2": discrete_action_space,
+    }
+)
+multi_discrete_dict_action_space = gym.spaces.Dict(
+    {
+        "o_multi_discrete": multi_discrete_action_space,
+        "o_multi_discrete_2": multi_discrete_action_space,
     }
 )
 
+
+@dataclass(frozen=True)
+class ONNXExportParams:
+    """Dataclass for handling different SB3 export configurations."""
+
+    algo_name: str
+    observation_space: gym.Space
+    action_space: gym.Space
+    buffer_size: int = 10000
+
+    def __hash__(self):
+        return hash(
+            (
+                self.algo_name,
+                str(self.observation_space),
+                str(self.action_space),
+            )
+        )
+
+    @property
+    def state_shapes(self) -> Optional[Dict[str, Tuple[int, ...]]]:
+        """SB3 models are not stateful, so state_shapes is None."""
+        return None
+
+    @property
+    def metadata(self) -> None:
+        """SB3 models are not stateful, so metadata is None."""
+        return None
+
+    @property
+    def policy_type(self) -> str:
+        """Returns the policy type string based on observation space."""
+        if isinstance(self.observation_space, gym.spaces.Dict):
+            return "MultiInputPolicy"
+        else:
+            return "MlpPolicy"
+
+    def __str__(self):
+        # If the action space is a dict add the name of the action space inside it (all will be the same so just one is enough)
+        if isinstance(self.action_space, gym.spaces.Dict):
+            action_space_subtype = type(
+                list(self.action_space.spaces.values())[0]
+            ).__name__
+            return f"{self.algo_name.upper()}({type(self.observation_space).__name__},{type(self.action_space).__name__}-{action_space_subtype})"
+        return f"{self.algo_name.upper()}({type(self.observation_space).__name__},{type(self.action_space).__name__})"
+
+    def get_env_class(self):
+        obs_space = copy.deepcopy(self.observation_space)
+        action_space = copy.deepcopy(self.action_space)
+
+        class TestEnv(gym.Env):
+            def __init__(self):
+                self.observation_space = obs_space
+                self.action_space = action_space
+
+                super().__init__()
+
+            def reset(self, seed=None, options=None):
+                super().reset(seed=seed)
+                observation = self.observation_space.sample()
+                info = {}
+                return observation, info
+
+            def step(self, action):
+                observation = self.observation_space.sample()
+                reward = 0
+                terminated = False
+                truncated = False
+                info = {}
+                return observation, reward, terminated, truncated, info
+
+        return TestEnv
+
+    def make_algo(self):
+        if self.algo_name == "ppo":
+            return sb3.PPO
+        elif self.algo_name == "sac":
+            return lambda *args, **kwargs: sb3.SAC(
+                *args, **kwargs, buffer_size=self.buffer_size
+            )
+        elif self.algo_name == "td3":
+            return lambda *args, **kwargs: sb3.TD3(
+                *args, **kwargs, buffer_size=self.buffer_size
+            )
+        elif self.algo_name == "ddpg":
+            return lambda *args, **kwargs: sb3.DDPG(
+                *args, **kwargs, buffer_size=self.buffer_size
+            )
+        elif self.algo_name == "a2c":
+            return lambda *args, **kwargs: sb3.A2C(*args, **kwargs)
+        elif self.algo_name == "dqn":
+            return lambda *args, **kwargs: sb3.DQN(
+                *args, **kwargs, buffer_size=self.buffer_size
+            )
+        else:
+            raise ValueError(f"Unknown algorithm: {self.algo_name}")
+
+
 def make_all_combinations(alg_name):
+    """Helper function to generate all combinations for an algorithm."""
     return [
         # Check different action spaces
-        ((default_dict_space, default_box_space), alg_name),
-        ((default_dict_space, default_discrete_space), alg_name),
-        ((default_dict_space, default_binary_space), alg_name),
-        ((default_dict_space, default_multi_discrete_space), alg_name),
-         # Check different observation spaces
-        ((default_box_space, default_box_space), alg_name),
-        ((default_discrete_space, default_box_space), alg_name),
-        ((default_binary_space, default_box_space), alg_name),
-        ((default_multi_discrete_space, default_box_space), alg_name),
+        ONNXExportParams(alg_name, dict_obs_space, box_action_space),
+        ONNXExportParams(alg_name, dict_obs_space, discrete_action_space),
+        ONNXExportParams(alg_name, dict_obs_space, binary_action_space),
+        ONNXExportParams(alg_name, dict_obs_space, multi_discrete_action_space),
+        # Check different observation spaces
+        ONNXExportParams(alg_name, box_obs_space, box_action_space),
+        ONNXExportParams(alg_name, discrete_obs_space, box_action_space),
+        ONNXExportParams(alg_name, binary_obs_space, box_action_space),
+        ONNXExportParams(alg_name, multi_discrete_obs_space, box_action_space),
     ]
 
-# Test exporting SB3 policies to ONNX, tests with every algorithm from SB3
-@pytest.mark.parametrize(
-    "env_class,algo",
-    [
-        # PPO
-        *make_all_combinations("ppo"),
-        # SAC
-        # try all obs spaces but only Box action spaces are supported
-        ((default_box_space, default_box_space), "sac"),
-        ((default_discrete_space, default_box_space), "sac"),
-        ((default_binary_space, default_box_space), "sac"),
-        ((default_multi_discrete_space, default_box_space), "sac"),
-        ((default_dict_space, default_box_space), "sac"),
-        # TD3
-        ((default_box_space, default_box_space), "td3"),
-        ((default_discrete_space, default_box_space), "td3"),
-        ((default_binary_space, default_box_space), "td3"),
-        ((default_multi_discrete_space, default_box_space), "td3"),
-        ((default_dict_space, default_box_space), "td3"),
-        # DDPG
-        ((default_box_space, default_box_space), "ddpg"),
-        ((default_discrete_space, default_box_space), "ddpg"),
-        ((default_binary_space, default_box_space), "ddpg"),
-        ((default_multi_discrete_space, default_box_space), "ddpg"),
-        ((default_dict_space, default_box_space), "ddpg"),
-        # A2C
-        *make_all_combinations("a2c"),
-        # DQN
-        ((default_box_space, default_discrete_space), "dqn"),
-        #((default_discrete_space, default_discrete_space), "dqn"),
-        ((default_binary_space, default_discrete_space), "dqn"),
-        #((default_multi_discrete_space, default_discrete_space), "dqn"),
-        #((default_dict_space, default_discrete_space), "dqn"),
-    ],
-    indirect=True,
-    ids=lambda val: f"{type(val[0]).__name__}-{type(val[1]).__name__}" if isinstance(val, tuple) else val,
+
+class TestExportFunction:
+    # Test exporting SB3 policies to ONNX, tests with every algorithm from SB3
+    @pytest.mark.parametrize(
+        "export_params",
+        [
+            # Testing for merged dict action spaces
+            ONNXExportParams("ppo", dict_obs_space, box_dict_action_space),
+            ONNXExportParams("ppo", dict_obs_space, discrete_dict_action_space),
+            ONNXExportParams("ppo", dict_obs_space, binary_dict_action_space),
+            ONNXExportParams("ppo", dict_obs_space, multi_discrete_dict_action_space),
+            # PPO
+            *make_all_combinations("ppo"),
+            # SAC
+            # try all obs spaces but only Box action spaces are supported
+            ONNXExportParams("sac", box_obs_space, box_action_space),
+            ONNXExportParams("sac", discrete_obs_space, box_action_space),
+            ONNXExportParams("sac", binary_obs_space, box_action_space),
+            ONNXExportParams("sac", multi_discrete_obs_space, box_action_space),
+            ONNXExportParams("sac", dict_obs_space, box_action_space),
+            # TD3
+            ONNXExportParams("td3", box_obs_space, box_action_space),
+            ONNXExportParams("td3", discrete_obs_space, box_action_space),
+            ONNXExportParams("td3", binary_obs_space, box_action_space),
+            ONNXExportParams("td3", multi_discrete_obs_space, box_action_space),
+            ONNXExportParams("td3", dict_obs_space, box_action_space),
+            # DDPG
+            ONNXExportParams("ddpg", box_obs_space, box_action_space),
+            ONNXExportParams("ddpg", discrete_obs_space, box_action_space),
+            ONNXExportParams("ddpg", binary_obs_space, box_action_space),
+            ONNXExportParams("ddpg", multi_discrete_obs_space, box_action_space),
+            ONNXExportParams("ddpg", dict_obs_space, box_action_space),
+            # A2C
+            *make_all_combinations("a2c"),
+            # DQN
+            ONNXExportParams("dqn", box_obs_space, discrete_action_space),
+            ONNXExportParams("dqn", binary_obs_space, discrete_action_space),
+            ONNXExportParams("dqn", dict_obs_space, discrete_action_space),
+            ONNXExportParams("dqn", discrete_obs_space, discrete_action_space),
+            ONNXExportParams("dqn", multi_discrete_obs_space, discrete_action_space),
+        ],
+        ids=str,
     )
-def test_export_sb3_policy_to_onnx(tmp_path, env_class, algo):
+    def test_export_sb3_policy_to_onnx(
+        self, tmp_path, export_params, onnx_model_checker
+    ):
+        params: ONNXExportParams = export_params
 
-    # Create a dummy environment
-    env = make_vec_env(env_class, 2, seed=1)  # prevents an error with automatic seeding
-    # Create a dummy model
-    model: BaseAlgorithm = algo("MultiInputPolicy" if isinstance(env_class().observation_space, gym.spaces.Dict) else "MlpPolicy", env, verbose=1)
-    # Train the model
-    model.__original_action_space = env.unwrapped.action_space
+        env = make_vec_env(
+            params.get_env_class(), 2, seed=1
+        )  # prevents an error with automatic seeding
+        # Create a dummy environment and model
+        if isinstance(params.action_space, gym.spaces.Dict):
+            env = VecMergeDictActionWrapper(env)
 
-    save_model_as_onnx(model, tmp_path / "test.onnx")
+        model: BaseAlgorithm = params.make_algo()(params.policy_type, env, verbose=1)
 
-    check_onnx_model(tmp_path / "test.onnx", env_class().observation_space, env_class().action_space)
+        save_model_as_onnx(
+            model, tmp_path / "test.onnx", action_space=params.action_space
+        )
+
+        onnx_model_checker(
+            tmp_path / "test.onnx",
+            params.observation_space,
+            params.action_space,
+            state_shapes=params.state_shapes,
+            metadata=params.metadata,
+        )
+
+
+class TestExportScript:
+
+    @pytest.mark.parametrize(
+        "export_params",
+        [
+            # Testing for merged dict action spaces
+            ONNXExportParams("ppo", dict_obs_space, box_action_space),
+            ONNXExportParams("sac", dict_obs_space, box_action_space),
+            ONNXExportParams("td3", dict_obs_space, box_action_space),
+            ONNXExportParams("ddpg", dict_obs_space, box_action_space),
+            ONNXExportParams("a2c", dict_obs_space, box_action_space),
+            ONNXExportParams("dqn", dict_obs_space, discrete_action_space),
+        ],
+        ids=str,
+    )
+    def test_algorithms(self, tmp_path, export_params, onnx_model_checker):
+        params: ONNXExportParams = export_params
+        env = make_vec_env(params.get_env_class(), 2, seed=1)
+        model: BaseAlgorithm = params.make_algo()(params.policy_type, env, verbose=1)
+        model.save(tmp_path / "test.zip")
+        export_onnx_app(
+            [
+                f"{tmp_path}/test.zip",
+                f"{tmp_path}/test.onnx",
+                "--algorithm",
+                params.algo_name.upper(),
+            ],
+            result_action="return_value",
+        )
+
+        onnx_model_checker(
+            tmp_path / "test.onnx",
+            params.observation_space,
+            params.action_space,
+            state_shapes=params.state_shapes,
+            metadata=params.metadata,
+        )
+
+    @pytest.mark.parametrize(
+        "export_params",
+        [
+            ONNXExportParams("ppo", dict_obs_space, box_dict_action_space),
+            ONNXExportParams("ppo", dict_obs_space, discrete_dict_action_space),
+            ONNXExportParams("ppo", dict_obs_space, binary_dict_action_space),
+            ONNXExportParams("ppo", dict_obs_space, multi_discrete_dict_action_space),
+        ],
+        ids=str,
+    )
+    def test_merged_dict_action_space(
+        self, tmp_path, export_params, onnx_model_checker
+    ):
+        params: ONNXExportParams = export_params
+
+        env = make_vec_env(params.get_env_class(), 2, seed=1)
+        env = VecMergeDictActionWrapper(env)
+
+        model: BaseAlgorithm = params.make_algo()(params.policy_type, env, verbose=1)
+        setattr(model, "__unmerged_action_space", env.unmerged_action_space)
+        model.save(tmp_path / "test.zip")
+
+        export_onnx_app(
+            [
+                f"{tmp_path}/test.zip",
+                f"{tmp_path}/test.onnx",
+                "--algorithm",
+                params.algo_name.upper(),
+            ],
+            result_action="return_value",
+        )
+        onnx_model_checker(
+            tmp_path / "test.onnx",
+            params.observation_space,
+            params.action_space,
+            state_shapes=params.state_shapes,
+            metadata=params.metadata,
+        )
+
+    @pytest.mark.parametrize(
+        "export_params",
+        [
+            ONNXExportParams("ppo", dict_obs_space, box_dict_action_space),
+        ],
+        ids=str,
+    )
+    def test_merge_with_no_hidden_state(
+        self, tmp_path, export_params, onnx_model_checker
+    ):
+        params: ONNXExportParams = export_params
+        env = make_vec_env(params.get_env_class(), 2, seed=1)
+        env = VecMergeDictActionWrapper(env)
+        model: BaseAlgorithm = params.make_algo()(params.policy_type, env, verbose=1)
+        model.save(tmp_path / "test.zip")
+        export_onnx_app(
+            [
+                f"{tmp_path}/test.zip",
+                f"{tmp_path}/test.onnx",
+                "--algorithm",
+                params.algo_name.upper(),
+            ],
+            result_action="return_value",
+        )
+        # Check that the action space is the same as the merged action space, since the original shape wasn't provided
+        onnx_model_checker(
+            tmp_path / "test.onnx",
+            params.observation_space,
+            env.action_space,
+            state_shapes=params.state_shapes,
+            metadata=params.metadata,
+        )

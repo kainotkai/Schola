@@ -7,6 +7,12 @@ public class ScholaNNE : ModuleRules
 	public ScholaNNE(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		if (System.Environment.GetEnvironmentVariable("SCHOLA_MEASURE_CPP_COVERAGE") == "1")
+		{
+			OptimizeCode = CodeOptimization.Never;
+		}
+
         PublicIncludePaths.AddRange(new string[] { });
 		PrivateIncludePaths.AddRange(new string[] { "ScholaNNE/Private"});
 		// Make generated code available to other modules

@@ -2,21 +2,23 @@
 """Tests for the SB3 VecEnv environment"""
 
 import pytest
-from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
 import gymnasium as gym
 import numpy as np
 from typing import Optional
 import functools
 
 from schola.sb3.env import VecEnv
-from schola.core.simulators.unreal.editor import UnrealEditor
+from schola.core.simulators.unreal.editor_simulator import UnrealEditor
 from stable_baselines3.common.env_util import make_vec_env
+
 
 def wrap(env, wrappers):
     if wrappers:
         for wrapper in wrappers:
             env = wrapper(env)
     return env
+
 
 @pytest.fixture(scope="function")
 def sb3_and_schola_env(gym_id_and_wrappers, make_env_server):
@@ -25,39 +27,46 @@ def sb3_and_schola_env(gym_id_and_wrappers, make_env_server):
 
     env_server_port = make_env_server(gym_id, wrappers)
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     schola_env = VecEnv(simulator, protocol)
     yield sb3_env, schola_env
 
     sb3_env.close()
     schola_env.close()
 
+
 @pytest.fixture(scope="function")
 def schola_env(make_env_server, gym_id_and_wrappers):
     gym_id, wrappers = gym_id_and_wrappers
     env_server_port = make_env_server(gym_id, wrappers)
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     return VecEnv(simulator, protocol)
 
 
 def test_sb3_env_action_space(sb3_and_schola_env):
     sb3_env, schola_env = sb3_and_schola_env
-    assert schola_env.action_space == sb3_env.action_space, f"Expected action space: {sb3_env.action_space} Got: {schola_env.action_space}"
+    assert (
+        schola_env.action_space == sb3_env.action_space
+    ), f"Expected action space: {sb3_env.action_space} Got: {schola_env.action_space}"
+
 
 def test_sb3_env_observation_space(sb3_and_schola_env):
     sb3_env, schola_env = sb3_and_schola_env
 
-    assert schola_env.observation_space == sb3_env.observation_space, f"Expected observation space: {sb3_env.observation_space} Got: {schola_env.observation_space}"
+    assert (
+        schola_env.observation_space == sb3_env.observation_space
+    ), f"Expected observation space: {sb3_env.observation_space} Got: {schola_env.observation_space}"
+
 
 @pytest.mark.skip()
 def test_sb3_env_close(make_env_server):
     gym_id = "CartPole-v1"
     env_server_port = make_env_server(gym_id)
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     env = VecEnv(simulator, protocol)
-    
+
     env.close()
 
 
@@ -89,12 +98,15 @@ THE SOFTWARE.
 
 # Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
+
 class StepEnv(gym.Env):
     def __init__(self, max_steps):
         """Gym environment for testing that terminal observation is inserted
         correctly."""
         self.action_space = gym.spaces.Discrete(2)
-        self.observation_space = gym.spaces.Box(np.array([0]), np.array([999]), dtype="int")
+        self.observation_space = gym.spaces.Box(
+            np.array([0]), np.array([999]), dtype="int"
+        )
         self.max_steps = max_steps
         self.current_step = 0
 
@@ -109,10 +121,12 @@ class StepEnv(gym.Env):
         truncated = self.current_step >= self.max_steps
         return np.array([prev_step], dtype="int"), 0.0, terminated, truncated, {}
 
+
 from stable_baselines3.common.vec_env import VecFrameStack, VecNormalize
 
 VEC_ENV_WRAPPERS = [None, VecNormalize, VecFrameStack]
 N_ENVS = 3
+
 
 @pytest.mark.parametrize("vec_env_wrapper", VEC_ENV_WRAPPERS)
 def test_vecenv_terminal_obs(make_vec_env_server, vec_env_wrapper):
@@ -123,7 +137,7 @@ def test_vecenv_terminal_obs(make_vec_env_server, vec_env_wrapper):
     env_funcs = [functools.partial(StepEnv, n) for n in step_nums]
     env_server_port = make_vec_env_server(env_funcs)
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     schola_env = VecEnv(simulator, protocol)  # just test it can be created and closed
 
     if vec_env_wrapper is not None:

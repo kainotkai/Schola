@@ -19,11 +19,7 @@ bool FMultiBinaryPointBlueprintLibrary_ArrayToMultiBinaryPoint_BasicTest::RunTes
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiBinaryPoint& MultiBinaryPoint = Result.Get<FMultiBinaryPoint>();
-    TestEqual(TEXT("MultiBinaryPoint.Values.Num() == 4"), MultiBinaryPoint.Values.Num(), 4);
-    TestTrue(TEXT("MultiBinaryPoint.Values[0] == true"), MultiBinaryPoint.Values[0]);
-    TestFalse(TEXT("MultiBinaryPoint.Values[1] == false"), MultiBinaryPoint.Values[1]);
-    TestTrue(TEXT("MultiBinaryPoint.Values[2] == true"), MultiBinaryPoint.Values[2]);
-    TestFalse(TEXT("MultiBinaryPoint.Values[3] == false"), MultiBinaryPoint.Values[3]);
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, Values);
 
     return true;
 }
@@ -55,11 +51,7 @@ bool FMultiBinaryPointBlueprintLibrary_ArrayToMultiBinaryPoint_AllTrueTest::RunT
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiBinaryPoint& MultiBinaryPoint = Result.Get<FMultiBinaryPoint>();
-    TestEqual(TEXT("MultiBinaryPoint.Values.Num() == 5"), MultiBinaryPoint.Values.Num(), 5);
-    for (int32 i = 0; i < MultiBinaryPoint.Values.Num(); i++)
-    {
-        TestTrue(FString::Printf(TEXT("MultiBinaryPoint.Values[%d] == true"), i), MultiBinaryPoint.Values[i]);
-    }
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, Values);
 
     return true;
 }
@@ -75,11 +67,7 @@ bool FMultiBinaryPointBlueprintLibrary_ArrayToMultiBinaryPoint_AllFalseTest::Run
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiBinaryPoint& MultiBinaryPoint = Result.Get<FMultiBinaryPoint>();
-    TestEqual(TEXT("MultiBinaryPoint.Values.Num() == 3"), MultiBinaryPoint.Values.Num(), 3);
-    for (int32 i = 0; i < MultiBinaryPoint.Values.Num(); i++)
-    {
-        TestFalse(FString::Printf(TEXT("MultiBinaryPoint.Values[%d] == false"), i), MultiBinaryPoint.Values[i]);
-    }
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, Values);
 
     return true;
 }
@@ -96,11 +84,7 @@ bool FMultiBinaryPointBlueprintLibrary_MultiBinaryPointToArray_BasicTest::RunTes
 
     TArray<bool> Result = UMultiBinaryPointBlueprintLibrary::MultiBinaryPointToArray(Point);
 
-    TestEqual(TEXT("Result.Num() == 4"), Result.Num(), 4);
-    TestTrue(TEXT("Result[0] == true"), Result[0]);
-    TestTrue(TEXT("Result[1] == true"), Result[1]);
-    TestFalse(TEXT("Result[2] == false"), Result[2]);
-    TestTrue(TEXT("Result[3] == true"), Result[3]);
+    TestEqual(TEXT("Result"), Result, TArray<bool>({true, true, false, true}));
 
     return true;
 }
@@ -114,11 +98,7 @@ bool FMultiBinaryPointBlueprintLibrary_MultiBinaryPointToArray_RoundTripTest::Ru
     TInstancedStruct<FMultiBinaryPoint> Point = UMultiBinaryPointBlueprintLibrary::ArrayToMultiBinaryPoint(OriginalValues);
     TArray<bool> Result = UMultiBinaryPointBlueprintLibrary::MultiBinaryPointToArray(Point);
 
-    TestEqual(TEXT("Round trip array length"), Result.Num(), OriginalValues.Num());
-    for (int32 i = 0; i < OriginalValues.Num(); i++)
-    {
-        TestEqual(FString::Printf(TEXT("Round trip array[%d]"), i), Result[i], OriginalValues[i]);
-    }
+    TestEqual(TEXT("Round trip array"), Result, OriginalValues);
 
     return true;
 }

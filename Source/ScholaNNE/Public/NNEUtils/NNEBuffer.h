@@ -6,10 +6,19 @@
 #include <NNERuntimeRunSync.h>
 #include "NNEBuffer.generated.h"
 
+inline int GetTotalSize(TConstArrayView<int> Shape)
+{
+	int TotalSize = 1;
+	for (int Dim : Shape)
+	{
+		TotalSize *= Dim;
+	}
+	return TotalSize;
+}
 
 /**
  * @brief Buffer for storing recurrent neural network state across time steps
- * 
+ *
  * This buffer maintains state information for sequence-based neural network models,
  * storing a sequence of state vectors that can be shifted and updated.
  */
@@ -19,44 +28,82 @@ struct SCHOLANNE_API FNNEStateBuffer
 	GENERATED_BODY()
 
 	/** Buffer storing the sequence of state vectors */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Policy Data")
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Data")
 	TArray<float> StateBuffer;
 
-	/** Length of the state sequence */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Policy Properties")
-	int StateSeqLen;
+	/** Tensor shape for the state buffer (batch fixed to 1 where applicable). */
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Data")
+	TArray<int> Shape = TArray<int>();
 
-	/** Dimensionality of each state vector */
-	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category="Policy Properties")
-	int StateDimSize;
+	/** Maximum Length of the state sequence */
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Properties")
+	int MaxSeqLen = 0;
+
+	/** Index of the sequence dimension in the shape (or -1 if no sequence dimension). */
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Properties")
+	int SeqDim = -1;
+
+	/** Flat size of one state vector (product of non-sequence dimensions). */
+	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Properties")
+	int StateDimSize = 1;
+
+	FNNEStateBuffer() = default;
 
 	/**
-	 * @brief Constructor that initializes the state buffer
-	 * @param[in] InStateSeqLen Length of the state sequence
-	 * @param[in] InStateDimSize Dimensionality of each state vector
+	 * @param[in] Shape Logical tensor shape; first dimension (batch dimension) will be set to 1, as batched state is not currently supported.
+	 * @param[in] InMaxSeqLen Maximum sequence length when a sequence dimension is present.
 	 */
-	FNNEStateBuffer(int InStateSeqLen = 0, int InStateDimSize = 0) : 
-		StateSeqLen(InStateSeqLen), 
-		StateDimSize(InStateDimSize)
+	FNNEStateBuffer(TConstArrayView<int32> Shape, int InMaxSeqLen = 1)
 	{
-		this->StateBuffer.Init(0.0f, InStateSeqLen * InStateDimSize);
+		this->Shape = Shape;
+		this->MaxSeqLen = InMaxSeqLen;
+		this->Shape[0] = 1; // Fix batch size at 1 for now, can be extended in the future
+		this->SeqDim = this->Shape.FindLast(-1);
+		// For now we only support the sequence dimension being the first dimension or not having a sequence dimension at all, but this can be extended in the future
+		if (this->HasSequenceDimension())
+		{
+			this->Shape[SeqDim] = MaxSeqLen;
+			TConstArrayView<int> NonSequenceShapeView = TConstArrayView<int>(Shape).Slice(SeqDim + 1, Shape.Num() - (SeqDim + 1));
+			this->StateDimSize = GetTotalSize(NonSequenceShapeView);
+		}
+		else
+		{
+			this->StateDimSize = GetTotalSize(this->Shape);
+		}
+		this->StateBuffer.Init(0.0f, GetTotalSize(this->Shape));
 	}
-	
+
 	/**
 	 * @brief Shifts the state sequence by removing the oldest state and making room for a new one
-	 * 
+	 *
 	 * Moves all state vectors one position earlier in the sequence, discarding the first state
 	 * and preparing the last position for a new state.
 	 */
 	void Shift()
 	{
 		// Shift overlapping regions safely
-		for (int i = 0; i < StateSeqLen - 1; i++)
+		for (int i = 0; i < MaxSeqLen - 1; i++)
 		{
 			FMemory::Memmove(
 				StateBuffer.GetData() + i * StateDimSize,
 				StateBuffer.GetData() + (i + 1) * StateDimSize,
 				StateDimSize * sizeof(float));
+		}
+	}
+
+	/** @return True if Shape contains a sequence axis (marked as -1 during construction). */
+	bool HasSequenceDimension() const
+	{
+		return this->SeqDim != -1;
+	}
+
+	/** Advances recurrent state (shifts sequence) when a sequence dimension exists. */
+	void Update()
+	{
+		if (this->HasSequenceDimension())
+		{
+			// If there is a sequence dimension, we assume the new state is already in the last position of the buffer after shifting, so no need to copy
+			this->Shift();
 		}
 	}
 
@@ -66,7 +113,7 @@ struct SCHOLANNE_API FNNEStateBuffer
 	 */
 	UE::NNE::FTensorBindingCPU MakeInputBinding() const
 	{
-		return { (void*)(StateBuffer.GetData()), StateSeqLen * StateDimSize * sizeof(float) };
+		return { (void*)(StateBuffer.GetData()), GetTotalSize(this->Shape) * sizeof(float) };
 	}
 
 	/**
@@ -75,17 +122,22 @@ struct SCHOLANNE_API FNNEStateBuffer
 	 */
 	UE::NNE::FTensorBindingCPU MakeOutputBinding() const
 	{
-		return { (void*)(StateBuffer.GetData() + (StateSeqLen - 1) * StateDimSize), StateDimSize * sizeof(float) };
+		if (this->SeqDim <= 0)
+		{
+			return { (void*)(StateBuffer.GetData()), GetTotalSize(this->Shape) * sizeof(float) };
+		}
+		else
+		{
+			return { (void*)(StateBuffer.GetData() + (MaxSeqLen - 1) * StateDimSize), StateDimSize * sizeof(float) };
+		}
 	}
-
-
 };
 
 struct FNNEBufferVisitor;
 
 /**
  * @brief Base class for all NNE point buffers
- * 
+ *
  * This is an abstract base class that provides the visitor pattern interface for
  * different types of buffers used to store neural network inputs and outputs.
  */
@@ -101,21 +153,20 @@ public:
 	 * @brief Accept method for the visitor pattern
 	 * @param[in,out] Visitor The visitor object that will process this buffer
 	 */
-	virtual void Accept(FNNEBufferVisitor& Visitor) const 
+	virtual void Accept(FNNEBufferVisitor& Visitor) const
 	{
-
 	}
 };
 
 /**
  * @brief Buffer for dictionary-structured neural network data
- * 
+ *
  * Stores multiple named buffers organized as key-value pairs, corresponding to
  * dictionary observation or action spaces in reinforcement learning.
  */
 USTRUCT(BlueprintType)
 struct SCHOLANNE_API FNNEDictBuffer : public FNNEPointBuffer
-{	
+{
 	GENERATED_BODY(BlueprintType)
 
 	/** Map of named buffers, each corresponding to a dictionary key */
@@ -144,27 +195,24 @@ struct SCHOLANNE_API FNNEDictBuffer : public FNNEPointBuffer
 
 /**
  * @brief Buffer for discrete action or observation spaces
- * 
- * Stores a single discrete choice represented as a probability distribution over possible actions.
+ *
+ * Stores a single selected discrete value.
  */
 USTRUCT(BlueprintType)
 struct SCHOLANNE_API FNNEDiscreteBuffer : public FNNEPointBuffer
-{	
+{
 	GENERATED_BODY()
 
-	/** Buffer storing the discrete value as a one-hot encoded or probability distribution */
+	/** Buffer storing the discrete value (not one-hot encoded) */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Data")
-	TArray<float> Buffer;
-
-	FNNEDiscreteBuffer() = default;
+	TArray<int64> Buffer;
 
 	/**
-	 * @brief Constructor that initializes the discrete buffer with a specific size
-	 * @param[in] Size Number of discrete values or action possibilities
+	 * @brief Constructor that initializes the discrete buffer, with a fixed size of 1. Use MultiDiscreteBuffer for multiple discrete values.
 	 */
-	FNNEDiscreteBuffer(int Size)
+	FNNEDiscreteBuffer()
 	{
-		Buffer.Init(0.0f, Size);
+		Buffer.Init(0, 1);
 	}
 
 	virtual ~FNNEDiscreteBuffer() = default;
@@ -175,7 +223,7 @@ struct SCHOLANNE_API FNNEDiscreteBuffer : public FNNEPointBuffer
 	 */
 	UE::NNE::FTensorBindingCPU MakeBinding() const
 	{
-		return { (void*) Buffer.GetData(), Buffer.Num() * sizeof(float) };
+		return { (void*)Buffer.GetData(), sizeof(int64) };
 	}
 
 	/**
@@ -187,28 +235,28 @@ struct SCHOLANNE_API FNNEDiscreteBuffer : public FNNEPointBuffer
 
 /**
  * @brief Buffer for multi-discrete action or observation spaces
- * 
- * Stores multiple discrete choices, where each choice can have different numbers of possible values.
+ *
+ * Stores one selected value per multi-discrete dimension, where each dimension can have different numbers of possible values.
  * Used when an agent makes several independent discrete decisions simultaneously.
  */
 USTRUCT(BlueprintType)
 struct SCHOLANNE_API FNNEMultiDiscreteBuffer : public FNNEPointBuffer
-{	
+{
 	GENERATED_BODY()
 
-	/** Buffer storing concatenated probability distributions for all discrete choices */
+	/** Buffer storing the selected value for each multi-discrete dimension */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Data")
-	TArray<float> Buffer;
+	TArray<int64> Buffer;
 
 	FNNEMultiDiscreteBuffer() = default;
 
 	/**
 	 * @brief Constructor that initializes the multi-discrete buffer with a specific size
-	 * @param[in] Size Total size of all discrete distributions combined
+	 * @param[in] Size Number of multi-discrete dimensions to store
 	 */
 	FNNEMultiDiscreteBuffer(int Size)
 	{
-		Buffer.Init(0.0f, Size);
+		Buffer.Init(0, Size);
 	}
 
 	virtual ~FNNEMultiDiscreteBuffer() = default;
@@ -219,7 +267,7 @@ struct SCHOLANNE_API FNNEMultiDiscreteBuffer : public FNNEPointBuffer
 	 */
 	UE::NNE::FTensorBindingCPU MakeBinding() const
 	{
-		return { (void*) Buffer.GetData(), Buffer.Num() * sizeof(float) };
+		return { (void*)Buffer.GetData(), Buffer.Num() * sizeof(int64) };
 	}
 
 	/**
@@ -229,11 +277,9 @@ struct SCHOLANNE_API FNNEMultiDiscreteBuffer : public FNNEPointBuffer
 	void Accept(FNNEBufferVisitor& Visitor) const override;
 };
 
-
-
 /**
  * @brief Buffer for multi-binary action or observation spaces
- * 
+ *
  * Stores multiple independent binary values, where each element represents a binary choice (on/off).
  * Common in scenarios with multiple simultaneous boolean decisions.
  */
@@ -241,13 +287,12 @@ USTRUCT(BlueprintType)
 struct SCHOLANNE_API FNNEMultiBinaryBuffer : public FNNEPointBuffer
 {
 	GENERATED_BODY()
-	
-	/** Buffer storing multiple binary values as floats (0.0 or 1.0) */
+
+	/** Buffer storing multiple binary values as bools (true or false) */
 	UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Policy Data")
-	TArray<float> Buffer;
+	TArray<bool> Buffer;
 
 public:
-
 	FNNEMultiBinaryBuffer() = default;
 
 	/**
@@ -256,7 +301,7 @@ public:
 	 */
 	FNNEMultiBinaryBuffer(int Size)
 	{
-		Buffer.Init(0.0f, Size);
+		Buffer.Init(false, Size);
 	}
 
 	virtual ~FNNEMultiBinaryBuffer() = default;
@@ -267,7 +312,7 @@ public:
 	 */
 	UE::NNE::FTensorBindingCPU MakeBinding() const
 	{
-		return {(void*)Buffer.GetData(), Buffer.Num() * sizeof(float) };
+		return { (void*)Buffer.GetData(), Buffer.Num() * sizeof(bool) };
 	}
 
 	/**
@@ -279,13 +324,13 @@ public:
 
 /**
  * @brief Buffer for continuous box-bounded action or observation spaces
- * 
+ *
  * Stores continuous values within bounded ranges, commonly used for continuous control
  * tasks where actions or observations are real-valued vectors with upper and lower bounds.
  */
 USTRUCT(BlueprintType)
 struct SCHOLANNE_API FNNEBoxBuffer : public FNNEPointBuffer
-{	
+{
 	GENERATED_BODY()
 
 	/** Buffer storing continuous values */
@@ -311,7 +356,7 @@ public:
 	 */
 	UE::NNE::FTensorBindingCPU MakeBinding() const
 	{
-		return {(void*)Buffer.GetData(), Buffer.Num() * sizeof(float)};
+		return { (void*)Buffer.GetData(), Buffer.Num() * sizeof(float) };
 	}
 
 	/**

@@ -9,6 +9,10 @@
 #include "ImitationConnector.pb.h"
 
 #include <functional>
+#include "HAL/Platform.h"
+
+THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include <grpcpp/generic/async_generic_service.h>
 #include <grpcpp/support/async_stream.h>
 #include <grpcpp/support/async_unary_call.h>
@@ -26,6 +30,7 @@
 #include <grpcpp/support/status.h>
 #include <grpcpp/support/stub_options.h>
 #include <grpcpp/support/sync_stream.h>
+#include <grpcpp/ports_def.inc>
 
 namespace Schola {
 
@@ -553,4 +558,7 @@ class ImitationConnectorService final {
 }  // namespace Schola
 
 
+#include <grpcpp/ports_undef.inc>
+#include "ScholaProtobufMacroGuardEnd.h"
+THIRD_PARTY_INCLUDES_END
 #endif  // GRPC_ImitationConnector_2eproto__INCLUDED

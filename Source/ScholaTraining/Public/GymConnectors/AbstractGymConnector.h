@@ -85,6 +85,17 @@ public:
 	/** Flag indicating if this is the first step after initialization. */
 	UPROPERTY(VisibleAnywhere, Category = "Schola|Gym Connector")
 	bool bFirstStep = true;
+
+	/** Flag indicating if the environments should be run in parallel. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (InlineEditConditionToggle), Category = "Schola|Gym Connector")
+	bool bRunEnvironmentsInParallel = false;
+
+	/** The minimum number of environments to process in each parallel batch. If bigger than the number of environments parallelization may be disabled.*/
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, meta = (ClampMin = "1", EditCondition = "bRunEnvironmentsInParallel"), Category = "Schola|Gym Connector")
+	int32 MinParallelBatchSize = 1;
+
+	/** Critical section for protecting access to InitialState.EnvironmentStates during parallel operations. */
+	FCriticalSection InitialStateCriticalSection;
 	
 	/**
 	 * @brief Constructor for the abstract gym connector. Initializes the connector with default values.

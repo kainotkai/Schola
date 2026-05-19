@@ -6,12 +6,14 @@
 #include "ProtobufBackends/gRPC/ConsumerRPCBackend.h"
 #include "ProtobufBackends/gRPC/ProducerRPCBackend.h"
 #include "GymConnectors/gRPC/RPCServerSettings.h"
-#include "TrainingSettings/ScriptSettings.h"
+#include "ImitationSettings/ImitationScriptSettings.h"
 
 THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include "ImitationConnector.pb.h"
 #include "ImitationConnector.grpc.pb.h"
 #include "ImitationState.pb.h"
+#include "ScholaProtobufMacroGuardEnd.h"
 THIRD_PARTY_INCLUDES_END
 
 #include "gRPCImitationConnector.generated.h"
@@ -59,13 +61,15 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Script Settings")
 	bool bRunScriptOnPlay = false;
 
+	/** Listen address and port for the imitation gRPC service. */
 	UPROPERTY(EditAnywhere, Category = "Schola|gRPC")
 	FRPCServerSettings ServerSettings;
 
 	/** The settings for the python script to be launched */
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bRunScriptOnPlay", ShowOnlyInnerProperties), Category = "Script Settings")
-	FScriptSettings ScriptSettings;
+	FImitationScriptSettings ScriptSettings;
 
+	/** Runtime handle for the imitation collection script when bRunScriptOnPlay is enabled. */
 	UPROPERTY()
 	FLaunchableScript Script;
 

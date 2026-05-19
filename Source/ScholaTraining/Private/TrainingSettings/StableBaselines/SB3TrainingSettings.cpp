@@ -18,6 +18,7 @@ void FSB3TrainingSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) c
 			this->PPOSettings.GenerateTrainingArgs(ArgBuilder);
 			break;
 	}
+	ArgBuilder.AddPositionalArgument(TEXT("editor"));
 
 	this->CheckpointSettings.GenerateTrainingArgs(ArgBuilder);
 	this->LoggingSettings.GenerateTrainingArgs(ArgBuilder);
@@ -27,6 +28,7 @@ void FSB3TrainingSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) c
 
 	ArgBuilder.AddIntArg(TEXT("timesteps"), Timesteps);
 	ArgBuilder.AddFlag(TEXT("pbar"), bDisplayProgressBar);
+	ArgBuilder.AddFlag(TEXT("disable-eval"), bDisableEval);
 }
 
 FSB3TrainingSettings::~FSB3TrainingSettings()

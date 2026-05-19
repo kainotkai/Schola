@@ -1,5 +1,7 @@
 # Copyright (c) 2024 Advanced Micro Devices, Inc. All Rights Reserved.
 
+"""Tests for documentation and build utilities (proto compile, docs paths)."""
+
 import shutil
 import pytest
 from pathlib import Path
@@ -65,6 +67,7 @@ def sphinx_docs_builder(doc_source_path):
     # delete the build docs folders, and the autosummary folder
     shutil.rmtree(sphinx_doc_folder_path / "_build")
     shutil.rmtree(sphinx_doc_folder_path / "API" / "Python")
+
 
 @pytest.mark.skip(reason="slow")
 def test_build_docs(

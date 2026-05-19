@@ -6,7 +6,7 @@ void FRLlibPPOSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) cons
 {
     ArgBuilder.AddFloatArg(TEXT("gae-lambda"), this->GAELambda);
     ArgBuilder.AddFloatArg(TEXT("clip-param"), this->ClipParam);
-    ArgBuilder.AddFlag(TEXT("disable-gae"), !this->bUseGAE);
+    ArgBuilder.AddFlag(TEXT("no-use-gae"), !this->bUseGAE);
     
 }
 

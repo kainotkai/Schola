@@ -11,8 +11,8 @@ bool FNNEPointCreatorDiscreteBufferTest::RunTest(const FString& Parameters)
 {
 	FMultiDiscreteSpace DiscreteSpace({5,});
     
-    TArray<float> BufferData = { 0.0f, 0.0f, 1.0f, 0.0f, 0.0f };
-    FNNEMultiDiscreteBuffer NNEBuffer(5);
+    TArray<int64> BufferData = {2,};
+    FNNEMultiDiscreteBuffer NNEBuffer(DiscreteSpace.GetNumDimensions());
     NNEBuffer.Buffer = BufferData;
     
     TInstancedStruct<FSpace> SpaceStruct;
@@ -28,8 +28,8 @@ bool FNNEPointCreatorDiscreteBufferTest::RunTest(const FString& Parameters)
     FNNEPointCreator::CreatePoint(BufferStruct, OutputPoint, SpaceStruct);
     
     const FMultiDiscretePoint& ResultPoint = OutputPoint.Get<FMultiDiscretePoint>();
-    TestEqual(TEXT("DiscretePoint should have one dimension"), ResultPoint.Values.Num(), 1);
-    TestEqual(TEXT("DiscretePoint value should be 2 (index of max value in [0,0,1,0,0])"), ResultPoint.Values[0], 2);
+    TestEqual(TEXT("MultiDiscretePoint should have one dimension"), ResultPoint.Values.Num(), 1);
+    TestEqual(TEXT("MultiDiscretePoint value should be 2"), ResultPoint.Values[0], 2);
     
     return true;
 }

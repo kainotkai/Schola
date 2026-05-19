@@ -2,6 +2,7 @@
 """
 Utilities for working with gym environments
 """
+
 from gymnasium.spaces import Dict
 from gymnasium import Env, Wrapper
 
@@ -11,6 +12,13 @@ class PopActionWrapper(Wrapper):
     A wrapper that pops the action from the environment's action space.
     This is useful for environments where the action space is a dictionary
     and we want to use only one of the actions.
+
+    Parameters
+    ----------
+    env : gymnasium.Env
+        Wrapped environment whose :attr:`~gymnasium.Env.action_space` is a
+        :class:`gymnasium.spaces.Dict`. The first key in ``spaces`` becomes
+        the sole exposed action space and is injected back as a dict on step.
     """
 
     def __init__(self, env: Env):
@@ -23,6 +31,16 @@ class PopActionWrapper(Wrapper):
 
     def step(self, action):
         """
-        Step the environment with the given action.
+        Step the wrapped environment, wrapping ``action`` under the selected dict key.
+
+        Parameters
+        ----------
+        action
+            Action for the popped (single) branch of the original dict action space.
+
+        Returns
+        -------
+        tuple
+            ``(observation, reward, terminated, truncated, info)`` from the inner env.
         """
         return self.env.step({self.key: action})

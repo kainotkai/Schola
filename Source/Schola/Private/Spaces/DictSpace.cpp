@@ -4,8 +4,8 @@
 
 FDictSpace::FDictSpace()
 {
-}
 
+}
 
 int FDictSpace::Num()
 {
@@ -44,7 +44,13 @@ ESpaceValidationResult FDictSpace::Validate(const TInstancedStruct<FPoint>& InPo
 		return ESpaceValidationResult::WrongDataType;
 	}
 	const FDictPoint& DictPoint = InPoint.Get<FDictPoint>();
+	// Check that the number of keys in the point matches the number of keys in the space
+	if (DictPoint.Points.Num() != Spaces.Num())
+	{
+		return ESpaceValidationResult::WrongDimensions;
+	}
 
+	// Check that each sub-point matches the corresponding sub-space
 	for (const TPair<FString, TInstancedStruct<FSpace>>& Pair : Spaces)
 	{
 		const FString& Key = Pair.Key;

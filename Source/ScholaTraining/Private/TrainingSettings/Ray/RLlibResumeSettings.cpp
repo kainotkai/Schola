@@ -4,7 +4,7 @@
 
 void FRLlibResumeSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) const
 {
-	ArgBuilder.AddConditionalStringArg(TEXT("resume-settings.resume-from"), this->ModelPath.FilePath, bLoadModel);
+	ArgBuilder.AddConditionalStringArg(TEXT("resume-from"), this->ModelPath.FilePath, bLoadModel);
 }
 
 FRLlibResumeSettings::~FRLlibResumeSettings()

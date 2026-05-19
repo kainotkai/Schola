@@ -25,10 +25,7 @@ bool FMultiBinaryPointFromArrayTest::RunTest(const FString& Parameters)
     TArray<bool> Values = { true, false, true };
 	FMultiBinaryPoint MultiBinaryPoint = FMultiBinaryPoint(Values);
 
-    TestEqual(TEXT("MultiBinaryPoint.Values.Num() == 3"), MultiBinaryPoint.Values.Num(), 3);
-    TestEqual(TEXT("MultiBinaryPoint[0] == true"), MultiBinaryPoint[0], true);
-    TestEqual(TEXT("MultiBinaryPoint[1] == false"), MultiBinaryPoint[1], false);
-    TestEqual(TEXT("MultiBinaryPoint[2] == true"), MultiBinaryPoint[2], true);
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, Values);
     
     return true;
 }
@@ -39,11 +36,7 @@ bool FMultiBinaryPointInitializerListConstructorTest::RunTest(const FString& Par
 {
 	FMultiBinaryPoint MultiBinaryPoint = FMultiBinaryPoint({ false, true, false, true });
 
-    TestEqual(TEXT("MultiBinaryPoint.Values.Num() == 4"), MultiBinaryPoint.Values.Num(), 4);
-    TestEqual(TEXT("MultiBinaryPoint[0] == false"), MultiBinaryPoint[0], false);
-    TestEqual(TEXT("MultiBinaryPoint[1] == true"), MultiBinaryPoint[1], true);
-    TestEqual(TEXT("MultiBinaryPoint[2] == false"), MultiBinaryPoint[2], false);
-    TestEqual(TEXT("MultiBinaryPoint[3] == true"), MultiBinaryPoint[3], true);
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, TArray<bool>({false, true, false, true}));
     
     return true;
 }
@@ -55,10 +48,7 @@ bool FMultiBinaryPointRawPointerConstructorTest::RunTest(const FString& Paramete
     TArray<bool> Values = { true, true, false };
 	FMultiBinaryPoint MultiBinaryPoint = FMultiBinaryPoint(Values.GetData(), 3);
 
-    TestEqual(TEXT("MultiBinaryPoint.Values.Num() == 3"), MultiBinaryPoint.Values.Num(), 3);
-    TestEqual(TEXT("MultiBinaryPoint[0] == true"), MultiBinaryPoint[0], true);
-    TestEqual(TEXT("MultiBinaryPoint[1] == true"), MultiBinaryPoint[1], true);
-    TestEqual(TEXT("MultiBinaryPoint[2] == false"), MultiBinaryPoint[2], false);
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, Values);
     
     return true;
 }
@@ -73,8 +63,7 @@ bool FMultiBinaryPointAddTest::RunTest(const FString& Parameters)
     MultiBinaryPoint.Add(true);
     MultiBinaryPoint.Add(false);
 
-    TestEqual(TEXT("MultiBinaryPoint[0] == true"), MultiBinaryPoint[0], true);
-    TestEqual(TEXT("MultiBinaryPoint[1] == false"), MultiBinaryPoint[1], false);
+    TestEqual(TEXT("MultiBinaryPoint.Values"), MultiBinaryPoint.Values, TArray<bool>({true, false}));
     
     return true;
 }

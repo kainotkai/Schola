@@ -7,6 +7,7 @@
 // #include "StructUtils/InstancedStruct.h"
 #include "Points/Point.h"
 #include "Spaces/Space.h"
+#include "Common/InstancedStructUtils.h"
 extern template struct TInstancedStruct<FPoint>;
 #include "ActuatorInterface.generated.h"
 
@@ -69,7 +70,7 @@ public:
 	 */
 	static void Execute_GetActionSpace(const UObject* Obj, TInstancedStruct<FSpace>& OutActionSpace)
 	{
-		IScholaActuator::Execute_GetActionSpace(Obj, reinterpret_cast<FInstancedStruct&>(OutActionSpace));
+		IScholaActuator::Execute_GetActionSpace(Obj, ToUntypedInstancedStruct(OutActionSpace));
 	};
 
 	/**
@@ -99,7 +100,7 @@ public:
 	 */
 	static void Execute_TakeAction(UObject* Obj, const TInstancedStruct<FPoint>& InAction)
 	{
-		IScholaActuator::Execute_TakeAction(Obj,reinterpret_cast<const FInstancedStruct&>(InAction));
+		IScholaActuator::Execute_TakeAction(Obj, ToUntypedInstancedStruct(InAction));
 	};
 
 	/**

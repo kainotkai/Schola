@@ -2,7 +2,6 @@
 
 #include "TrainingUtils/GymConnectorManager.h"
 #include "Engine/World.h"
-#include "Engine/Engine.h"
 
 // Sets default values
 AGymConnectorManager::AGymConnectorManager()

@@ -7,6 +7,7 @@
 #include "Points/DictPoint.h"
 #include "Points/DiscretePoint.h"
 #include "Points/BoxPoint.h"
+#include "Common/InstancedStructUtils.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -19,7 +20,7 @@ bool FDictPointBlueprintLibrary_MapToDictPoint_BasicTest::RunTest(const FString&
     TMap<FString, FInstancedStruct> Points;
     
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
-	Points.Add(TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+	Points.Add(TEXT("action"), ToUntypedInstancedStruct(DiscretePoint));
 
     TInstancedStruct<FDictPoint> Result = UDictPointBlueprintLibrary::MapToDictPoint(Points);
 
@@ -55,11 +56,11 @@ bool FDictPointBlueprintLibrary_MapToDictPoint_MultipleTest::RunTest(const FStri
     TMap<FString, FInstancedStruct> Points;
     
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
-	Points.Add(TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+	Points.Add(TEXT("action"), ToUntypedInstancedStruct(DiscretePoint));
     
     TArray<float> Values = {1.0f, 2.0f};
     TInstancedStruct<FBoxPoint> BoxPoint = UBoxPointBlueprintLibrary::ArrayToBoxPoint(Values);
-	Points.Add(TEXT("observation"), reinterpret_cast<FInstancedStruct&>(BoxPoint));
+	Points.Add(TEXT("observation"), ToUntypedInstancedStruct(BoxPoint));
 
     TInstancedStruct<FDictPoint> Result = UDictPointBlueprintLibrary::MapToDictPoint(Points);
 
@@ -102,7 +103,7 @@ bool FDictPointBlueprintLibrary_DictPointToMap_RoundTripTest::RunTest(const FStr
     TMap<FString, FInstancedStruct> OriginalPoints;
     
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(7);
-	OriginalPoints.Add(TEXT("key1"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+	OriginalPoints.Add(TEXT("key1"), ToUntypedInstancedStruct(DiscretePoint));
 
     TInstancedStruct<FDictPoint> DictPoint = UDictPointBlueprintLibrary::MapToDictPoint(OriginalPoints);
     TMap<FString, FInstancedStruct> Result = UDictPointBlueprintLibrary::DictPointToMap(DictPoint);
@@ -124,7 +125,7 @@ bool FDictPointBlueprintLibrary_Add_BasicTest::RunTest(const FString& Parameters
 
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
     
-    bool Result = UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+    bool Result = UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint));
 
     TestTrue(TEXT("Add returned true"), Result);
     TestEqual(TEXT("DictPoint now has 1 element"), DictPoint.Get<FDictPoint>().Points.Num(), 1);
@@ -140,10 +141,10 @@ bool FDictPointBlueprintLibrary_Add_UpdateTest::RunTest(const FString& Parameter
     DictPoint.InitializeAs<FDictPoint>();
 
     TInstancedStruct<FDiscretePoint> DiscretePoint1 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint1));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint1));
 
     TInstancedStruct<FDiscretePoint> DiscretePoint2 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(10);
-	bool Result = UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint2));
+	bool Result = UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint2));
 
     TestTrue(TEXT("Update returned true"), Result);
     TestEqual(TEXT("DictPoint still has 1 element"), DictPoint.Get<FDictPoint>().Points.Num(), 1);
@@ -161,7 +162,7 @@ bool FDictPointBlueprintLibrary_Find_SuccessTest::RunTest(const FString& Paramet
     DictPoint.InitializeAs<FDictPoint>();
 
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint));
 
     FInstancedStruct OutValue;
     bool Result = UDictPointBlueprintLibrary::DictPoint_Find(DictPoint, TEXT("action"), OutValue);
@@ -197,7 +198,7 @@ bool FDictPointBlueprintLibrary_Contains_TrueTest::RunTest(const FString& Parame
     DictPoint.InitializeAs<FDictPoint>();
 
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint));
 
     bool Result = UDictPointBlueprintLibrary::DictPoint_Contains(DictPoint, TEXT("action"));
 
@@ -230,7 +231,7 @@ bool FDictPointBlueprintLibrary_Remove_SuccessTest::RunTest(const FString& Param
     DictPoint.InitializeAs<FDictPoint>();
 
     TInstancedStruct<FDiscretePoint> DiscretePoint = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
-	UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint));
+	UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint));
 
     bool Result = UDictPointBlueprintLibrary::DictPoint_Remove(DictPoint, TEXT("action"));
 
@@ -281,9 +282,9 @@ bool FDictPointBlueprintLibrary_Length_MultipleTest::RunTest(const FString& Para
     TInstancedStruct<FDiscretePoint> DiscretePoint2 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(10);
     TInstancedStruct<FDiscretePoint> DiscretePoint3 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(15);
     
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key1"), reinterpret_cast<FInstancedStruct&>(DiscretePoint1));
-	UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key2"), reinterpret_cast<FInstancedStruct&>(DiscretePoint2));
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key3"), reinterpret_cast<FInstancedStruct&>(DiscretePoint3));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key1"), ToUntypedInstancedStruct(DiscretePoint1));
+	UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key2"), ToUntypedInstancedStruct(DiscretePoint2));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key3"), ToUntypedInstancedStruct(DiscretePoint3));
 
     int32 Result = UDictPointBlueprintLibrary::DictPoint_Length(DictPoint);
 
@@ -304,8 +305,8 @@ bool FDictPointBlueprintLibrary_Clear_BasicTest::RunTest(const FString& Paramete
     TInstancedStruct<FDiscretePoint> DiscretePoint1 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
     TInstancedStruct<FDiscretePoint> DiscretePoint2 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(10);
     
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key1"), reinterpret_cast<FInstancedStruct&>(DiscretePoint1));
-	UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key2"), reinterpret_cast<FInstancedStruct&>(DiscretePoint2));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key1"), ToUntypedInstancedStruct(DiscretePoint1));
+	UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("key2"), ToUntypedInstancedStruct(DiscretePoint2));
 
     UDictPointBlueprintLibrary::DictPoint_Clear(DictPoint);
 
@@ -326,8 +327,8 @@ bool FDictPointBlueprintLibrary_Keys_BasicTest::RunTest(const FString& Parameter
     TInstancedStruct<FDiscretePoint> DiscretePoint1 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
     TInstancedStruct<FDiscretePoint> DiscretePoint2 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(10);
     
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint1));
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("observation"), reinterpret_cast<FInstancedStruct&>(DiscretePoint2));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint1));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("observation"), ToUntypedInstancedStruct(DiscretePoint2));
 
     TArray<FString> Keys;
     UDictPointBlueprintLibrary::DictPoint_Keys(DictPoint, Keys);
@@ -351,8 +352,8 @@ bool FDictPointBlueprintLibrary_Values_BasicTest::RunTest(const FString& Paramet
     TInstancedStruct<FDiscretePoint> DiscretePoint1 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(5);
     TInstancedStruct<FDiscretePoint> DiscretePoint2 = UDiscretePointBlueprintLibrary::Int32ToDiscretePoint(10);
     
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), reinterpret_cast<FInstancedStruct&>(DiscretePoint1));
-    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("observation"), reinterpret_cast<FInstancedStruct&>(DiscretePoint2));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("action"), ToUntypedInstancedStruct(DiscretePoint1));
+    UDictPointBlueprintLibrary::DictPoint_Add(DictPoint, TEXT("observation"), ToUntypedInstancedStruct(DiscretePoint2));
 
     TArray<FInstancedStruct> Values;
     UDictPointBlueprintLibrary::DictPoint_Values(DictPoint, Values);

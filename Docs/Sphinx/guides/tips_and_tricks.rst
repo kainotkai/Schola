@@ -42,7 +42,7 @@ To resolve this, you can either increase the number of training steps, or disabl
 Understanding Algorithm Parameters and Options
 ----------------------------------------------
 
-Schola supports multiple algorithms for training: PPO and SAC for Stable Baselines 3, as well as PPO, APPO, and Impala with Ray. each with its own set of parameters and options. These are documented in a few places in Schola:
+Schola supports multiple algorithms for training: PPO and SAC for Stable Baselines 3, as well as PPO, SAC, APPO, and Impala with Ray RLlib. Each has its own set of parameters and options. These are documented in a few places in Schola:
 
 .. tabs::
 
@@ -58,6 +58,7 @@ Schola supports multiple algorithms for training: PPO and SAC for Stable Baselin
             .. group-tab:: Ray RLlib
                 
                 * :py:class:`schola.scripts.rllib.settings.PPOSettings`
+                * :py:class:`schola.scripts.rllib.settings.SACSettings`
                 * :py:class:`schola.scripts.rllib.settings.APPOSettings`
                 * :py:class:`schola.scripts.rllib.settings.IMPALASettings`
     
@@ -73,10 +74,11 @@ Schola supports multiple algorithms for training: PPO and SAC for Stable Baselin
             .. group-tab:: Ray RLlib
 
                 * :cpp:struct:`FRLlibPPOSettings`
+                * :cpp:struct:`FRLlibSACSettings`
                 * :cpp:struct:`FRLlibAPPOSettings`
                 * :cpp:struct:`FRLlibIMPALASettings`
 
-The order of precedence for default settings is Unreal Settings (only when launching the training process from Unreal), the CLI defaults, and then python dataclass default values. For example, the dataclass default values will be overriden by any values given a default in the CLI.
+The order of precedence for default settings is Unreal Settings (only when launching the training process from Unreal), the CLI defaults, and then python dataclass default values. For example, the dataclass default values will be overridden by any values given a default in the CLI.
 
 .. Note::
 

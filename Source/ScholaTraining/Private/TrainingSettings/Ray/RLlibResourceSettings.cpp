@@ -7,14 +7,14 @@ void FRLlibResourceSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder)
 {
 	if(this->bUseCustomNumberOfCPUs)
 	{
-		ArgBuilder.AddIntArg(TEXT("resource-settings.num-cpus"),this->NumCPUs);
+		ArgBuilder.AddIntArg(TEXT("num-cpus"),this->NumCPUs);
 	}
-	ArgBuilder.AddIntArg(TEXT("resource-settings.num-gpus"),this->NumGPUs);
-	ArgBuilder.AddIntArg(TEXT("resource-settings.num-cpus-for-main-process"),this->NumCPUsForMainProcess);
+	ArgBuilder.AddIntArg(TEXT("num-gpus"),this->NumGPUs);
+	ArgBuilder.AddIntArg(TEXT("num-cpus-for-main-process"),this->NumCPUsForMainProcess);
 
-	ArgBuilder.AddIntArg(TEXT("resource-settings.num-learners"),this->NumLearners);
-	ArgBuilder.AddIntArg(TEXT("resource-settings.num-gpus-per-learner"),this->NumGPUsPerLearner);
-	ArgBuilder.AddIntArg(TEXT("resource-settings.num-cpus-per-learner"),this->NumCPUsPerLearner);
+	ArgBuilder.AddIntArg(TEXT("num-learners"),this->NumLearners);
+	ArgBuilder.AddIntArg(TEXT("num-gpus-per-learner"),this->NumGPUsPerLearner);
+	ArgBuilder.AddIntArg(TEXT("num-cpus-per-learner"),this->NumCPUsPerLearner);
 }
 
 FRLlibResourceSettings::~FRLlibResourceSettings()

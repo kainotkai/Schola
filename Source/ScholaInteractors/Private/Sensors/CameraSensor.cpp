@@ -10,7 +10,7 @@ void UCameraSensor::InitSensor_Implementation()
 	
 	if (!TextureTarget)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CameraObserver: TextureTarget not found. Creating new TextureTarget."));
+		UE_LOGFMT(LogScholaInteractors, Verbose, "UCameraSensor::InitSensor_Implementation(): TextureTarget not found. Creating new TextureTarget.");
 		TextureTarget = NewObject<UTextureRenderTarget2D>();
 		TextureTarget->bGPUSharedFlag = 1;
 		TextureTarget->InitAutoFormat(128, 128);
@@ -51,7 +51,7 @@ void UCameraSensor::CollectObservations_Implementation(FInstancedStruct& OutObse
 {
 	if (!TextureTarget)
 	{
-		UE_LOG(LogScholaInteractors, Error, TEXT("CameraObserver: RenderTarget not found. Not collecting Observations."));
+		UE_LOGFMT(LogScholaInteractors, Error, "UCameraSensor::CollectObservations_Implementation(): RenderTarget not found. Not collecting Observations.");
 		return;
 	}
 
@@ -72,25 +72,25 @@ void UCameraSensor::CollectObservations_Implementation(FInstancedStruct& OutObse
 	for (int i = 0; i < Width*Height; i++)
     {
 		int Index = i;
-		if (EnabledChannels & !InvalidChannels & static_cast<uint8>(EChannels::R))
+		if (EnabledChannels & ~InvalidChannels & static_cast<uint8>(EChannels::R))
 		{
 			OutBoxPoint.Values[Index] = ((float)Bitmap[i].R / 255.0); // R
 			Index += Width*Height;
 		}
 		
-		if (EnabledChannels & !InvalidChannels & static_cast<uint8>(EChannels::G))
+		if (EnabledChannels & ~InvalidChannels & static_cast<uint8>(EChannels::G))
 		{
 			OutBoxPoint.Values[Index] = ((float)Bitmap[i].G / 255.0); // G
 			Index += Width * Height;
 		}
 
-		if (EnabledChannels & !InvalidChannels & static_cast<uint8>(EChannels::B))
+		if (EnabledChannels & ~InvalidChannels & static_cast<uint8>(EChannels::B))
 		{
 			OutBoxPoint.Values[Index] = ((float)Bitmap[i].B / 255.0); // B
 			Index += Width * Height;
 		}
 
-		if (EnabledChannels & !InvalidChannels & static_cast<uint8>(EChannels::A))
+		if (EnabledChannels & ~InvalidChannels & static_cast<uint8>(EChannels::A))
 		{
 			OutBoxPoint.Values[Index] = ((float)Bitmap[i].A / 255.0); // A
 		}

@@ -38,13 +38,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = 1), Category = "Architecture Settings")
 	int MinibatchSize = 256;
 
-	/** Whether to use attention in the model */
+	/** Whether to use an LSTM layer in the model (for sequential/partial observability). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Architecture Settings")
-	bool bUseAttention = false;
+	bool bUseLSTM = false;
 
-	/** The dimension of the attention layer */
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bUseAttention"), Category = "Architecture Settings")
-	int AttentionDims = 64;
+	/** The size of the LSTM cell (number of units). Only used when Use LSTM is enabled. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bUseLSTM", ClampMin = 1), Category = "Architecture Settings")
+	int LSTMCellSize = 64;
+
+	/** Maximum sequence length for stateful (LSTM) models. Only used when Use LSTM is enabled. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bUseLSTM", ClampMin = 1), Category = "Architecture Settings")
+	int MaxSeqLen = 20;
 
 	void GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const;
 

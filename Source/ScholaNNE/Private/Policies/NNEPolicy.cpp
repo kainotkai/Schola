@@ -13,7 +13,6 @@
 #include "NNEUtils/NNEBindingCreator.h"
 #include "LogScholaNNE.h"
 
-
 TArray<FString> UNNEPolicy::GetRuntimeNames() const
 {
 	// we don't support RDG yet so skip it here
@@ -39,13 +38,12 @@ IRuntimeInterface* UNNEPolicy::GetRuntime(const FString& SelectedRuntimeName) co
 	return nullptr;
 }
 
-
 bool UNNEPolicy::Think(const TInstancedStruct<FPoint>& InObservations, TInstancedStruct<FPoint>& OutAction)
 {
 	bool Expected = false;
 	if (!bInferenceInFlight.compare_exchange_weak(Expected, true, std::memory_order_acq_rel))
 	{
-		UE_LOG(LogScholaNNE, Verbose, TEXT("NNEPolicy::Think() - Inference already in Flight"));
+		UE_LOGFMT(LogScholaNNE, Verbose, "NNEPolicy::Think(): Inference already in flight");
 		return false;
 	}
 
@@ -58,32 +56,32 @@ bool UNNEPolicy::Think(const TInstancedStruct<FPoint>& InObservations, TInstance
 	// If the network hasn't been initialized, bail immediately
 	if (!bNetworkLoaded)
 	{
-		UE_LOG(LogScholaNNE, Display, TEXT("NNEPolicy::Think() - Network not loaded, returning false"));
+		UE_LOGFMT(LogScholaNNE, Error, "NNEPolicy::Think(): Network not loaded, returning false");
 		return false;
 	}
-    
+
 	// Initialize the OutAction container lazily, but only after initialization
-	if(!OutAction.IsValid())
+	if (!OutAction.IsValid())
 	{
 		if (!ActionBuffer.IsValid() || !PolicyDefinition.ActionSpaceDefn.IsValid())
 		{
-			UE_LOG(LogScholaNNE, Error, TEXT("NNEPolicy::Think() - ActionBuffer or ActionSpace is invalid after init"));
+			UE_LOGFMT(LogScholaNNE, Error, "NNEPolicy::Think(): ActionBuffer or ActionSpace is invalid after init");
 			return false;
 		}
 		// Initialize the OutAction with the ActionSpace Definition
 		FNNEPointCreator::CreatePoint(ActionBuffer, OutAction, PolicyDefinition.ActionSpaceDefn);
 	}
-	
+
 	FNNEPointToBufferConverter::ConvertPointToBuffer(InObservations, ObservationBuffer, PolicyDefinition.ObsSpaceDefn);
-	
-	if((int)ModelInstance->RunSync(InputBindings, OutputBindings) != 0)
+
+	if ((int)ModelInstance->RunSync(InputBindings, OutputBindings) != 0)
 	{
-		UE_LOG(LogScholaNNE, Warning, TEXT("NNEPolicy::Think() - Model inference failed"));
+		UE_LOGFMT(LogScholaNNE, Error, "NNEPolicy::Think(): Model inference failed");
 		return false;
 	}
 
 	// Copy the Buffer into the pre-allocated ActionPoint
-	FNNEPointCreator::CreatePoint(ActionBuffer, OutAction, PolicyDefinition.ActionSpaceDefn);	
+	FNNEPointCreator::CreatePoint(ActionBuffer, OutAction, PolicyDefinition.ActionSpaceDefn);
 	return true;
 }
 
@@ -102,34 +100,28 @@ bool UNNEPolicy::InitInputTensorShapes(TSharedPtr<IModelInstanceRunSync> InModel
 bool UNNEPolicy::InitStateBuffersAndBindings(TSharedPtr<IModelInstanceRunSync> InModelInstance)
 {
 	// Find all the State Tensors from the Tensor Descriptions and Create a buffer for each one
-	TConstArrayView<UE::NNE::FTensorDesc> InputTensorDescs = InModelInstance->GetInputTensorDescs(); 
-    for (int i = 0; i < InputTensorDescs.Num(); i++)
+	TConstArrayView<UE::NNE::FTensorDesc> InputTensorDescs = InModelInstance->GetInputTensorDescs();
+	for (int i = 0; i < InputTensorDescs.Num(); i++)
 	{
-        if(InputTensorDescs[i].GetName().StartsWith(TEXT("state_in")))
-        {
-            UE::NNE::FTensorDesc StateDesc = InputTensorDescs[i];
-			if (StateDesc.GetShape().Rank() != 3)
-			{
-				UE_LOG(LogScholaNNE, Error, TEXT("Invalid input tensor shape for state buffer, should have rank 3"));
-				return false;
-			}
-			int StateSeqLen = StateDesc.GetShape().GetData()[1];
-			int StateDimSize = StateDesc.GetShape().GetData()[2];
-			FNNEStateBuffer& BufferRef = this->StateBuffer.Emplace_GetRef(StateSeqLen, StateDimSize);
+		if (InputTensorDescs[i].GetName().StartsWith(TEXT("state_in")))
+		{
+			UE::NNE::FTensorDesc StateDesc = InputTensorDescs[i];
+
+			FNNEStateBuffer& BufferRef = this->StateBuffer.Emplace_GetRef(StateDesc.GetShape().GetData(), this->MaxStateSequenceLength);
 			this->InputBindings[i] = BufferRef.MakeInputBinding();
-        }
+		}
 	}
 	// Go through the output tensors and find the state tensors, linking them to the state buffer for the corresponding input tensor
 	TConstArrayView<UE::NNE::FTensorDesc> OutputTensorDescs = InModelInstance->GetOutputTensorDescs();
-	int StateIndex = 0;
+	int									  StateIndex = 0;
 	for (int i = 0; i < OutputTensorDescs.Num(); i++)
 	{
-        if(OutputTensorDescs[i].GetName().StartsWith(TEXT("state_out")))
-        {
-			FNNEStateBuffer& BufferRef = this->StateBuffer[StateIndex++];
+		if (OutputTensorDescs[i].GetName().StartsWith(TEXT("state_out")))
+		{
+			FNNEStateBuffer& BufferRef = this->StateBuffer[StateIndex];
 			this->OutputBindings[i] = BufferRef.MakeOutputBinding();
-			//StateIndex++; // double increment?
-        }
+			StateIndex++;
+		}
 	}
 	return true;
 }
@@ -142,17 +134,17 @@ void UNNEPolicy::InitNonStateBuffers(const FInteractionDefinition& InDefinition)
 
 bool UNNEPolicy::InitNonStateBindings(const FInteractionDefinition& InDefinition)
 {
-	//Observation Bindings
+	// Observation Bindings
 	if (FNNEBindingCreator::CreateBindings(InDefinition.ObsSpaceDefn, this->ObservationBuffer, ModelInstance->GetInputTensorDescs(), this->InputBindings))
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to create bindings for Observation Space"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::InitNonStateBindings(): Failed to create bindings for Observation Space");
 		return false;
 	}
-	
-	//Action Bindings
+
+	// Action Bindings
 	if (FNNEBindingCreator::CreateBindings(InDefinition.ActionSpaceDefn, this->ActionBuffer, ModelInstance->GetOutputTensorDescs(), this->OutputBindings))
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to create bindings for Action Space"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::InitNonStateBindings(): Failed to create bindings for Action Space");
 		return false;
 	}
 	return true;
@@ -165,7 +157,7 @@ bool UNNEPolicy::AllocateBindingArrays(TSharedPtr<IModelInstanceRunSync> InModel
 
 	if (InputBindings.Num() == 0 || OutputBindings.Num() == 0)
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("No Input or Output Bindings found for the Model. Must be atleast one input and one output binding for the model to run"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::AllocateBindingArrays(): No Input or Output Bindings found for the Model. Must be at least one input and one output binding for the model to run");
 		return false;
 	}
 
@@ -175,9 +167,9 @@ bool UNNEPolicy::AllocateBindingArrays(TSharedPtr<IModelInstanceRunSync> InModel
 bool UNNEPolicy::SetupBuffersAndBindings(const FInteractionDefinition& InDefinition, TSharedPtr<IModelInstanceRunSync> InModelInstance)
 {
 	// Add Empty Entries to the Input and Output Bindings, so we can update the entries instead of Allocating later.
-	if(!AllocateBindingArrays(InModelInstance))
+	if (!AllocateBindingArrays(InModelInstance))
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to allocate input or output bindings"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::SetupBuffersAndBindings(): Failed to allocate input or output bindings");
 		return false;
 	}
 
@@ -187,22 +179,21 @@ bool UNNEPolicy::SetupBuffersAndBindings(const FInteractionDefinition& InDefinit
 	// Prepare buffers and bindings for state tensors, e.g. as used in RNNs or LSTM networks
 	if (!InitStateBuffersAndBindings(InModelInstance))
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to initialize state buffers"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::SetupBuffersAndBindings(): Failed to initialize state buffers");
 		return false;
 	}
 
 	// Bind the remaining inputs and outputs to the Action and Observation buffers
 	InitNonStateBindings(InDefinition);
 
-	if(!InitInputTensorShapes(InModelInstance))
+	if (!InitInputTensorShapes(InModelInstance))
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to initialize input tensor shapes"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::SetupBuffersAndBindings(): Failed to initialize input tensor shapes");
 		return false;
 	}
 
 	return true;
 }
-
 
 bool UNNEPolicy::Init(const FInteractionDefinition& InPolicyDefinition)
 {
@@ -211,7 +202,7 @@ bool UNNEPolicy::Init(const FInteractionDefinition& InPolicyDefinition)
 
 	if (!ModelData)
 	{
-		UE_LOG(LogScholaNNE, Warning, TEXT("Failed to Create Network Due to Invalid Model Data"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::Init(): Failed to create network due to invalid model data");
 		// Invalid Model Data
 		bNetworkLoaded = false;
 		return false;
@@ -221,7 +212,7 @@ bool UNNEPolicy::Init(const FInteractionDefinition& InPolicyDefinition)
 	this->Runtime = TUniquePtr<IRuntimeInterface>(this->GetRuntime(this->RuntimeName));
 	if (!this->Runtime.IsValid() || !this->Runtime->IsValid())
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Cannot find runtime %s, please enable the corresponding plugin"), *this->RuntimeName);
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::Init(): Cannot find runtime {0}, please enable the corresponding plugin", RuntimeName);
 		// Invalid Runtime
 		bNetworkLoaded = false;
 		return false;
@@ -230,7 +221,7 @@ bool UNNEPolicy::Init(const FInteractionDefinition& InPolicyDefinition)
 	TUniquePtr<IModelInterface> TempModelPtr = this->Runtime->CreateModel(ModelData);
 	if (!TempModelPtr.IsValid() || !TempModelPtr->IsValid())
 	{
-		UE_LOG(LogScholaNNE, Warning, TEXT("Failed to Create the Model"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::Init(): Failed to create the model");
 		// Invalid Runtime
 		bNetworkLoaded = false;
 		return false;
@@ -242,14 +233,14 @@ bool UNNEPolicy::Init(const FInteractionDefinition& InPolicyDefinition)
 	ModelInstance = this->Model->CreateModelInstance();
 	if (!ModelInstance.IsValid())
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to create the model instance"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::Init(): Failed to create the model instance");
 		bNetworkLoaded = false;
 		return false;
 	}
 
 	if (!this->SetupBuffersAndBindings(InPolicyDefinition, ModelInstance))
 	{
-		UE_LOG(LogScholaNNE, Error, TEXT("Failed to setup buffers and bindings"));
+		UE_LOGFMT(LogScholaNNE, Error, "UNNEPolicy::Init(): Failed to setup buffers and bindings");
 		bNetworkLoaded = false;
 		return false;
 	}

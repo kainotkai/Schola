@@ -31,4 +31,35 @@ public:
     UFUNCTION(BlueprintPure, Category="Schola|Space|Box", meta=(DisplayName="From Arrays (Box Space)"))
     static TInstancedStruct<FBoxSpace> ArraysToBoxSpace(UPARAM(DisplayName="Low") const TArray<float>& InLow, UPARAM(DisplayName="High") const TArray<float>& InHigh, UPARAM(DisplayName="Shape") const TArray<int32>& InShape);
 
+    /**
+     * @brief Creates a box space for FVector with specified bounds for each component.
+     * @param[in] InLow The lower bounds for X, Y, Z components.
+     * @param[in] InHigh The upper bounds for X, Y, Z components.
+     * @return A box space with 3 dimensions (X, Y, Z) with the specified bounds.
+     */
+    UFUNCTION(BlueprintPure, Category="Schola|Space|Box", meta=(DisplayName="From Vector (Box Space)"))
+    static TInstancedStruct<FBoxSpace> VectorToBoxSpace(UPARAM(DisplayName="Low") const FVector& InLow, UPARAM(DisplayName="High") const FVector& InHigh);
+
+    /**
+     * @brief Creates a box space for FRotator with specified bounds for each component.
+     * @return A box space with 3 dimensions (Pitch, Yaw, Roll) with bounds [-180,180].
+     */
+    UFUNCTION(BlueprintPure, Category="Schola|Space|Box", meta=(DisplayName="Rotator Space"))
+    static TInstancedStruct<FBoxSpace> RotatorSpace();
+
+    /**
+     * @brief Creates a box space for FTransform with specified bounds for Location, Rotation, and Scale.
+     * @param[in] InLocationLow The lower bounds for Location (X, Y, Z).
+     * @param[in] InLocationHigh The upper bounds for Location (X, Y, Z).
+     * @param[in] InScaleLow The lower bounds for Scale (X, Y, Z).
+     * @param[in] InScaleHigh The upper bounds for Scale (X, Y, Z).
+     * @return A box space with 9 dimensions (Location XYZ, Rotation PYR, Scale XYZ) with the specified bounds.
+     */
+    UFUNCTION(BlueprintPure, Category="Schola|Space|Box", meta=(DisplayName="From Transform (Box Space)"))
+    static TInstancedStruct<FBoxSpace> TransformToBoxSpace(
+        UPARAM(DisplayName="Location Low") const FVector& InLocationLow, 
+        UPARAM(DisplayName="Location High") const FVector& InLocationHigh,
+        UPARAM(DisplayName="Scale Low") const FVector& InScaleLow,
+        UPARAM(DisplayName="Scale High") const FVector& InScaleHigh);
+
 };

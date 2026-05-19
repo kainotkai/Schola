@@ -3,7 +3,9 @@
 #include "Misc/AutomationTest.h"
 
 #include "Spaces/MultiBinarySpace.h"
-
+#include "Spaces/Space.h"
+#include "Points/MultiBinaryPoint.h"
+#include "Points/DiscretePoint.h"
 
 #if WITH_AUTOMATION_TESTS
 
@@ -43,6 +45,50 @@ bool FMultiBinarySpaceMergeTest::RunTest(const FString& Parameters)
     MultiBinarySpace.Merge(OtherMultiBinarySpace);
 
     TestEqual(TEXT("MultiBinarySpace.Shape == 15"), MultiBinarySpace.Shape, 15);
+
+    return true;
+}
+
+// Validate Tests
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiBinarySpaceValidateSuccessTest, "Schola.Spaces.MultiBinarySpace.Validate Success Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FMultiBinarySpaceValidateSuccessTest::RunTest(const FString& Parameters)
+{
+    FMultiBinarySpace MultiBinarySpace = FMultiBinarySpace(3);
+
+    FMultiBinaryPoint MultiBinaryPoint = FMultiBinaryPoint({ true, false, true });
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FMultiBinaryPoint>(MultiBinaryPoint);
+
+    TestEqual(TEXT("MultiBinarySpace.Validate(Point) == ESpaceValidationResult::Success"), MultiBinarySpace.Validate(Point), ESpaceValidationResult::Success);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiBinarySpaceValidateWrongDataTypeTest, "Schola.Spaces.MultiBinarySpace.Validate Wrong Data Type Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FMultiBinarySpaceValidateWrongDataTypeTest::RunTest(const FString& Parameters)
+{
+    FMultiBinarySpace MultiBinarySpace = FMultiBinarySpace(3);
+
+    TInstancedStruct<FPoint> Point;
+    Point.InitializeAs<FDiscretePoint>();
+
+    TestEqual(TEXT("MultiBinarySpace.Validate(Point) == ESpaceValidationResult::WrongDataType"), MultiBinarySpace.Validate(Point), ESpaceValidationResult::WrongDataType);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiBinarySpaceValidateWrongDimensionsTest, "Schola.Spaces.MultiBinarySpace.Validate Wrong Dimensions Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FMultiBinarySpaceValidateWrongDimensionsTest::RunTest(const FString& Parameters)
+{
+    FMultiBinarySpace MultiBinarySpace = FMultiBinarySpace(3);
+
+    FMultiBinaryPoint MultiBinaryPoint = FMultiBinaryPoint({ true, false });
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FMultiBinaryPoint>(MultiBinaryPoint);
+
+    TestEqual(TEXT("MultiBinarySpace.Validate(Point) == ESpaceValidationResult::WrongDimensions"), MultiBinarySpace.Validate(Point), ESpaceValidationResult::WrongDimensions);
 
     return true;
 }

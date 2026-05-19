@@ -3,4 +3,7 @@
 Support for Stable Baselines 3 environments.
 """
 
+from .async_env import AsyncVecEnv
+from .env import BaseVecEnv, VecEnv
 
+__all__ = ["AsyncVecEnv", "BaseVecEnv", "VecEnv"]

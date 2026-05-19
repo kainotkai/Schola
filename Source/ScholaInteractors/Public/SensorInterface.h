@@ -9,6 +9,7 @@
 #include "Spaces/Space.h"
 #include "Points/BoxPoint.h"
 #include "Spaces/BoxSpace.h"
+#include "Common/InstancedStructUtils.h"
 #include "SensorInterface.generated.h"
 
 /**
@@ -82,7 +83,7 @@ public:
 	 */
 	static void Execute_GetObservationSpace(const UObject* Obj, TInstancedStruct<FSpace>& OutObservationSpace)
 	{
-		IScholaSensor::Execute_GetObservationSpace(Obj, reinterpret_cast<FInstancedStruct&>(OutObservationSpace));
+		IScholaSensor::Execute_GetObservationSpace(Obj, ToUntypedInstancedStruct(OutObservationSpace));
 	};
 
 	/**
@@ -105,7 +106,7 @@ public:
 	 */
 	static void Execute_CollectObservations(UObject* Obj, TInstancedStruct<FPoint>& OutObservations)
 	{
-		IScholaSensor::Execute_CollectObservations(Obj, reinterpret_cast<FInstancedStruct&>(OutObservations));
+		IScholaSensor::Execute_CollectObservations(Obj, ToUntypedInstancedStruct(OutObservations));
 	};
 
 	/**

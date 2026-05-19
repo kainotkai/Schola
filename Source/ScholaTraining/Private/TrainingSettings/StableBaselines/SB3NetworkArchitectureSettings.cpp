@@ -4,20 +4,20 @@
 
 void FSB3NetworkArchSettings::GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const
 {
-
+	//This has to be non-lowercase due to parsing issue with cyclopts
 	FString ActivationString;
 	switch (ActivationFunction)
 	{
 		case (ESB3ActivationFunctionEnum::TanH):
-			ActivationString = TEXT("tanh");
+			ActivationString = TEXT("TanH");
 			break;
 
 		case (ESB3ActivationFunctionEnum::ReLU):
-			ActivationString = TEXT("relu");
+			ActivationString = TEXT("ReLU");
 			break;
 
 		default:
-			ActivationString = TEXT("sigmoid");
+			ActivationString = TEXT("Sigmoid");
 			break;
 	}
 	ArgBuilder.AddStringArg(TEXT("activation"), ActivationString);

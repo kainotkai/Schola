@@ -21,6 +21,15 @@ struct SCHOLA_API FInteractionDefinition
 	GENERATED_BODY()
 
 	/**
+	 * @brief Optional type used by training integrations to group compatible agents.
+	 *
+	 * Agents with the same non-empty type may be assigned to a shared policy during training.
+	 * Leave empty to let training integrations fall back to the unique agent ID.
+	 */
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Schola|Interaction", meta = (ToolTip = "Optional type used by training integrations to group compatible agents under a shared policy. Leave empty to use the unique agent ID."))
+	FString AgentType;
+
+	/**
 	 * @brief Defines the range of values that the corresponding agent accepts as observations.
 	 * 
 	 * This space describes the structure and valid values for observations
@@ -44,6 +53,7 @@ struct SCHOLA_API FInteractionDefinition
 	 */
 	FInteractionDefinition(const FInteractionDefinition& Other)
 	{
+		AgentType = Other.AgentType;
 		ObsSpaceDefn = Other.ObsSpaceDefn;
 		ActionSpaceDefn = Other.ActionSpaceDefn;
 	}
@@ -55,6 +65,18 @@ struct SCHOLA_API FInteractionDefinition
 	 */
 	FInteractionDefinition(const TInstancedStruct<FSpace>& InObsSpaceDefn, const TInstancedStruct<FSpace>& InActionSpaceDefn)
 		: ObsSpaceDefn(InObsSpaceDefn), ActionSpaceDefn(InActionSpaceDefn)
+	{
+
+	}
+
+	/**
+	 * @brief Constructor with agent type, observation, and action space parameters.
+	 * @param[in] InAgentType The optional policy grouping type for the agent.
+	 * @param[in] InObsSpaceDefn The observation space definition.
+	 * @param[in] InActionSpaceDefn The action space definition.
+	 */
+	FInteractionDefinition(const FString& InAgentType, const TInstancedStruct<FSpace>& InObsSpaceDefn, const TInstancedStruct<FSpace>& InActionSpaceDefn)
+		: AgentType(InAgentType), ObsSpaceDefn(InObsSpaceDefn), ActionSpaceDefn(InActionSpaceDefn)
 	{
 
 	}

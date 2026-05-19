@@ -98,7 +98,7 @@ void URotationActuator::TakeAction_Implementation(const FInstancedStruct& InActi
 	}
 	else
 	{
-		UE_LOG(LogScholaInteractors, Warning, TEXT("RotationActuator %s: No Pawn found to apply rotation to."), *this->GetName());
+		UE_LOGFMT(LogScholaInteractors, Warning, "URotationActuator::TakeAction_Implementation(): No Owner found to apply rotation to - {0}", GetName());
 	}
 }
 

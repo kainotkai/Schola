@@ -89,7 +89,7 @@ struct SCHOLANNE_API FNNEPointToBufferConverter : public FNNEBufferVisitor
     {
         if (!InPoint.IsValid() || !OutBuffer.IsValid() || !InSpace.IsValid())
         {
-            UE_LOG(LogScholaNNE, Error, TEXT("Invalid input parameters to ConvertPointToBuffer"));
+            UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::ConvertPointToBuffer(): Invalid input parameters");
             return;
         }
 

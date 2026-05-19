@@ -13,16 +13,19 @@ struct SCHOLAPROTOBUF_API FRPCServerSettings
 	GENERATED_BODY()
 
 public:
+	/** Bind address or hostname for the Python client to connect to. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Communicator Settings")
 	FString Address = FString("127.0.0.1");
 
+	/** TCP port for the gRPC / socket server. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Communicator Settings")
 	int Port = 8000;
 
-	void GetTrainingArgs(FScriptArgBuilder& ArgBuilder) const
+	/** Writes protocol URL and port into script argument keys consumed by Schola Python. */
+	void GetArgs(FScriptArgBuilder& ArgBuilder) const
 	{
-		ArgBuilder.AddIntArg("protocol.port",this->Port);
-		ArgBuilder.AddStringArg("protocol.url", this->Address);
+		ArgBuilder.AddIntArg("port",this->Port);
+		ArgBuilder.AddStringArg("url", this->Address);
 	}
 	
 };

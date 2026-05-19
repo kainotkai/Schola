@@ -17,6 +17,7 @@ bool FProtobufEnvironmentDefinitionSerializationTest::RunTest(const FString& Par
 {
 	// Build InteractionDefinition with discrete spaces for obs and action
 	FInteractionDefinition Inter;
+	Inter.AgentType = TEXT("Tagger");
 	Inter.ObsSpaceDefn.InitializeAs<FDiscreteSpace>();
 	FDiscreteSpace* ObsSpace = Inter.ObsSpaceDefn.GetMutablePtr<FDiscreteSpace>();
 	ObsSpace->High = 5;
@@ -38,6 +39,7 @@ bool FProtobufEnvironmentDefinitionSerializationTest::RunTest(const FString& Par
 	if (It != Map.end())
 	{
 		const Schola::AgentDefinition& AgentProto = It->second;
+		TestEqual(TEXT("AgentProto.agent_type == Tagger"), FString(UTF8_TO_TCHAR(AgentProto.agent_type().c_str())), FString(TEXT("Tagger")));
 		TestTrue(TEXT("AgentProto has obs_space serialized"), AgentProto.has_obs_space());
 		if (AgentProto.has_obs_space())
 		{
@@ -67,6 +69,7 @@ bool FProtobufTrainingDefinitionSerializationTest::RunTest(const FString& Parame
 {
 	// Reuse environment definition from previous test
 	FInteractionDefinition Inter;
+	Inter.AgentType = TEXT("Runner");
 	Inter.ObsSpaceDefn.InitializeAs<FDiscreteSpace>();
 	Inter.ObsSpaceDefn.GetMutablePtr<FDiscreteSpace>()->High = 2;
 	Inter.ActionSpaceDefn.InitializeAs<FDiscreteSpace>();
@@ -92,6 +95,7 @@ bool FProtobufTrainingDefinitionSerializationTest::RunTest(const FString& Parame
 		if (It != Map.end())
 		{
 			const Schola::AgentDefinition& AgentProto = It->second;
+			TestEqual(TEXT("AgentProto.agent_type == Runner"), FString(UTF8_TO_TCHAR(AgentProto.agent_type().c_str())), FString(TEXT("Runner")));
 			TestTrue(TEXT("AgentProto.obs_space present"), AgentProto.has_obs_space());
 			if (AgentProto.has_obs_space())
 			{

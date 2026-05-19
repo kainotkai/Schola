@@ -29,7 +29,7 @@ class SCHOLAIMITATION_API USingleAgentImitationScholaEnvironment : public UBaseI
  * Includes compatibility methods to bridge single-agent and multi-agent APIs.
  */
 class SCHOLAIMITATION_API ISingleAgentImitationScholaEnvironment : public IBaseImitationScholaEnvironment
-{	
+{
 	GENERATED_BODY()
 public:
 	/**
@@ -52,7 +52,7 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Schola|Environment")
 	void SetEnvironmentOptions(const TMap<FString, FString>& InOptions);
-	
+
 	/**
 	 * @brief Reset the environment and return the agent's initial state.
 	 * @param[out] OutAgentState The agent's initial state
@@ -102,5 +102,4 @@ public:
 		AgentState.Empty();
 		ISingleAgentImitationScholaEnvironment::Execute_Step(Obj, AgentState);
 	}
-
 };

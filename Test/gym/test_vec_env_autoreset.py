@@ -25,7 +25,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 """
-# Modifications Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
+# Modifications Copyright (c) 2025-2026 Advanced Micro Devices, Inc. All Rights Reserved.
 
 from functools import partial
 
@@ -40,10 +40,10 @@ from gymnasium.vector import AsyncVectorEnv, SyncVectorEnv
 from gymnasium.vector.vector_env import AutoresetMode
 
 from schola.gym.env import GymVectorEnv
-from schola.core.protocols.protobuf.gRPC import gRPCProtocol
-from schola.core.simulators.unreal.editor import UnrealEditor
+from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
+from schola.core.simulators.unreal.editor_simulator import UnrealEditor
 
-from  Test.testing_spaces import TESTING_SPACES, TESTING_SPACES_IDS
+from Test.testing_spaces import TESTING_SPACES, TESTING_SPACES_IDS
 from Test.gym.testing_env import GenericTestEnv
 from functools import partial
 
@@ -56,17 +56,22 @@ def count_reset(
     self.count = seed if seed is not None else 0
     return self.count, {}
 
+
 def make_count_step(max_count):
     def count_step(self: GenericTestEnv, action):
         self.count += 1
         return self.count, action, self.count == max_count, False, {}
+
     return count_step
 
+
 def test_autoreset_next_step(make_vec_env_server):
-   
-    max_counts = [2,3,3]
-    env_server_port = make_vec_env_server([
-            partial(GenericTestEnv, 
+
+    max_counts = [2, 3, 3]
+    env_server_port = make_vec_env_server(
+        [
+            partial(
+                GenericTestEnv,
                 action_space=Discrete(5),
                 observation_space=Discrete(5),
                 reset_func=count_reset,
@@ -76,7 +81,7 @@ def test_autoreset_next_step(make_vec_env_server):
         ]
     )
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     envs = GymVectorEnv(simulator, protocol, autoreset_mode=AutoresetMode.NEXT_STEP)
 
     assert envs.metadata["autoreset_mode"] == AutoresetMode.NEXT_STEP
@@ -116,11 +121,12 @@ def test_autoreset_next_step(make_vec_env_server):
     envs.close()
 
 
-
 def test_autoreset_within_step(make_vec_env_server):
-    max_counts = [2,3,3]
-    env_server_port = make_vec_env_server([
-            partial(GenericTestEnv, 
+    max_counts = [2, 3, 3]
+    env_server_port = make_vec_env_server(
+        [
+            partial(
+                GenericTestEnv,
                 action_space=Discrete(5),
                 observation_space=Discrete(5),
                 reset_func=count_reset,
@@ -131,7 +137,7 @@ def test_autoreset_within_step(make_vec_env_server):
     )
 
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     envs = GymVectorEnv(simulator, protocol, autoreset_mode=AutoresetMode.SAME_STEP)
 
     assert envs.metadata["autoreset_mode"] == AutoresetMode.SAME_STEP
@@ -197,9 +203,11 @@ def test_autoreset_within_step(make_vec_env_server):
 
 @pytest.mark.skip(reason="Feature not implemented yet")
 def test_autoreset_disabled(make_vec_env_server):
-    max_counts = [2,3,3]
-    env_server_port = make_vec_env_server([
-            partial(GenericTestEnv, 
+    max_counts = [2, 3, 3]
+    env_server_port = make_vec_env_server(
+        [
+            partial(
+                GenericTestEnv,
                 action_space=Discrete(5),
                 observation_space=Discrete(5),
                 reset_func=count_reset,
@@ -210,7 +218,7 @@ def test_autoreset_disabled(make_vec_env_server):
     )
 
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     envs = GymVectorEnv(simulator, protocol, autoreset_mode=AutoresetMode.DISABLED)
 
     assert envs.metadata["autoreset_mode"] == AutoresetMode.DISABLED
@@ -266,7 +274,7 @@ def test_autoreset_metadata(make_vec_env_server, autoreset_mode):
     env_server_port = make_vec_env_server([partial(GenericTestEnv) for _ in range(2)])
 
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     envs = GymVectorEnv(simulator, protocol, autoreset_mode=autoreset_mode)
 
     assert envs.metadata["autoreset_mode"] == autoreset_mode
@@ -275,7 +283,7 @@ def test_autoreset_metadata(make_vec_env_server, autoreset_mode):
     env_server_port = make_vec_env_server([partial(GenericTestEnv) for _ in range(2)])
 
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     envs = GymVectorEnv(simulator, protocol, autoreset_mode=autoreset_mode.value)
 
     assert envs.metadata["autoreset_mode"] == autoreset_mode
@@ -290,6 +298,7 @@ def count_reset_obs(
     self.count = seed if seed is not None else 0
     return self.observation_space.sample(), {}
 
+
 def make_count_step_obs(max_count):
     def count_step_obs(self: GenericTestEnv, action):
         self.count += 1
@@ -301,26 +310,30 @@ def make_count_step_obs(max_count):
             False,
             {},
         )
+
     return count_step_obs
 
 
 @pytest.mark.parametrize("obs_space", TESTING_SPACES, ids=TESTING_SPACES_IDS)
 def test_same_step_final_obs(make_vec_env_server, obs_space):
-    max_counts=[2,3,3]
-    env_server_port = make_vec_env_server([
-        partial(GenericTestEnv,
-            action_space=Discrete(5),
-            observation_space=obs_space,
-            reset_func=count_reset_obs,
-            step_func=make_count_step_obs(max_counts[i]),
-           ) for i in range(3)]
-        )
+    max_counts = [2, 3, 3]
+    env_server_port = make_vec_env_server(
+        [
+            partial(
+                GenericTestEnv,
+                action_space=Discrete(5),
+                observation_space=obs_space,
+                reset_func=count_reset_obs,
+                step_func=make_count_step_obs(max_counts[i]),
+            )
+            for i in range(3)
+        ]
+    )
 
     simulator = UnrealEditor()
-    protocol = gRPCProtocol(url="localhost", port=env_server_port)
+    protocol = GrpcProtocol(url="localhost", port=env_server_port)
     envs = GymVectorEnv(simulator, protocol, autoreset_mode=AutoresetMode.SAME_STEP)
 
-    
     assert envs.metadata["autoreset_mode"] == AutoresetMode.SAME_STEP
 
     envs.reset()

@@ -7,6 +7,7 @@
 #include "Points/MultiBinaryPoint.h"
 #include "Points/MultiDiscretePoint.h"
 #include "Points/DictPoint.h"
+#include "Common/InstancedStructUtils.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -21,7 +22,7 @@ bool FPointBlueprintLibrary_Type_BoxTest::RunTest(const FString& Parameters)
     FBoxPoint& BoxPoint = Point.GetMutable<FBoxPoint>();
     BoxPoint.Add(1.0f);
 
-    EPointType Result = UPointBlueprintLibrary::Point_Type(reinterpret_cast<FInstancedStruct&>(Point));
+    EPointType Result = UPointBlueprintLibrary::Point_Type(ToUntypedInstancedStruct(Point));
 
     TestEqual(TEXT("Point_Type(BoxPoint) == EPointType::Box"), Result, EPointType::Box);
 
@@ -36,7 +37,7 @@ bool FPointBlueprintLibrary_Type_DiscreteTest::RunTest(const FString& Parameters
     Point.InitializeAs<FDiscretePoint>(5);
 
 
-    EPointType Result = UPointBlueprintLibrary::Point_Type(reinterpret_cast<FInstancedStruct&>(Point));
+    EPointType Result = UPointBlueprintLibrary::Point_Type(ToUntypedInstancedStruct(Point));
 
     TestEqual(TEXT("Point_Type(DiscretePoint) == EPointType::Discrete"), Result, EPointType::Discrete);
 
@@ -52,7 +53,7 @@ bool FPointBlueprintLibrary_Type_MultiBinaryTest::RunTest(const FString& Paramet
     FMultiBinaryPoint& MultiBinaryPoint = Point.GetMutable<FMultiBinaryPoint>();
     MultiBinaryPoint.Values = {true, false, true};
 
-    EPointType Result = UPointBlueprintLibrary::Point_Type(reinterpret_cast<FInstancedStruct&>(Point));
+    EPointType Result = UPointBlueprintLibrary::Point_Type(ToUntypedInstancedStruct(Point));
 
     TestEqual(TEXT("Point_Type(MultiBinaryPoint) == EPointType::MultiBinary"), Result, EPointType::MultiBinary);
 
@@ -68,7 +69,7 @@ bool FPointBlueprintLibrary_Type_MultiDiscreteTest::RunTest(const FString& Param
     FMultiDiscretePoint& MultiDiscretePoint = Point.GetMutable<FMultiDiscretePoint>();
     MultiDiscretePoint.Values = {1, 2, 3};
 
-    EPointType Result = UPointBlueprintLibrary::Point_Type(reinterpret_cast<FInstancedStruct&>(Point));
+    EPointType Result = UPointBlueprintLibrary::Point_Type(ToUntypedInstancedStruct(Point));
 
     TestEqual(TEXT("Point_Type(MultiDiscretePoint) == EPointType::MultiDiscrete"), Result, EPointType::MultiDiscrete);
 
@@ -82,7 +83,7 @@ bool FPointBlueprintLibrary_Type_DictTest::RunTest(const FString& Parameters)
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FDictPoint>();
 
-    EPointType Result = UPointBlueprintLibrary::Point_Type(reinterpret_cast<FInstancedStruct&>(Point));
+    EPointType Result = UPointBlueprintLibrary::Point_Type(ToUntypedInstancedStruct(Point));
 
     TestEqual(TEXT("Point_Type(DictPoint) == EPointType::Dict"), Result, EPointType::Dict);
 
@@ -98,7 +99,7 @@ bool FPointBlueprintLibrary_IsOfType_BoxTrueTest::RunTest(const FString& Paramet
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FBoxPoint>();
 
-    bool Result = UPointBlueprintLibrary::Point_IsOfType(reinterpret_cast<FInstancedStruct&>(Point), EPointType::Box);
+    bool Result = UPointBlueprintLibrary::Point_IsOfType(ToUntypedInstancedStruct(Point), EPointType::Box);
 
     TestTrue(TEXT("Point_IsOfType(BoxPoint, Box) == true"), Result);
 
@@ -112,7 +113,7 @@ bool FPointBlueprintLibrary_IsOfType_BoxFalseTest::RunTest(const FString& Parame
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FBoxPoint>();
 
-    bool Result = UPointBlueprintLibrary::Point_IsOfType(reinterpret_cast<FInstancedStruct&>(Point), EPointType::Discrete);
+    bool Result = UPointBlueprintLibrary::Point_IsOfType(ToUntypedInstancedStruct(Point), EPointType::Discrete);
 
     TestFalse(TEXT("Point_IsOfType(BoxPoint, Discrete) == false"), Result);
 
@@ -126,7 +127,7 @@ bool FPointBlueprintLibrary_IsOfType_DiscreteTrueTest::RunTest(const FString& Pa
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FDiscretePoint>();
 
-    bool Result = UPointBlueprintLibrary::Point_IsOfType(reinterpret_cast<FInstancedStruct&>(Point), EPointType::Discrete);
+    bool Result = UPointBlueprintLibrary::Point_IsOfType(ToUntypedInstancedStruct(Point), EPointType::Discrete);
 
     TestTrue(TEXT("Point_IsOfType(DiscretePoint, Discrete) == true"), Result);
 
@@ -140,7 +141,7 @@ bool FPointBlueprintLibrary_IsOfType_MultiBinaryTrueTest::RunTest(const FString&
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FMultiBinaryPoint>();
 
-    bool Result = UPointBlueprintLibrary::Point_IsOfType(reinterpret_cast<FInstancedStruct&>(Point), EPointType::MultiBinary);
+    bool Result = UPointBlueprintLibrary::Point_IsOfType(ToUntypedInstancedStruct(Point), EPointType::MultiBinary);
 
     TestTrue(TEXT("Point_IsOfType(MultiBinaryPoint, Binary) == true"), Result);
 
@@ -154,7 +155,7 @@ bool FPointBlueprintLibrary_IsOfType_MultiDiscreteTrueTest::RunTest(const FStrin
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FMultiDiscretePoint>();
 
-    bool Result = UPointBlueprintLibrary::Point_IsOfType(reinterpret_cast<FInstancedStruct&>(Point), EPointType::MultiDiscrete);
+    bool Result = UPointBlueprintLibrary::Point_IsOfType(ToUntypedInstancedStruct(Point), EPointType::MultiDiscrete);
 
     TestTrue(TEXT("Point_IsOfType(MultiDiscretePoint, MultiDiscrete) == true"), Result);
 
@@ -168,7 +169,7 @@ bool FPointBlueprintLibrary_IsOfType_DictTrueTest::RunTest(const FString& Parame
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FDictPoint>();
 
-    bool Result = UPointBlueprintLibrary::Point_IsOfType(reinterpret_cast<FInstancedStruct&>(Point), EPointType::Dict);
+    bool Result = UPointBlueprintLibrary::Point_IsOfType(ToUntypedInstancedStruct(Point), EPointType::Dict);
 
     TestTrue(TEXT("Point_IsOfType(DictPoint, Dict) == true"), Result);
 

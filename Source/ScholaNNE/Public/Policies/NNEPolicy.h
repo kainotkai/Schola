@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "NNEModelData.h"
 #include "Common/InteractionDefinition.h"
+#include "Common/InstancedStructUtils.h"
+#include "Common/BlueprintErrorUtils.h"
 #include "NNEUtils/NNEWrappers.h"
 #include "NNEUtils/NNEBuffer.h"
 #include "Policies/PolicyInterface.h"
@@ -18,7 +20,7 @@
  * reinforcement learning framework, enabling trained neural network models to control agents.
  * Supports both CPU and GPU inference runtimes.
  */
-UCLASS(Blueprintable)
+UCLASS(Blueprintable, BlueprintType, EditInlineNew, DefaultToInstanced)
 class SCHOLANNE_API UNNEPolicy : public UObject, public IPolicy
 {
 	GENERATED_BODY()
@@ -26,16 +28,20 @@ class SCHOLANNE_API UNNEPolicy : public UObject, public IPolicy
 public:
 
 	/** Defines the observation and action spaces for this policy */
-	UPROPERTY(VisibleAnywhere, Category="Policy Definition")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Policy Definition")
 	FInteractionDefinition PolicyDefinition;
 
 	/** The neural network model data asset used for inference */
-	UPROPERTY(EditAnywhere, Category="Policy Properties")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(ExposeOnSpawn=true), Category="Policy Properties")
 	TObjectPtr<UNNEModelData> ModelData;
 
 	/** The runtime name for inference execution. Enable NNE runtime plugins (e.g., NNERuntimeORT) to see options */
-	UPROPERTY(EditAnywhere, meta = (GetOptions = "GetRuntimeNames"), Category="Policy Properties")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, meta = (GetOptions = "GetRuntimeNames",ExposeOnSpawn=true), Category="Policy Properties")
 	FString RuntimeName;
+
+	/** Maximum sequence length for state buffers with a sequence dimension */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ExposeOnSpawn = true, ClampMin = 1), Category = "Policy Properties")
+	int MaxStateSequenceLength = 1;
 
 	/**
 	 * @brief Retrieves all available NNE runtime names
@@ -64,7 +70,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Schola|Policy")
 	bool Think(const FInstancedStruct& InObservations, FInstancedStruct& OutAction)
 	{
-		return this->Think(reinterpret_cast<const TInstancedStruct<FPoint>&>(InObservations), reinterpret_cast<TInstancedStruct<FPoint>&>(OutAction));
+		if (!InObservations.GetScriptStruct())
+		{
+			RaiseInvalidInstancedStructError(TEXT("NNEPolicy::Think"));
+			return false;
+		}
+
+		if (!InObservations.GetScriptStruct()->IsChildOf(FPoint::StaticStruct()))
+		{
+			RaiseInstancedStructTypeMismatchError(InObservations, TEXT("FPoint"), TEXT("NNEPolicy::Think"));
+			return false;
+		}
+
+		if (OutAction.GetScriptStruct() && !OutAction.GetScriptStruct()->IsChildOf(FPoint::StaticStruct()))
+		{
+			RaiseInstancedStructTypeMismatchError(OutAction, TEXT("FPoint"), TEXT("NNEPolicy::Think"));
+			return false;
+		}
+
+		return this->Think(ToTypedInstancedStruct<FPoint>(InObservations), ToTypedInstancedStruct<FPoint>(OutAction));
 	}
 
 	/**
@@ -84,15 +108,15 @@ public:
 	bool Init(const FInteractionDefinition& InPolicyDefinition) override;
 
 	/** Buffer storing action data for neural network output */
-	UPROPERTY(VisibleAnywhere, Category="Policy Data")
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly, Category="Policy Data")
 	TInstancedStruct<FNNEPointBuffer> ActionBuffer;
 
 	/** Buffer storing observation data for neural network input */
-	UPROPERTY(VisibleAnywhere, Category="Policy Data")
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly, Category="Policy Data")
 	TInstancedStruct<FNNEPointBuffer> ObservationBuffer;
 
 	/** Array of buffers storing recurrent state for sequence-based models */
-	UPROPERTY(VisibleAnywhere, Category="Policy Data")
+	UPROPERTY(VisibleAnywhere,BlueprintReadOnly, Category="Policy Data")
 	TArray<FNNEStateBuffer> StateBuffer;
 
 	/**

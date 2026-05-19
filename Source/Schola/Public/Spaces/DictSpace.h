@@ -35,7 +35,16 @@ struct SCHOLA_API FDictSpace : public FSpace
 	 * @brief Constructs an empty DictSpace.
 	 */
 	FDictSpace();
-	
+
+	/**
+	 * @brief Constructs a DictSpace with the given map of sub-spaces.
+	 * @param InSpaces The map of named sub-spaces to initialize this dictionary with.
+	 */
+	FDictSpace(const TMap<FString, TInstancedStruct<FSpace>>& InSpaces)
+		: Spaces(InSpaces)
+	{
+	}
+
 	/**
 	 * @brief Gets the number of sub-spaces in this dictionary.
 	 * @return The number of entries in the Spaces map.

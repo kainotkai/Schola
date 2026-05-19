@@ -41,9 +41,11 @@ class UBTCommand:
         get_unreal_platform()
     )  # Target platform (e.g., Win64, Linux)
     should_package: bool = True  # Whether to package the build
-    should_clean: bool = True  # Whether to clean before building
+    should_clean: bool = False  # Whether to clean before building
     should_cook: bool = True  # Whether to cook content
-    fast_cook: bool = True  # Use FastCook for quicker iteration
+    fast_cook: bool = (
+        True  # Use FastCook for quicker iteration, only used if should_cook is True.
+    )
     should_build: bool = True  # Whether to build the project
     no_p4: bool = True  # Disable Perforce integration (-NoP4)
     prereqs: bool = True  # Install prerequisites (-prereqs)
@@ -54,16 +56,15 @@ class UBTCommand:
     )
     no_debug_info: bool = True  # Exclude debug info (-nodebuginfo)
     unattended: bool = True  # Run in unattended mode (-unattended)
-    staging_dir: Optional[str] = None  # Directory to stage build output
-    force_monolithic: bool = True  # Build as a monolithic executable (-ForceMonolithic)
-    maps: List[str] = field(
-        default_factory=list
-    )  # List of maps to cook/package
+    staging_dir: Optional[Union[Path, str]] = None  # Directory to stage build output
+    force_monolithic: bool = (
+        False  # Build as a monolithic executable (-ForceMonolithic)
+    )
+    maps: List[str] = field(default_factory=list)  # List of maps to cook/package
+    all_maps: bool = (
+        True  # Whether to cook all maps (-AllMaps). If False, maps must be set. If True, maps will be ignored.
+    )
     stdout: bool = True  # Whether to route build process output to stdout
-
-    @property
-    def all_maps(self) -> bool:
-        return len(self.maps) == 0
 
     def build_args(self) -> List[str]:
         """
@@ -129,10 +130,16 @@ class UBTCommand:
 
         if self.all_maps:
             args.append("-AllMaps")
-        elif self.maps:
+        elif len(self.maps) > 0:
             args.append(f"-map={'+'.join(self.maps)}")
 
         return args
+
+    def run(self) -> subprocess.CompletedProcess:
+        """
+        Run the UBT command.
+        """
+        return subprocess.run(self.build_args(), capture_output=True)
 
 
 def get_ue_version(project_file: Path) -> str:
@@ -159,7 +166,7 @@ def get_ue_version(project_file: Path) -> str:
     return ue_version
 
 
-def get_project_file(project_folder: Path) -> Path:
+def get_project_file(project_folder: Path) -> Optional[Path]:
     """
     Find the .uproject file in a project folder.
 
@@ -179,7 +186,7 @@ def get_project_file(project_folder: Path) -> Path:
     return None
 
 
-def get_engine_path_from_sln(sln_file: Path) -> Path:
+def get_engine_path_from_sln(sln_file: Path) -> Optional[Path]:
     """
     Extract the Unreal Engine path from a Visual Studio solution file.
 
@@ -200,6 +207,7 @@ def get_engine_path_from_sln(sln_file: Path) -> Path:
                 parts = line.split(",")
                 # Get the path to the engine folder using the UBT entry in the solution file
                 return sln_file.parent / Path(parts[1].split("Engine")[0].strip(' "'))
+    return None
 
 
 def get_sln_file_from_project(project_folder: Path) -> Optional[Path]:
@@ -222,7 +230,9 @@ def get_sln_file_from_project(project_folder: Path) -> Optional[Path]:
     return None
 
 
-def get_ubt_path(project_folder: Path, ue_version: str = "5.5") -> Path:
+def get_ubt_path(
+    sln_or_project_folder: Path, ue_version: str = "5.5"
+) -> Optional[Path]:
     """
     Get the path to the Unreal Build Tool (UBT) RunUAT script.
 
@@ -235,11 +245,15 @@ def get_ubt_path(project_folder: Path, ue_version: str = "5.5") -> Path:
 
     Returns
     -------
-    Path
-        Path to the RunUAT batch/shell script.
+    Optional[Path]
+        Path to the RunUAT batch/shell script if found, None otherwise.
     """
-    # try and load it from a sln file
-    sln_file = get_sln_file_from_project(project_folder)
+    sln_file = None
+    if sln_or_project_folder.is_file() and sln_or_project_folder.suffix == ".sln":
+        sln_file = sln_or_project_folder
+    elif sln_or_project_folder.is_dir():
+        sln_file = get_sln_file_from_project(sln_or_project_folder)
+
     if sln_file is not None:
         engine_path = get_engine_path_from_sln(sln_file)
         if engine_path is not None:
@@ -258,8 +272,7 @@ def get_ubt_path(project_folder: Path, ue_version: str = "5.5") -> Path:
                 + ue_version
                 + "/Engine/Build/BatchFiles/RunUAT.bat"
             )
-        else:
-            return None
+    return None
 
 
 def get_editor_executable_path(engine_path: Path) -> Path:
@@ -277,15 +290,15 @@ def get_editor_executable_path(engine_path: Path) -> Path:
         Path to the UnrealEditor-Cmd executable.
     """
     editor_tool = (
-        "UnrealEditor-Cmd.exe"
-        if platform.system() == "Windows"
-        else "UnrealEditor-Cmd"
+        "UnrealEditor-Cmd.exe" if platform.system() == "Windows" else "UnrealEditor-Cmd"
     )
     bin_dir = "Win64" if platform.system() == "Windows" else "Linux"
     return engine_path / "Engine" / "Binaries" / bin_dir / editor_tool
 
 
-def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: Path | str, **kwargs):
+def build_executable(
+    project_file: Path | str, build_dir: Path | str, ubt_path: Path | str, **kwargs
+):
     """
     Build an Unreal Engine project executable using the Unreal Build Tool.
 
@@ -308,12 +321,14 @@ def build_executable(project_file: Path | str, build_dir: Path | str, ubt_path: 
     args = UBTCommand(
         ubt_path=ubt_path, project_file=project_file, staging_dir=build_dir, **kwargs
     ).build_args()
-    comp_process = subprocess.run(args,capture_output=True)
+    comp_process = subprocess.run(args, capture_output=True)
     return comp_process
 
 
 def quick_build_unreal_project(
-    project_folder: str, build_dir: str, ubt_path: Optional[str] = None
+    project_folder: Path | str,
+    build_dir: Path | str,
+    ubt_path: Optional[Path | str] = None,
 ):
     """
     Build function with reasonable defaults to build an Unreal Engine project and return the path to the executable.
@@ -346,25 +361,37 @@ def quick_build_unreal_project(
     ValueError
         If the UE version cannot be determined from the .uproject file.
     """
-
-    
+    project_folder = Path(project_folder).resolve()
+    build_dir = Path(build_dir).resolve()
     uproject_file = get_project_file(project_folder)
     if uproject_file is None:
         raise FileNotFoundError("No .uproject file found in the project folder")
     ue_version = get_ue_version(uproject_file)
     if ue_version is None:
-        raise ValueError("Could not determine Unreal Engine version from .uproject file")
+        raise ValueError(
+            "Could not determine Unreal Engine version from .uproject file"
+        )
     ubt_path = (
         get_ubt_path(project_folder, ue_version) if ubt_path is None else Path(ubt_path)
     )
     if ubt_path is None:
-        raise FileNotFoundError("Could not find Unreal Build Tool (UBT) path from project folder.")
+        raise FileNotFoundError(
+            "Could not find Unreal Build Tool (UBT) path from project folder."
+        )
 
-    build_executable(
-        project_file=str(uproject_file),
+    completed_build_process = build_executable(
+        project_file=uproject_file,
         build_dir=build_dir,
-        ubt_path=str(ubt_path),
+        ubt_path=ubt_path,
     )
+
+    if completed_build_process.returncode != 0:
+        exception_message = f"Unreal build failed with return code {completed_build_process.returncode} and the following output:\n"
+        if completed_build_process.stderr:
+            exception_message += f"stderr:\n {completed_build_process.stderr.decode('utf-8', errors='ignore')}\n"
+        if completed_build_process.stdout:
+            exception_message += f"stdout:\n {completed_build_process.stdout.decode('utf-8', errors='ignore')}\n"
+        raise Exception(exception_message)
 
     executable_filename = Path(uproject_file).name.split(".")[0] + (
         ".exe" if platform.system() == "Windows" else ""

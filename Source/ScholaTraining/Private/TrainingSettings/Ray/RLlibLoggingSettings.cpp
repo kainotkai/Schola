@@ -4,8 +4,8 @@
 
 void FRLlibLoggingSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) const
 {
-	ArgBuilder.AddIntArg(TEXT("logging-settings.schola-verbosity"), EnvLoggingVerbosity);
-	ArgBuilder.AddIntArg(TEXT("logging-settings.rllib-verbosity"), TrainerLoggingVerbosity);
+	ArgBuilder.AddIntArg(TEXT("schola-verbosity"), EnvLoggingVerbosity);
+	ArgBuilder.AddIntArg(TEXT("rllib-verbosity"), TrainerLoggingVerbosity);
 }
 
 FRLlibLoggingSettings::~FRLlibLoggingSettings()

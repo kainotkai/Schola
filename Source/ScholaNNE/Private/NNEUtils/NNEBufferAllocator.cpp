@@ -28,10 +28,10 @@ void FNNEBufferAllocator::operator()(const FMultiBinarySpace& InSpace)
 
 void FNNEBufferAllocator::operator()(const FDiscreteSpace& InSpace)
 {
-	this->Buffer.InitializeAs<FNNEDiscreteBuffer>(InSpace.GetFlattenedSize());
+	this->Buffer.InitializeAs<FNNEDiscreteBuffer>();
 }
 
 void FNNEBufferAllocator::operator()(const FMultiDiscreteSpace& InSpace)
 {
-	this->Buffer.InitializeAs<FNNEMultiDiscreteBuffer>(InSpace.GetFlattenedSize());
+	this->Buffer.InitializeAs<FNNEMultiDiscreteBuffer>(InSpace.GetNumDimensions());
 }

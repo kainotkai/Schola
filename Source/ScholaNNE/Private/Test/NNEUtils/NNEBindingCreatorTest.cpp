@@ -69,11 +69,11 @@ bool FNNEBindingCreatorBinaryBufferTest::RunTest(const FString& Parameters)
     FNNEBindingCreator Creator(Holder, TensorDescs, Bindings);
 
     FNNEMultiBinaryBuffer BinaryBuffer(2);
-    BinaryBuffer.Buffer[0] = 1.0f;
-    BinaryBuffer.Buffer[1] = 0.0f;
+    BinaryBuffer.Buffer[0] = true;
+    BinaryBuffer.Buffer[1] = false;
     Creator(BinaryBuffer);
 
-    TestEqual(TEXT("Binding size"), Bindings[0].SizeInBytes, (uint64)(2 * sizeof(float)));
+    TestEqual(TEXT("Binding size"), Bindings[0].SizeInBytes, (uint64)(2 * sizeof(bool)));
     TestEqual(TEXT("Binding data ptr"), Bindings[0].Data, (void*)BinaryBuffer.Buffer.GetData());
     return true;
 }
@@ -82,22 +82,18 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNNEBindingCreatorDiscreteBufferTest, "Schola.P
 
 bool FNNEBindingCreatorDiscreteBufferTest::RunTest(const FString& Parameters)
 {
-    TInstancedStruct<FNNEPointBuffer> Holder; Holder.InitializeAs<FNNEDiscreteBuffer>(4);
+    TInstancedStruct<FNNEPointBuffer> Holder; Holder.InitializeAs<FNNEDiscreteBuffer>();
     TArray<UE::NNE::FTensorDesc> TensorDescs;
-    const UE::NNE::FSymbolicTensorShape ShapeDiscrete = UE::NNE::FSymbolicTensorShape::Make({4});
-    TensorDescs.Add(UE::NNE::FTensorDesc::Make(TEXT("discrete_input"), ShapeDiscrete, ENNETensorDataType::Float));
+    const UE::NNE::FSymbolicTensorShape ShapeDiscrete = UE::NNE::FSymbolicTensorShape::Make({1});
+    TensorDescs.Add(UE::NNE::FTensorDesc::Make(TEXT("discrete_input"), ShapeDiscrete, ENNETensorDataType::Int32));
     TArray<UE::NNE::FTensorBindingCPU> Bindings; Bindings.SetNum(1);
     FNNEBindingCreator Creator(Holder, TensorDescs, Bindings);
 
-    FNNEDiscreteBuffer DiscreteBuffer(4);
-    DiscreteBuffer.Buffer[0] = 0.1f;
-    DiscreteBuffer.Buffer[1] = 0.3f;
-    DiscreteBuffer.Buffer[2] = 0.5f;
-    DiscreteBuffer.Buffer[3] = 0.1f;
-    Creator(DiscreteBuffer);
+    FNNEDiscreteBuffer Buffer;
+	Creator(Buffer);
 
-    TestEqual(TEXT("Binding size"), Bindings[0].SizeInBytes, (uint64)(4 * sizeof(float)));
-    TestEqual(TEXT("Binding data ptr"), Bindings[0].Data, (void*)DiscreteBuffer.Buffer.GetData());
+    TestEqual(TEXT("Binding size"), Bindings[0].SizeInBytes, (uint64)(sizeof(int64)));
+	TestEqual(TEXT("Binding data ptr"), Bindings[0].Data, (void*)Buffer.Buffer.GetData());
     return true;
 }
 
@@ -164,6 +160,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNNEBindingCreatorOutOfBoundsTest, "Schola.Poli
 bool FNNEBindingCreatorOutOfBoundsTest::RunTest(const FString& Parameters)
 {
     // Dict with a single buffer but two tensor descs; bindings array too small
+	AddExpectedError(TEXT("LogScholaNNE: .*"), EAutomationExpectedErrorFlags::Contains, 1);
     TMap<FString, TInstancedStruct<FNNEPointBuffer>> Map;
     TInstancedStruct<FNNEPointBuffer> Buf; Buf.InitializeAs<FNNEBoxBuffer>(2);
     Map.Add(TEXT("input"), Buf);
@@ -179,7 +176,7 @@ bool FNNEBindingCreatorOutOfBoundsTest::RunTest(const FString& Parameters)
     FNNEBindingCreator Creator(Root, TensorDescs, Bindings);
     FNNEDictBuffer Dict(Map);
     Creator(Dict);
-    TestEqual(TEXT("Should error when index exceeds bindings"), Creator.bError, true);
+    TestEqual(TEXT("Creator should be marked as having an error"), Creator.bError, true);
     return true;
 }
 

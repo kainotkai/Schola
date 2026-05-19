@@ -8,13 +8,18 @@ public class ScholaEditor : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+		if (System.Environment.GetEnvironmentVariable("SCHOLA_MEASURE_CPP_COVERAGE") == "1")
+		{
+			OptimizeCode = CodeOptimization.Never;
+		}
+
 		PublicIncludePaths.AddRange(new string[] { });
-		PrivateIncludePaths.AddRange(new string[] { "ScholaEditor/Private"});
+		PrivateIncludePaths.AddRange(new string[] { "ScholaEditor/Private" });
 		//TODO figure out if these can be moved to private
 		PublicDependencyModuleNames.AddRange(new string[] { "Kismet", "NNE", "BlueprintEditorLibrary", "Schola", "KismetCompiler", });
 
 		PrivateIncludePathModuleNames.AddRange(new string[] { });
-		PrivateDependencyModuleNames.AddRange(new string[] { "Engine", "Core", "BlueprintGraph", "UnrealEd", "CoreUObject", "AutomationController", "KismetCompiler", "Schola", "gRPC", "ScholaTraining", "Slate", "SlateCore", "ToolMenus" });
+        PrivateDependencyModuleNames.AddRange(new string[] { "AIModule", "Engine", "Core", "BlueprintGraph", "UnrealEd", "CoreUObject", "AutomationController", "KismetCompiler", "Schola", "ScholaInteractors", "gRPC", "ScholaTraining", "Slate", "SlateCore", "ToolMenus" });
 		DynamicallyLoadedModuleNames.AddRange(new string[] { });
 	}
 }

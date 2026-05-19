@@ -7,6 +7,7 @@
 #include "Spaces/MultiBinarySpace.h"
 #include "Spaces/MultiDiscreteSpace.h"
 #include "Spaces/DictSpace.h"
+#include "Common/InstancedStructUtils.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -21,7 +22,7 @@ bool FSpaceBlueprintLibrary_Type_BoxTest::RunTest(const FString& Parameters)
     FBoxSpace& BoxSpace = Space.GetMutable<FBoxSpace>();
     BoxSpace.Add(-1.0f, 1.0f);
 
-    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(reinterpret_cast<FInstancedStruct&>(Space));
+    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(ToUntypedInstancedStruct(Space));
 
     TestEqual(TEXT("Space_Type(BoxSpace) == ESpaceType::Box"), Result, ESpaceType::Box);
 
@@ -37,7 +38,7 @@ bool FSpaceBlueprintLibrary_Type_DiscreteTest::RunTest(const FString& Parameters
     FDiscreteSpace& DiscreteSpace = Space.GetMutable<FDiscreteSpace>();
     DiscreteSpace.High = 5;
 
-    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(reinterpret_cast<FInstancedStruct&>(Space));
+    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(ToUntypedInstancedStruct(Space));
 
     TestEqual(TEXT("Space_Type(DiscreteSpace) == ESpaceType::Discrete"), Result, ESpaceType::Discrete);
 
@@ -53,7 +54,7 @@ bool FSpaceBlueprintLibrary_Type_MultiBinaryTest::RunTest(const FString& Paramet
     FMultiBinarySpace& MultiBinarySpace = Space.GetMutable<FMultiBinarySpace>();
     MultiBinarySpace.Shape = 8;
 
-    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(reinterpret_cast<FInstancedStruct&>(Space));
+    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(ToUntypedInstancedStruct(Space));
 
     TestEqual(TEXT("Space_Type(MultiBinarySpace) == ESpaceType::Binary"), Result, ESpaceType::MultiBinary);
 
@@ -68,7 +69,7 @@ bool FSpaceBlueprintLibrary_Type_MultiDiscreteTest::RunTest(const FString& Param
     Space.InitializeAs<FMultiDiscreteSpace>(TArray<int32>{2, 3, 4});
     FMultiDiscreteSpace& MultiDiscreteSpace = Space.GetMutable<FMultiDiscreteSpace>();
 
-    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(reinterpret_cast<FInstancedStruct&>(Space));
+    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(ToUntypedInstancedStruct(Space));
 
     TestEqual(TEXT("Space_Type(MultiDiscreteSpace) == ESpaceType::MultiDiscrete"), Result, ESpaceType::MultiDiscrete);
 
@@ -82,7 +83,7 @@ bool FSpaceBlueprintLibrary_Type_DictTest::RunTest(const FString& Parameters)
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FDictSpace>();
 
-    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(reinterpret_cast<FInstancedStruct&>(Space));
+    ESpaceType Result = USpaceBlueprintLibrary::Space_Type(ToUntypedInstancedStruct(Space));
 
     TestEqual(TEXT("Space_Type(DictSpace) == ESpaceType::Dict"), Result, ESpaceType::Dict);
 
@@ -98,7 +99,7 @@ bool FSpaceBlueprintLibrary_IsOfType_BoxTrueTest::RunTest(const FString& Paramet
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FBoxSpace>();
 
-    bool Result = USpaceBlueprintLibrary::Space_IsOfType(reinterpret_cast<FInstancedStruct&>(Space), ESpaceType::Box);
+    bool Result = USpaceBlueprintLibrary::Space_IsOfType(ToUntypedInstancedStruct(Space), ESpaceType::Box);
 
     TestTrue(TEXT("Space_IsOfType(BoxSpace, Box) == true"), Result);
 
@@ -112,7 +113,7 @@ bool FSpaceBlueprintLibrary_IsOfType_BoxFalseTest::RunTest(const FString& Parame
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FBoxSpace>();
 
-    bool Result = USpaceBlueprintLibrary::Space_IsOfType(reinterpret_cast<FInstancedStruct&>(Space), ESpaceType::Discrete);
+    bool Result = USpaceBlueprintLibrary::Space_IsOfType(ToUntypedInstancedStruct(Space), ESpaceType::Discrete);
 
     TestFalse(TEXT("Space_IsOfType(BoxSpace, Discrete) == false"), Result);
 
@@ -126,7 +127,7 @@ bool FSpaceBlueprintLibrary_IsOfType_DiscreteTrueTest::RunTest(const FString& Pa
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FDiscreteSpace>();
 
-    bool Result = USpaceBlueprintLibrary::Space_IsOfType(reinterpret_cast<FInstancedStruct&>(Space), ESpaceType::Discrete);
+    bool Result = USpaceBlueprintLibrary::Space_IsOfType(ToUntypedInstancedStruct(Space), ESpaceType::Discrete);
 
     TestTrue(TEXT("Space_IsOfType(DiscreteSpace, Discrete) == true"), Result);
 
@@ -140,7 +141,7 @@ bool FSpaceBlueprintLibrary_IsOfType_MultiBinaryTrueTest::RunTest(const FString&
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FMultiBinarySpace>();
 
-    bool Result = USpaceBlueprintLibrary::Space_IsOfType(reinterpret_cast<FInstancedStruct&>(Space), ESpaceType::MultiBinary);
+    bool Result = USpaceBlueprintLibrary::Space_IsOfType(ToUntypedInstancedStruct(Space), ESpaceType::MultiBinary);
 
     TestTrue(TEXT("Space_IsOfType(MultiBinarySpace, MultiBinary) == true"), Result);
 
@@ -154,7 +155,7 @@ bool FSpaceBlueprintLibrary_IsOfType_MultiDiscreteTrueTest::RunTest(const FStrin
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FMultiDiscreteSpace>();
 
-    bool Result = USpaceBlueprintLibrary::Space_IsOfType(reinterpret_cast<FInstancedStruct&>(Space), ESpaceType::MultiDiscrete);
+    bool Result = USpaceBlueprintLibrary::Space_IsOfType(ToUntypedInstancedStruct(Space), ESpaceType::MultiDiscrete);
 
     TestTrue(TEXT("Space_IsOfType(MultiDiscreteSpace, MultiDiscrete) == true"), Result);
 
@@ -168,7 +169,7 @@ bool FSpaceBlueprintLibrary_IsOfType_DictTrueTest::RunTest(const FString& Parame
     TInstancedStruct<FSpace> Space;
     Space.InitializeAs<FDictSpace>();
 
-    bool Result = USpaceBlueprintLibrary::Space_IsOfType(reinterpret_cast<FInstancedStruct&>(Space), ESpaceType::Dict);
+    bool Result = USpaceBlueprintLibrary::Space_IsOfType(ToUntypedInstancedStruct(Space), ESpaceType::Dict);
 
     TestTrue(TEXT("Space_IsOfType(DictSpace, Dict) == true"), Result);
 

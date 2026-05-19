@@ -22,14 +22,14 @@ Install Schola
 
       .. code-tab:: bash Standalone Git Repository
          
-         git clone https://github.com/GPUOpen-LibrariesAndSDKs/Schola.git ./Plugins
+         git clone https://github.com/GPUOpen-LibrariesAndSDKs/Schola.git ./Plugins/Schola
 
    .. note::
       If you experience an error installing the repository with git due to a large file sizes, run the following command to increase the git buffer size:
       
       .. code-block:: bash
          
-         git config –global http.postBuffer 524288000
+         git config --global http.postBuffer 524288000
 
 2. 
    .. include:: ./doc_fragments/pip_install.rst
@@ -88,7 +88,7 @@ Building gRPC from source for Schola
          bash ./Resources/Build/linux_dependencies.sh
       
       .. note::
-         You may need to manually update `libtool-bin` as old versions of `libtool-bin`` may cause errors during install.
+         You may need to manually update ``libtool-bin`` as old versions of ``libtool-bin`` may cause errors during install.
 
       .. code-tab:: batch Windows
 
@@ -105,11 +105,13 @@ Regenerated Protobuf and gRPC Code
 
    .. code-block:: bash
 
-      python schola-build-proto --plugin-folder . --add-type-stubs
+      schola compile-proto --plugin-folder .
 
-   .. note::
+.. note::
 
-      The `--add-type-stubs` flag is optional and will generate `.pyi` files for the generated code. This is useful for IDEs that support type stubs for better code completion. However, not all protobuf/gRPC features are supported in the `.pyi` files. If you encounter issues when generating try running without the flag.
+   Type stub generation (``.pyi`` files) is enabled by default. Pass ``--no-add-type-stubs`` if you need to disable it. Stubs help IDEs with completion, but not every protobuf or gRPC feature is represented cleanly in ``.pyi`` output; if generation fails, try again with stubs disabled.
+
+   You can also run the same logic without the console script: ``python -m schola.scripts.utils.compile_proto`` (same arguments as ``schola compile-proto``).
 
 
 

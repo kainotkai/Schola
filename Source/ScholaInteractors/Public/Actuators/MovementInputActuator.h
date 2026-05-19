@@ -101,10 +101,12 @@ protected:
 	/**
 	 * @brief Convert a Box Point to an FVector for movement input.
 	 * 
-	 * Extracts values from the BoxPoint based on enabled dimensions and maps them to X, Y, Z components.
+	 * Resolves the owning Pawn from GetOwner() and extracts values from the BoxPoint based on
+	 * enabled dimensions, mapping them to X, Y, Z components.
 	 * 
 	 * @param[in] Action BoxPoint that will be converted
+	 * @param[out] OutOwnerPawn The component owner cast to APawn, or nullptr if not a Pawn
 	 * @return FVector containing the converted movement values
 	 */
-	FVector ConvertActionToFVector(const FBoxPoint& Action) const;
+	FVector ConvertActionToFVector(const FBoxPoint& Action, APawn*& OutOwnerPawn) const;
 };

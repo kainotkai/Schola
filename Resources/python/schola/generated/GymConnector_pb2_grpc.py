@@ -21,17 +21,17 @@ class GymServiceStub(object):
                 '/Schola.GymService/UpdateState',
                 request_serializer=StateUpdates__pb2.StateUpdate.SerializeToString,
                 response_deserializer=State__pb2.State.FromString,
-                )
+                _registered_method=True)
         self.RequestTrainingDefinition = channel.unary_unary(
                 '/Schola.GymService/RequestTrainingDefinition',
                 request_serializer=GymConnector__pb2.TrainingDefinitionRequest.SerializeToString,
                 response_deserializer=Definitions__pb2.TrainingDefinition.FromString,
-                )
+                _registered_method=True)
         self.StartGymConnector = channel.unary_unary(
                 '/Schola.GymService/StartGymConnector',
                 request_serializer=GymConnector__pb2.GymConnectorStartRequest.SerializeToString,
                 response_deserializer=GymConnector__pb2.GymConnectorStartResponse.FromString,
-                )
+                _registered_method=True)
 
 
 class GymServiceServicer(object):
@@ -77,6 +77,7 @@ def add_GymServiceServicer_to_server(servicer, server):
     generic_handler = grpc.method_handlers_generic_handler(
             'Schola.GymService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('Schola.GymService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -94,11 +95,21 @@ class GymService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.GymService/UpdateState',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Schola.GymService/UpdateState',
             StateUpdates__pb2.StateUpdate.SerializeToString,
             State__pb2.State.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def RequestTrainingDefinition(request,
@@ -111,11 +122,21 @@ class GymService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.GymService/RequestTrainingDefinition',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Schola.GymService/RequestTrainingDefinition',
             GymConnector__pb2.TrainingDefinitionRequest.SerializeToString,
             Definitions__pb2.TrainingDefinition.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def StartGymConnector(request,
@@ -128,8 +149,18 @@ class GymService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.GymService/StartGymConnector',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Schola.GymService/StartGymConnector',
             GymConnector__pb2.GymConnectorStartRequest.SerializeToString,
             GymConnector__pb2.GymConnectorStartResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

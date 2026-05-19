@@ -123,10 +123,18 @@ ESpaceValidationResult FBoxSpace::Validate(const TInstancedStruct<FPoint>& Point
 		return ESpaceValidationResult::WrongDataType;
 	}
 	const FBoxPoint& TypedObservation = Point.Get<FBoxPoint>();
-
+	// Check that the real number of dimensions matches
 	if (Dimensions.Num() != TypedObservation.Values.Num())
 	{
 		return ESpaceValidationResult::WrongDimensions;
+	}
+	
+	if (Shape.Num() > 0 && TypedObservation.Shape.Num() > 0)
+	{
+		if (Shape != TypedObservation.Shape)
+		{
+			return ESpaceValidationResult::WrongDimensions;
+		}
 	}
 
 	for (int i = 0; i < Dimensions.Num(); i++)

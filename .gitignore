@@ -125,5 +125,16 @@ documentation/*.bkp
 .cursor/*
 
 # ignore pytest temporary files
-.pytest_tmp/*
-.pytest_cache/*
+**/.pytest_tmp/*
+**/.pytest_cache/*
+
+#ignore Temporary Projects Created during BuildPlugin
+**/HostProject/*
+
+# ignore coverage files
+**/.coverage
+coverage_html_report/*
+**/coverage.json
+
+# ignore log files from pytest or OpenCPPCoverage
+*.log

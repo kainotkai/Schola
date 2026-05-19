@@ -37,6 +37,9 @@ public:
 	 */
 	virtual void Restart() = 0;
 
+	/**
+	 * @brief Begin serving or polling after Initialize and Establish have completed.
+	 * @details For gRPC backends this typically starts completion-queue worker threads.
+	 */
 	virtual void Start() = 0;
-    
 };

@@ -24,6 +24,7 @@ Extensions
    schola.sb3
    schola.rllib
    schola.gym
+   schola.minari
 
 Scripts
 ^^^^^^^

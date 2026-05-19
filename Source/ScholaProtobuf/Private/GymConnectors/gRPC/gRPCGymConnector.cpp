@@ -15,6 +15,7 @@ TFuture<FTrainingStateUpdate*> URPCGymConnector::RequestStateUpdate()
 
 void URPCGymConnector::SubmitState(const FTrainingState& InTrainingState)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: gRPCGymConnector Submit State");
 	Schola::State StateMsg;
 	ProtobufSerializer::ToProto(InTrainingState, StateMsg.mutable_training_state());
 	this->DecisionRequestService->Respond(StateMsg);
@@ -22,6 +23,7 @@ void URPCGymConnector::SubmitState(const FTrainingState& InTrainingState)
 
 void URPCGymConnector::SubmitStateWithInitialState(const FTrainingState& InTrainingState, const FInitialState& InInitialAgentStates)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: gRPCGymConnector Submit State With Initial State");
 	Schola::State StateMsg;
 	ProtobufSerializer::ToProto(InTrainingState, StateMsg.mutable_training_state());
 	ProtobufSerializer::ToProto(InInitialAgentStates, StateMsg.mutable_initial_state());
@@ -30,6 +32,7 @@ void URPCGymConnector::SubmitStateWithInitialState(const FTrainingState& InTrain
 
 void URPCGymConnector::SubmitInitialState(const FInitialState& InInitialAgentStates)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: gRPCGymConnector Submit Initial State");
 	Schola::State StateMsg;
 	ProtobufSerializer::ToProto(InInitialAgentStates, StateMsg.mutable_initial_state());
 	this->DecisionRequestService->Respond(StateMsg);
@@ -37,7 +40,7 @@ void URPCGymConnector::SubmitInitialState(const FInitialState& InInitialAgentSta
 
 void URPCGymConnector::Init(const FTrainingDefinition& AgentDefns)
 {
-	
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: gRPCGymConnector Init");
 	// First-time initialization: create server and services
 	std::shared_ptr<GymService::AsyncService> Service = std::make_shared<GymService::AsyncService>();
 	this->CommunicationManager = NewObject<UCommunicationManager>();
@@ -64,7 +67,7 @@ void URPCGymConnector::Init(const FTrainingDefinition& AgentDefns)
 
 	// Prep for the next connection
 	this->OnConnectorClosed.AddLambda([this]() {
-		UE_LOG(LogScholaProtobuf, Warning, TEXT("Responding with Empty State Message after connector closed."))
+		UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCGymConnector::Init(): Responding with Empty State Message after connector closed.");
 		//Cleanup any carry-over messages, if they still exist.
 		this->DecisionRequestService->Reset();
 		// Re-publish the training definition for the next connection
@@ -77,8 +80,8 @@ void URPCGymConnector::Init(const FTrainingDefinition& AgentDefns)
 	if (this->bRunScriptOnPlay && !FParse::Param(FCommandLine::Get(), TEXT("ScholaDisableScript")))
 	{
 		FScriptArgBuilder ArgBuilder = FScriptArgBuilder();
-		this->ScriptSettings.GetTrainingArgs(ArgBuilder);
-		this->ServerSettings.GetTrainingArgs(ArgBuilder);
+		this->ScriptSettings.GetArgs(ArgBuilder);
+		this->ServerSettings.GetArgs(ArgBuilder);
 		FString Args = ArgBuilder.Build();
 
 		this->Script = this->ScriptSettings.GetLaunchableScript();
@@ -90,6 +93,7 @@ void URPCGymConnector::Init(const FTrainingDefinition& AgentDefns)
 
 bool URPCGymConnector::CheckForStart()
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: gRPCGymConnector CheckForStart");
 	TOptional<FStartRequest> OptionalStartRequest = TOptional<FStartRequest>();
 	this->StartRequestService->Poll(OptionalStartRequest);
 	if (OptionalStartRequest.IsSet())

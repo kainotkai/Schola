@@ -10,7 +10,6 @@
 #include "ImitationDataTypes/ImitationAgentState.h"
 #include "MultiAgentImitationEnvironmentInterface.generated.h"
 
-
 /**
  * @brief UInterface for multi-agent imitation learning environments.
  * @details Implement this interface in Blueprint or C++ to create environments
@@ -32,7 +31,6 @@ class SCHOLAIMITATION_API IMultiAgentImitationScholaEnvironment : public IBaseIm
 	GENERATED_BODY()
 
 public:
-
 	/**
 	 * @brief Initialize the environment and define all agents and their interaction spaces.
 	 * @param[out] OutAgentDefinitions Map from agent names to their interaction definitions (observation/action spaces)
@@ -60,12 +58,11 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Schola|Environment")
 	void Reset(TMap<FString, FInitialAgentState>& OutAgentState);
-	
+
 	/**
 	 * @brief Execute one environment step and return imitation states for all agents.
 	 * @param[out] OutAgentStates Map from agent names to their imitation states (observations, expert actions, rewards)
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Schola|Environment")
 	void Step(TMap<FString, FImitationAgentState>& OutAgentStates);
-
 };

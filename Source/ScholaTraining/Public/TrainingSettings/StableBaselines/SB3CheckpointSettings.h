@@ -21,7 +21,7 @@ public:
 
 	/** Whether to save the final model */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Checkpoint Settings")
-	bool bSaveFinalModel = true;
+	bool bSaveFinalModel = false;
 
 	/** Whether to save the VecNormalize parameters */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bSaveCheckpoints || bSaveFinalModel"), Category = "Checkpoint Settings")

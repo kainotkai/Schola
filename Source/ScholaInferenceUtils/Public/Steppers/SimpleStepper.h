@@ -19,18 +19,20 @@
  * This stepper blocks during policy inference and is suitable for simple scenarios
  * or policies with fast inference times.
  */
-UCLASS(Blueprintable, BlueprintType)
+UCLASS(BlueprintType, EditInlineNew, DefaultToInstanced)
 class SCHOLAINFERENCEUTILS_API USimpleStepper : public UObject, public IStepper
 {
 	GENERATED_BODY()
 
-	UPROPERTY()
+public:
+	/** Agents stepped each tick in array order. */
+	UPROPERTY(BlueprintReadOnly, Category = "Stepper")
 	TArray<TScriptInterface<IAgent>> Agents;
 
-	UPROPERTY()
+	/** Policy used for inference in Step(). */
+	UPROPERTY(BlueprintReadOnly, Category = "Stepper")
 	TScriptInterface<IPolicy>		 Policy;
 
-public:
 	/**
 	 * @brief Initialize the stepper with the given agents and policy.
 	 * 
@@ -43,6 +45,19 @@ public:
 	{	
 		this->Agents = InAgents;
 		this->Policy = InPolicy;
+
+		if(this->Agents.Num() == 0)
+		{
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "USimpleStepper::Init(): Initialized with no agents!");
+			return false;
+		}
+
+		if (!this->Policy)
+		{
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "USimpleStepper::Init(): Initialized with no policy!");
+			return false;
+		}
+
 		return true;
 	}
 
@@ -59,39 +74,44 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Schola|Stepper")
 	void Step()
 	{
-		if (Agents.Num() > 0 && Policy)
+		if (this->Agents.Num() == 0)
 		{
-			TArray<TInstancedStruct<FPoint>> Observations;
-			TArray<TInstancedStruct<FPoint>> Actions;
-			for (int i = 0; i < Agents.Num(); i++)
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "USimpleStepper::Step(): No agents to step!");
+			return;
+		}
+		if (!this->Policy)
+		{
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "USimpleStepper::Step(): No policy to use for stepping!");
+			return;
+		}
+
+		TArray<TInstancedStruct<FPoint>> Observations;
+		TArray<TInstancedStruct<FPoint>> Actions;
+		for (int i = 0; i < Agents.Num(); i++)
+		{
+			TInstancedStruct<FPoint> Observation;
+			IAgent::Execute_Observe(Agents[i].GetObject(), Observation);
+			Observations.Add(Observation);
+		}
+		if (this->Policy->BatchedThink(Observations, Actions))
+		{
+			if (Actions.Num() == this->Agents.Num())
 			{
-				TInstancedStruct<FPoint> Observation;
-				IAgent::Execute_Observe(Agents[i].GetObject(), Observation);
-				Observations.Add(Observation);
-			}
-			if (Policy->BatchedThink(Observations, Actions))
-			{
-				if (Actions.Num() == Agents.Num())
+				for (int i = 0; i < Agents.Num(); i++)
 				{
-					for (int i = 0; i < Agents.Num(); i++)
-					{
-						IAgent::Execute_Act(Agents[i].GetObject(), Actions[i]);
-					}
-				}
-				else
-				{
-					UE_LOG(LogScholaInferenceUtils, Error, TEXT("SimpleStepper: Number of actions (%d) does not match number of agents (%d)!"), Actions.Num(), Agents.Num());
+					IAgent::Execute_Act(Agents[i].GetObject(), Actions[i]);
 				}
 			}
 			else
 			{
-				UE_LOG(LogScholaInferenceUtils, Error, TEXT("SimpleStepper: Policy failed to think!"));
+				UE_LOGFMT(LogScholaInferenceUtils, Error, "USimpleStepper::Step(): Number of actions ({0}) does not match number of agents ({1})!", Actions.Num(), Agents.Num());
 			}
-			
 		}
 		else
 		{
-			UE_LOG(LogScholaInferenceUtils, Error, TEXT("SimpleStepper: Agent or Policy is not set!"));
+			UE_LOGFMT(LogScholaInferenceUtils, Error, "USimpleStepper::Step(): Policy failed to think!");
 		}
+			
+		
 	}
 };

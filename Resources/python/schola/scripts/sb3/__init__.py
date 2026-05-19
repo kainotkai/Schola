@@ -7,13 +7,15 @@ from cyclopts import App, Parameter, validators, group_extractors, Group
 
 sb3_app = App(name="schola-sb3", help="Use StableBaselines3 with Schola!")
 
-from .train import app as train_app
+from .train.train import app as train_app
+from .eval.eval import app as eval_app
 
-from .sb3_to_onnx import app as onnx_export
+from .sb3_to_onnx import export_onnx_app
 
-sb3_app.command(train_app,name="train")
+sb3_app.command(train_app.meta, name="train")
+sb3_app.command(eval_app.meta, name="eval")
 
-sb3_app.command(onnx_export, name="export")
+sb3_app.command(export_onnx_app, name="export")
 
-if __name__=="__main__":
+if __name__ == "__main__":
     sb3_app()

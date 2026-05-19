@@ -3,6 +3,7 @@
 #include "Spaces/Blueprint/DictSpaceBlueprintLibrary.h"
 #include "Spaces/DictSpace.h"
 #include "Common/BlueprintErrorUtils.h"
+#include "Common/InstancedStructUtils.h"
 
 TInstancedStruct<FDictSpace> UDictSpaceBlueprintLibrary::MapToDictSpace(const TMap<FString, FInstancedStruct>& InSpaces)
 {
@@ -53,7 +54,19 @@ bool UDictSpaceBlueprintLibrary::DictSpace_Add(TInstancedStruct<FDictSpace>& InO
         return false;
     }
 
-    TypedSpace->Spaces.Add(InKey, reinterpret_cast<const TInstancedStruct<FSpace>&>(InValue));
+    if (!InValue.GetScriptStruct())
+    {
+        RaiseInvalidInstancedStructError(TEXT("DictSpace_Add"));
+        return false;
+    }
+
+    if (!InValue.GetScriptStruct()->IsChildOf(FSpace::StaticStruct()))
+    {
+        RaiseInstancedStructTypeMismatchError(InValue, TEXT("FSpace"), TEXT("DictSpace_Add"));
+        return false;
+    }
+
+    TypedSpace->Spaces.Add(InKey, ToTypedInstancedStruct<FSpace>(InValue));
     return true;
 }
 
@@ -81,7 +94,7 @@ bool UDictSpaceBlueprintLibrary::DictSpace_Find(const TInstancedStruct<FDictSpac
         return false;
     }
 
-    OutValue = reinterpret_cast<const FInstancedStruct&>(*Found);
+    OutValue = ToUntypedInstancedStruct(*Found);
     return true;
 }
 
@@ -209,6 +222,6 @@ void UDictSpaceBlueprintLibrary::DictSpace_Values(const TInstancedStruct<FDictSp
     OutValues.Empty();
     for (const auto& Pair : TypedSpace->Spaces)
     {
-        OutValues.Add(reinterpret_cast<const FInstancedStruct&>(Pair.Value));
+        OutValues.Add(ToUntypedInstancedStruct(Pair.Value));
     }
 }

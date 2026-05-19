@@ -30,7 +30,6 @@ THE SOFTWARE.
 
 import re
 
-from cycler import V
 import numpy as np
 import pytest
 
@@ -43,21 +42,55 @@ from Test.gym.vec_utils import (
     make_custom_space_env,
     make_env,
 )
-from schola.core.protocols.protobuf.gRPC import gRPCProtocol
-from schola.core.simulators.unreal.editor import UnrealEditor
+from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
+from schola.core.simulators.unreal.editor_simulator import UnrealEditor
 from schola.gym.env import GymVectorEnv
 from gymnasium.vector.vector_env import AutoresetMode
 
 all_testing_env_specs = []
+
+
+def assert_gymnasium_vector_infos(infos: dict, num_envs: int) -> None:
+    """Assert ``infos`` matches Gymnasium ``VectorEnv._add_info`` layout.
+
+    Each non-mask key ``k`` has a sibling mask ``_{k}`` (bool ndarray, shape
+    ``(num_envs,)``). Leaf values are ndarrays whose first axis is ``num_envs``.
+    Nested dict values are validated recursively with the same rules.
+    """
+    assert isinstance(infos, dict)
+    assert all(isinstance(k, str) for k in infos), (
+        "top-level keys must be str (info names or _mask names), not env ids"
+    )
+    data_keys = {k for k in infos if not k.startswith("_")}
+    mask_keys = {k for k in infos if k.startswith("_")}
+    expected_masks = {f"_{k}" for k in data_keys}
+    assert mask_keys == expected_masks, (
+        "every data key must have exactly one ``_<key>`` mask and vice versa; "
+        f"symmetric difference: {mask_keys ^ expected_masks}"
+    )
+    for k in data_keys:
+        v = infos[k]
+        mask = infos[f"_{k}"]
+        assert isinstance(mask, np.ndarray), k
+        assert mask.dtype == np.bool_, k
+        assert mask.shape == (num_envs,), k
+        if isinstance(v, dict):
+            assert_gymnasium_vector_infos(v, num_envs)
+        else:
+            assert isinstance(v, np.ndarray), k
+            assert v.shape[0] == num_envs, (k, v.shape)
+
 
 @pytest.fixture(scope="function")
 def make_vec_env(make_vec_env_server):
     def _factory(env_funcs):
         env_server_port = make_vec_env_server(env_funcs)
         simulator = UnrealEditor()
-        protocol = gRPCProtocol(url="localhost", port=env_server_port)
+        protocol = GrpcProtocol(url="localhost", port=env_server_port)
         return GymVectorEnv(simulator, protocol, autoreset_mode=AutoresetMode.NEXT_STEP)
+
     return _factory
+
 
 def test_create_vector_env(make_vec_env):
     """Tests creating the vector environment."""
@@ -83,8 +116,10 @@ def test_reset_vector_env(make_vec_env):
     assert observations.dtype == env.observation_space.dtype
     assert observations.shape == (8,) + env.single_observation_space.shape
     assert observations.shape == env.observation_space.shape
+    assert_gymnasium_vector_infos(infos, 8)
 
     del observations
+
 
 def test_reset_mask_not_supported(make_vec_env):
     """Tests that `reset` with mask raises error."""
@@ -92,9 +127,54 @@ def test_reset_mask_not_supported(make_vec_env):
     env = make_vec_env(env_fns)
 
     with pytest.raises(NotImplementedError):
-        env.reset(options={"reset_mask": [True]*8})
+        env.reset(options={"reset_mask": [True] * 8})
 
     env.close()
+
+
+def test_reset_mask_not_supported_options_list(make_vec_env):
+    """Per-env options list must reject reset_mask like a single dict does."""
+    n = 8
+    env_fns = [make_env("CartPole-v1", i) for i in range(n)]
+    env = make_vec_env(env_fns)
+    options = [{}] * (n - 1) + [{"reset_mask": [True]}]
+    with pytest.raises(NotImplementedError):
+        env.reset(options=options)
+    env.close()
+
+
+def test_reset_options_list_per_unreal_env(make_vec_env):
+    """Per-Unreal-env options list is forwarded when length matches num_envs."""
+    n = 8
+    env_fns = [make_env("CartPole-v1", i) for i in range(n)]
+    env = make_vec_env(env_fns)
+    options = [{"episode_id": str(i)} for i in range(n)]
+    obs, infos = env.reset(options=options)
+    assert obs.shape == (n,) + env.single_observation_space.shape
+    assert len(env.reset_infos) == n
+    assert_gymnasium_vector_infos(infos, n)
+    env.close()
+
+
+def test_reset_options_list_length_mismatch(make_vec_env):
+    """Wrong list length raises ValueError with Unreal vs vector hint."""
+    n = 8
+    env_fns = [make_env("CartPole-v1", i) for i in range(n)]
+    env = make_vec_env(env_fns)
+    with pytest.raises(ValueError, match="Unreal"):
+        env.reset(options=[{}] * (n - 1))
+    env.close()
+
+
+def test_reset_seed_list_length_mismatch(make_vec_env):
+    """Seed list length must match Unreal sub-environment count."""
+    n = 8
+    env_fns = [make_env("CartPole-v1", i) for i in range(n)]
+    env = make_vec_env(env_fns)
+    with pytest.raises(ValueError, match="Unreal"):
+        env.reset(seed=[0] * (n - 1))
+    env.close()
+
 
 @pytest.mark.parametrize("use_single_action_space", [True, False])
 def test_step_vector_env(use_single_action_space, make_vec_env):
@@ -109,7 +189,7 @@ def test_step_vector_env(use_single_action_space, make_vec_env):
         actions = [env.single_action_space.sample() for _ in range(8)]
     else:
         actions = env.action_space.sample()
-    observations, rewards, terminations, truncations, _ = env.step(actions)
+    observations, rewards, terminations, truncations, infos = env.step(actions)
 
     env.close()
 
@@ -134,6 +214,10 @@ def test_step_vector_env(use_single_action_space, make_vec_env):
     assert truncations.ndim == 1
     assert truncations.size == 8
 
+    assert len(env.reset_infos) == 8
+    assert_gymnasium_vector_infos(infos, 8)
+
+
 @pytest.mark.skip("render not supported in schola envs yet")
 def test_render_vector(make_vec_env):
     envs = make_vec_env(
@@ -149,6 +233,7 @@ def test_render_vector(make_vec_env):
 
     envs = SyncVectorEnv([make_env("CartPole-v1", i) for i in range(3)])
     assert envs.render_mode is None
+
 
 @pytest.mark.skip("call not supported in schola envs yet")
 def test_call_vector_env(make_vec_env):
@@ -176,6 +261,7 @@ def test_call_vector_env(make_vec_env):
         assert isinstance(gravity[i], float)
         assert gravity[i] == 9.8
 
+
 @pytest.mark.skip("set attr not supported in schola envs yet")
 def test_set_attr_vector_env(make_vec_env):
     """Test vector `set_attr` function."""
@@ -187,6 +273,7 @@ def test_set_attr_vector_env(make_vec_env):
     assert gravity == (9.81, 3.72, 8.87, 1.62)
 
     env.close()
+
 
 @pytest.mark.skip()
 def test_vector_env_seed(make_vec_env):

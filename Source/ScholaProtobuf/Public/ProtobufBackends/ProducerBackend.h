@@ -19,12 +19,18 @@ public:
 	 * @param[in] Msg The message to send to the client
 	 */
 	virtual void Publish(T* Msg) = 0;
-    
-    virtual T* Allocate()
-    {
-        return new T();
-    }
 
+	/** @return A newly allocated protobuf message of type T for Publish; default is heap-allocated. */
+	virtual T* Allocate()
+	{
+		return new T();
+	}
+
+	/**
+	 * @brief Serialize an Unreal value to protobuf and publish it.
+	 * @tparam UnrealType Unreal struct type supported by ProtobufSerializer::ToProto.
+	 * @param[in] InUnrealValue Value to convert and publish.
+	 */
 	template <typename UnrealType>
 	void Publish(const UnrealType& InUnrealValue)
 	{

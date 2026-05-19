@@ -93,6 +93,15 @@ struct SCHOLA_API FSpace
 	virtual ESpaceValidationResult Validate(const TInstancedStruct<FPoint>& InPoint) const PURE_VIRTUAL(FSpace::Validate, return ESpaceValidationResult::Success;);
 	
 	/**
+	 * @brief Checks if a point is contained in this space.
+	 * @param[in] InPoint The point to check.
+	 * @return True if the point is contained in this space, false otherwise.
+	 */
+	bool Contains(const TInstancedStruct<FPoint>& InPoint) const
+	{
+		return ConvertSpaceValidationResultToBool(Validate(InPoint));
+	}
+	/**
 	 * @brief Gets the size of the flattened representation of this space.
 	 * 
 	 * Returns the total number of scalar values when all dimensions are

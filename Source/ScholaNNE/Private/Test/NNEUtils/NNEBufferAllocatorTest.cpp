@@ -150,10 +150,10 @@ bool FNNEBufferAllocatorComplexHierarchicalTest::RunTest(const FString& Paramete
     TestTrue(TEXT("VisionBuffer is FNNEBoxBuffer"), VisionBuffer.GetPtr<FNNEBoxBuffer>() != nullptr);
     TestEqual(TEXT("VisionBuffer has 12288 elements"), VisionBuffer.Get<FNNEBoxBuffer>().Buffer.Num(), 12288);
 
-    // Verify audio buffer (1000 categorical probabilities: 10 bins × 100 categories each)
+    // Verify audio buffer (10 selected categorical values, one per audio bin)
     const TInstancedStruct<FNNEPointBuffer>& AudioBuffer = SensorsDict.Buffers["audio"];
-    TestTrue(TEXT("AudioBuffer is FNNEDiscreteBuffer"), AudioBuffer.GetPtr<FNNEMultiDiscreteBuffer>() != nullptr);
-	TestEqual(TEXT("AudioBuffer has 1000 elements"), AudioBuffer.Get<FNNEMultiDiscreteBuffer>().Buffer.Num(), 1000);
+    TestTrue(TEXT("AudioBuffer is FNNEMultiDiscreteBuffer"), AudioBuffer.GetPtr<FNNEMultiDiscreteBuffer>() != nullptr);
+	TestEqual(TEXT("AudioBuffer has 10 elements"), AudioBuffer.Get<FNNEMultiDiscreteBuffer>().Buffer.Num(), 10);
 
     // Verify touch buffer (8 binary elements)
     const TInstancedStruct<FNNEPointBuffer>& TouchBuffer = SensorsDict.Buffers["touch"];
@@ -168,10 +168,10 @@ bool FNNEBufferAllocatorComplexHierarchicalTest::RunTest(const FString& Paramete
     TestTrue(TEXT("ActionsDict contains 'movement'"), ActionsDict.Buffers.Contains("movement"));
     TestTrue(TEXT("ActionsDict contains 'interaction'"), ActionsDict.Buffers.Contains("interaction"));
 
-    // Verify movement buffer (4 categorical probabilities for 4 directions)
+    // Verify movement buffer (single selected direction)
     const TInstancedStruct<FNNEPointBuffer>& MovementBuffer = ActionsDict.Buffers["movement"];
 	TestTrue(TEXT("MovementBuffer is FNNEDiscreteBuffer"), MovementBuffer.GetPtr<FNNEDiscreteBuffer>() != nullptr);
-	TestEqual(TEXT("MovementBuffer has 4 elements"), MovementBuffer.Get<FNNEDiscreteBuffer>().Buffer.Num(), 4);
+	TestEqual(TEXT("MovementBuffer has 1 element"), MovementBuffer.Get<FNNEDiscreteBuffer>().Buffer.Num(), 1);
 
     // Verify interaction buffer (2 binary elements)
     const TInstancedStruct<FNNEPointBuffer>& InteractionBuffer = ActionsDict.Buffers["interaction"];
@@ -182,9 +182,9 @@ bool FNNEBufferAllocatorComplexHierarchicalTest::RunTest(const FString& Paramete
     TestEqualExactFloat(TEXT("Position[0] initialized to 0"), PositionBuffer.Get<FNNEBoxBuffer>().Buffer[0], 0.0f);
     TestEqualExactFloat(TEXT("Vision[0] initialized to 0"), VisionBuffer.Get<FNNEBoxBuffer>().Buffer[0], 0.0f);
     TestEqualExactFloat(TEXT("Vision[12287] initialized to 0"), VisionBuffer.Get<FNNEBoxBuffer>().Buffer[12287], 0.0f);
-    TestEqualExactFloat(TEXT("Audio[0] initialized to 0"), AudioBuffer.Get<FNNEMultiDiscreteBuffer>().Buffer[0], 0.0f);
+    TestEqual(TEXT("Audio[0] initialized to 0"), AudioBuffer.Get<FNNEMultiDiscreteBuffer>().Buffer[0], (int64)0);
 	TestEqualExactFloat(TEXT("Touch[0] initialized to 0"), TouchBuffer.Get<FNNEMultiBinaryBuffer>().Buffer[0], 0.0f);
-    TestEqualExactFloat(TEXT("Movement[0] initialized to 0"), MovementBuffer.Get<FNNEDiscreteBuffer>().Buffer[0], 0.0f);
+    TestEqual(TEXT("Movement[0] initialized to 0"), MovementBuffer.Get<FNNEDiscreteBuffer>().Buffer[0], (int64)0);
 	TestEqualExactFloat(TEXT("Interaction[0] initialized to 0"), InteractionBuffer.Get<FNNEMultiBinaryBuffer>().Buffer[0], 0.0f);
 
     return true;
@@ -204,9 +204,9 @@ bool FNNEBufferAllocatorMultiDiscreteSpaceTest::RunTest(const FString& Parameter
     TestTrue(TEXT("NNEBuffer is FNNEDiscreteBuffer"), NNEBuffer.GetPtr<FNNEMultiDiscreteBuffer>() != nullptr);
     
     const FNNEMultiDiscreteBuffer& DiscreteBuffer = NNEBuffer.Get<FNNEMultiDiscreteBuffer>();
-    TestEqual(TEXT("DiscreteBuffer.Buffer.Num() == 5"), DiscreteBuffer.Buffer.Num(), 5);
-    TestEqualExactFloat(TEXT("DiscreteBuffer.Buffer[0] == 0.0f"), DiscreteBuffer.Buffer[0], 0.0f);
-    TestEqualExactFloat(TEXT("DiscreteBuffer.Buffer[1] == 0.0f"), DiscreteBuffer.Buffer[1], 0.0f);
+    TestEqual(TEXT("DiscreteBuffer.Buffer.Num() == 2"), DiscreteBuffer.Buffer.Num(), 2);
+    TestEqual(TEXT("DiscreteBuffer.Buffer[0] == 0"), DiscreteBuffer.Buffer[0], (int64)0);
+    TestEqual(TEXT("DiscreteBuffer.Buffer[1] == 0"), DiscreteBuffer.Buffer[1], (int64)0);
 
     return true;
 }

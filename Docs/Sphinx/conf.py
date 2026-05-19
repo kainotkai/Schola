@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Schola'
-copyright = "Copyright (c) 2023-2025 Advanced Micro Devices, Inc. All Rights Reserved."
+copyright = "Copyright (c) 2023-2026 Advanced Micro Devices, Inc. All Rights Reserved."
 author = 'Advanced Micro Devices'
 
 import sys
@@ -67,13 +67,13 @@ html_theme_options = {
     'home_page_in_toc': True,
 }
 
-PYTHON_VERSION = "Python 3.9 to 3.12 "
-UNREAL_VERSION = "Unreal Engine 5.6"
-UNREAL_VERSION_EXACT = "5.6.1"
+PYTHON_VERSION = "Python 3.10 to 3.12 "
+UNREAL_VERSION = "Unreal Engine 5.7"
+UNREAL_VERSION_EXACT = "5.7.3"
 
 rst_prolog =f"""
 .. |py_version| replace:: {PYTHON_VERSION} 
-.. _`py_version`: https://www.python.org/downloads/release/python-3919/
+.. _`py_version`: https://www.python.org/downloads/
 
 .. |unreal_version| replace:: ({UNREAL_VERSION_EXACT} is recommended for reproducibility)
 
@@ -122,7 +122,7 @@ breathe_default_members = ('members', 'undoc-members')
 sphinx_tabs_disable_tab_closing = True
 
 # -- Options for intersphinx extension ---------------------------------------
-USE_INTERSPHINX = False # quick toggle to speed up build time while debugging
+USE_INTERSPHINX = True # quick toggle to speed up build time while debugging
 if USE_INTERSPHINX:
     intersphinx_mapping = {
         'python': ('https://docs.python.org/3', None), 

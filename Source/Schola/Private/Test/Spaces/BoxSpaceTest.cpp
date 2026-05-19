@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 
 #include "Spaces/BoxSpace.h"
+#include "Points/BoxPoint.h"
 #include "Points/MultiBinaryPoint.h"
 #if WITH_DEV_AUTOMATION_TESTS
 #define TestEqualExactFloat(TestMessage, Actual, Expected) TestEqual(TestMessage, (float)Actual, (float)Expected, 0.0001f)
@@ -30,16 +31,14 @@ bool FBoxSpaceLowHighArrayCreationTest::RunTest(const FString& Parameters)
 
     FBoxSpace BoxSpace = FBoxSpace(Low, High);
 
-    TestEqual(TEXT("BoxSpace.Dimensions.Num() == 3"), BoxSpace.Dimensions.Num(), 3);
     TestEqual(TEXT("BoxSpace.Shape.Num() == 0"), BoxSpace.Shape.Num(), 0);
 
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == -1.0"), BoxSpace.Dimensions[0].Low, -1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].Low == -2.0"), BoxSpace.Dimensions[1].Low, -2.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[2].Low == -3.0"), BoxSpace.Dimensions[2].Low, -3.0);
-
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].High == 1.0"), BoxSpace.Dimensions[0].High, 1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].High == 2.0"), BoxSpace.Dimensions[1].High, 2.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[2].High == 3.0"), BoxSpace.Dimensions[2].High, 3.0);
+    const TArray<FBoxSpaceDimension> ExpectedDimensions = {
+        FBoxSpaceDimension(-1.f, 1.f),
+        FBoxSpaceDimension(-2.f, 2.f),
+        FBoxSpaceDimension(-3.f, 3.f),
+    };
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, ExpectedDimensions);
 
     return true;
 }
@@ -54,13 +53,16 @@ bool FBoxSpaceLowHighArrayWithShapeTest::RunTest(const FString& Parameters)
 
     FBoxSpace BoxSpace = FBoxSpace(Low, High, Shape);
 
-    TestEqual(TEXT("BoxSpace.Dimensions.Num() == 6"), BoxSpace.Dimensions.Num(), 6);
-    TestEqual(TEXT("BoxSpace.Shape.Num() == 2"), BoxSpace.Shape.Num(), 2);
-    TestEqual(TEXT("BoxSpace.Shape[0] == 2"), BoxSpace.Shape[0], 2);
-    TestEqual(TEXT("BoxSpace.Shape[1] == 3"), BoxSpace.Shape[1], 3);
-
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == -1.0"), BoxSpace.Dimensions[0].Low, -1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[5].High == 6.0"), BoxSpace.Dimensions[5].High, 6.0);
+    const TArray<FBoxSpaceDimension> ExpectedDimensions = {
+        FBoxSpaceDimension(-1.f, 1.f),
+        FBoxSpaceDimension(-2.f, 2.f),
+        FBoxSpaceDimension(-3.f, 3.f),
+        FBoxSpaceDimension(-4.f, 4.f),
+        FBoxSpaceDimension(-5.f, 5.f),
+        FBoxSpaceDimension(-6.f, 6.f),
+    };
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, ExpectedDimensions);
+    TestEqual(TEXT("BoxSpace.Shape"), BoxSpace.Shape, Shape);
 
     return true;
 }
@@ -73,15 +75,8 @@ bool FBoxSpaceDimensionArrayCreationTest::RunTest(const FString& Parameters)
 
     FBoxSpace BoxSpace = FBoxSpace(Dimensions);
 
-    TestEqual(TEXT("BoxSpace.Dimensions.Num() == 3"), BoxSpace.Dimensions.Num(), 3);
 	TestEqual(TEXT("BoxSpace.Shape == {3}"), BoxSpace.Shape, TArray<int>({ 3 }));
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == -1.0"), BoxSpace.Dimensions[0].Low, -1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].Low == -2.0"), BoxSpace.Dimensions[1].Low, -2.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[2].Low == -3.0"), BoxSpace.Dimensions[2].Low, -3.0);
-
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].High == 1.0"), BoxSpace.Dimensions[0].High, 1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].High == 2.0"), BoxSpace.Dimensions[1].High, 2.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[2].High == 3.0"), BoxSpace.Dimensions[2].High, 3.0);
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, Dimensions);
 
     return true;
 }
@@ -100,13 +95,8 @@ bool FBoxSpaceDimensionArrayWithShapeTest::RunTest(const FString& Parameters)
 
     FBoxSpace BoxSpace = FBoxSpace(Dimensions, Shape);
 
-    TestEqual(TEXT("BoxSpace.Dimensions.Num() == 4"), BoxSpace.Dimensions.Num(), 4);
-    TestEqual(TEXT("BoxSpace.Shape.Num() == 2"), BoxSpace.Shape.Num(), 2);
-    TestEqual(TEXT("BoxSpace.Shape[0] == 2"), BoxSpace.Shape[0], 2);
-    TestEqual(TEXT("BoxSpace.Shape[1] == 2"), BoxSpace.Shape[1], 2);
-
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == -1.0"), BoxSpace.Dimensions[0].Low, -1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[3].High == 4.0"), BoxSpace.Dimensions[3].High, 4.0);
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, Dimensions);
+    TestEqual(TEXT("BoxSpace.Shape"), BoxSpace.Shape, Shape);
 
     return true;
 }
@@ -120,13 +110,13 @@ bool FBoxSpaceInitializerListsTest::RunTest(const FString& Parameters)
     TestEqual(TEXT("BoxSpace.Dimensions.Num() == 2"), BoxSpace.Dimensions.Num(), 2);
 
     //Create an array of shape [2] by default
-    TestEqual(TEXT("BoxSpace.Shape.Num() == 1"), BoxSpace.Shape.Num(), 1);
-    TestEqual(TEXT("BoxSpace.Shape[0] == 2"), BoxSpace.Shape[0], 2);
+    TestEqual(TEXT("BoxSpace.Shape"), BoxSpace.Shape, TArray<int>({2}));
 
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == -5.0"), BoxSpace.Dimensions[0].Low, -5.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].High == 5.0"), BoxSpace.Dimensions[0].High, 5.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].Low == -10.0"), BoxSpace.Dimensions[1].Low, -10.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].High == 10.0"), BoxSpace.Dimensions[1].High, 10.0);
+    const TArray<FBoxSpaceDimension> ExpectedDimensions = {
+        FBoxSpaceDimension(-5.f, 5.f),
+        FBoxSpaceDimension(-10.f, 10.f),
+    };
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, ExpectedDimensions);
 
     return true;
 }
@@ -138,12 +128,15 @@ bool FBoxSpaceInitializerListsWithShapeTest::RunTest(const FString& Parameters)
     FBoxSpace BoxSpace = FBoxSpace({ 0.0f, 0.0f, 0.0f, 0.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 2, 2 });
 
     TestEqual(TEXT("BoxSpace.Dimensions.Num() == 4"), BoxSpace.Dimensions.Num(), 4);
-    TestEqual(TEXT("BoxSpace.Shape.Num() == 2"), BoxSpace.Shape.Num(), 2);
-    TestEqual(TEXT("BoxSpace.Shape[0] == 2"), BoxSpace.Shape[0], 2);
-    TestEqual(TEXT("BoxSpace.Shape[1] == 2"), BoxSpace.Shape[1], 2);
+    TestEqual(TEXT("BoxSpace.Shape"), BoxSpace.Shape, TArray<int>({2, 2}));
 
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == 0.0"), BoxSpace.Dimensions[0].Low, 0.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[3].High == 1.0"), BoxSpace.Dimensions[3].High, 1.0);
+    const TArray<FBoxSpaceDimension> ExpectedDimensions = {
+        FBoxSpaceDimension(0.f, 1.f),
+        FBoxSpaceDimension(0.f, 1.f),
+        FBoxSpaceDimension(0.f, 1.f),
+        FBoxSpaceDimension(0.f, 1.f),
+    };
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, ExpectedDimensions);
 
     return true;
 }
@@ -155,10 +148,7 @@ bool FBoxSpaceShapeConstructorTest::RunTest(const FString& Parameters)
     TArray<int> Shape = { 3, 4, 5 };
     FBoxSpace BoxSpace = FBoxSpace(Shape);
 
-    TestEqual(TEXT("BoxSpace.Shape.Num() == 3"), BoxSpace.Shape.Num(), 3);
-    TestEqual(TEXT("BoxSpace.Shape[0] == 3"), BoxSpace.Shape[0], 3);
-    TestEqual(TEXT("BoxSpace.Shape[1] == 4"), BoxSpace.Shape[1], 4);
-    TestEqual(TEXT("BoxSpace.Shape[2] == 5"), BoxSpace.Shape[2], 5);
+    TestEqual(TEXT("BoxSpace.Shape"), BoxSpace.Shape, Shape);
     
     // This constructor creates a space with preallocated shape but uninitialized dimensions
     TestEqual(TEXT("BoxSpace.Dimensions.Num() == 60"), BoxSpace.Dimensions.Num(), 60); // 3*4*5 = 60
@@ -178,15 +168,12 @@ bool FBoxSpaceAddDimensionTest::RunTest(const FString& Parameters)
     BoxSpace.Add(FBoxSpaceDimension(-2.0, 2.0));
     BoxSpace.Add(-3.0, 3.0);
 
-    TestEqual(TEXT("BoxSpace.Dimensions.Num() == 3"), BoxSpace.Dimensions.Num(), 3);
-
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].Low == -1.0"), BoxSpace.Dimensions[0].Low, -1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].Low == -2.0"), BoxSpace.Dimensions[1].Low, -2.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[2].Low == -3.0"), BoxSpace.Dimensions[2].Low, -3.0);
-
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[0].High == 1.0"), BoxSpace.Dimensions[0].High, 1.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[1].High == 2.0"), BoxSpace.Dimensions[1].High, 2.0);
-    TestEqualExactFloat(TEXT("BoxSpace.Dimensions[2].High == 3.0"), BoxSpace.Dimensions[2].High, 3.0);
+    const TArray<FBoxSpaceDimension> ExpectedDimensions = {
+        FBoxSpaceDimension(-1.f, 1.f),
+        FBoxSpaceDimension(-2.f, 2.f),
+        FBoxSpaceDimension(-3.f, 3.f),
+    };
+    TestEqual(TEXT("BoxSpace.Dimensions"), BoxSpace.Dimensions, ExpectedDimensions);
 
     return true;
 }
@@ -202,15 +189,12 @@ bool FBoxSpaceNormalizedObservationSpaceTest::RunTest(const FString& Parameters)
 
     FBoxSpace NormalizedBoxSpace = BoxSpace.GetNormalizedObservationSpace();
 
-    TestEqual(TEXT("NormalizedBoxSpace.Dimensions.Num() == 3"), NormalizedBoxSpace.Dimensions.Num(), 3);
-
-    TestEqualExactFloat(TEXT("NormalizedBoxSpace.Dimensions[0].Low == 0.0"), NormalizedBoxSpace.Dimensions[0].Low, 0.0);
-    TestEqualExactFloat(TEXT("NormalizedBoxSpace.Dimensions[1].Low == 0.0"), NormalizedBoxSpace.Dimensions[1].Low, 0.0);
-    TestEqualExactFloat(TEXT("NormalizedBoxSpace.Dimensions[2].Low == 0.0"), NormalizedBoxSpace.Dimensions[2].Low, 0.0);
-
-    TestEqualExactFloat(TEXT("NormalizedBoxSpace.Dimensions[0].High == 1.0"), NormalizedBoxSpace.Dimensions[0].High, 1.0);
-    TestEqualExactFloat(TEXT("NormalizedBoxSpace.Dimensions[1].High == 1.0"), NormalizedBoxSpace.Dimensions[1].High, 1.0);
-    TestEqualExactFloat(TEXT("NormalizedBoxSpace.Dimensions[2].High == 1.0"), NormalizedBoxSpace.Dimensions[2].High, 1.0);
+    const TArray<FBoxSpaceDimension> ExpectedNormalized = {
+        FBoxSpaceDimension(0.f, 1.f),
+        FBoxSpaceDimension(0.f, 1.f),
+        FBoxSpaceDimension(0.f, 1.f),
+    };
+    TestEqual(TEXT("NormalizedBoxSpace.Dimensions"), NormalizedBoxSpace.Dimensions, ExpectedNormalized);
 
     return true;
 }
@@ -245,9 +229,77 @@ bool FBoxSpaceNormalizeObservationTest::RunTest(const FString& Parameters)
 
     FBoxPoint NormalizedBoxPoint = BoxSpace.NormalizeObservation(BoxPoint);
 
-    TestEqualExactFloat(TEXT("NormalizedBoxPoint[0] == 0.0"), NormalizedBoxPoint[0], 0.0);
-    TestEqualExactFloat(TEXT("NormalizedBoxPoint[1] == 0.5"), NormalizedBoxPoint[1], 0.5);
-    TestEqualExactFloat(TEXT("NormalizedBoxPoint[2] == 0.5"), NormalizedBoxPoint[2], 0.5);
+    TestEqual(TEXT("NormalizedBoxPoint.Values"), NormalizedBoxPoint.Values, TArray<float>({0.f, 0.5f, 0.5f}));
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoxSpaceValidateSuccessTest, "Schola.Spaces.BoxSpace.Validate Success Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FBoxSpaceValidateSuccessTest::RunTest(const FString& Parameters)
+{
+    FBoxSpace BoxSpace = FBoxSpace();
+    BoxSpace.Add(-1.0, 1.0);
+    BoxSpace.Add(-2.0, 2.0);
+    BoxSpace.Add(-3.0, 3.0);
+
+    FBoxPoint BoxPoint = FBoxPoint({0.0f, 1.0f, 2.0f});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FBoxPoint>(BoxPoint);
+
+    ESpaceValidationResult Result = BoxSpace.Validate(Point);
+    TestTrue(TEXT("BoxSpace.Validate(Point) == ESpaceValidationResult::Success"), Result == ESpaceValidationResult::Success);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoxSpaceValidateWrongDimensionsTest, "Schola.Spaces.BoxSpace.Validate Wrong Dimensions Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FBoxSpaceValidateWrongDimensionsTest::RunTest(const FString& Parameters)
+{
+    FBoxSpace BoxSpace = FBoxSpace();
+    BoxSpace.Add(-1.0, 1.0);
+    BoxSpace.Add(-2.0, 2.0);
+
+    FBoxPoint BoxPoint = FBoxPoint({0.0f});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FBoxPoint>(BoxPoint);
+
+    ESpaceValidationResult Result = BoxSpace.Validate(Point);
+    TestTrue(TEXT("BoxSpace.Validate(Point) == ESpaceValidationResult::WrongDimensions"), Result == ESpaceValidationResult::WrongDimensions);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoxSpaceValidateWrongDimensionsShapeMismatchTest, "Schola.Spaces.BoxSpace.Validate Wrong Dimensions When Shape Mismatch Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FBoxSpaceValidateWrongDimensionsShapeMismatchTest::RunTest(const FString& Parameters)
+{
+    TArray<float> Low = { 0.0f, 0.0f};
+    TArray<float> High = { 1.0f, 1.0f};
+    FBoxSpace BoxSpace = FBoxSpace(Low, High, { 1, 2 });
+
+    TArray<float> Values = { 0.0f, 0.0f};
+    FBoxPoint BoxPoint = FBoxPoint(Values, { 2, 1});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FBoxPoint>(BoxPoint);
+
+    ESpaceValidationResult Result = BoxSpace.Validate(Point);
+    TestTrue(TEXT("BoxSpace.Validate(Point) == ESpaceValidationResult::WrongDimensions when space shape {1,2} and point shape {2,1}"), Result == ESpaceValidationResult::WrongDimensions);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FBoxSpaceValidateOutOfBoundsTest, "Schola.Spaces.BoxSpace.Validate Out Of Bounds Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FBoxSpaceValidateOutOfBoundsTest::RunTest(const FString& Parameters)
+{
+    FBoxSpace BoxSpace = FBoxSpace();
+    BoxSpace.Add(-1.0, 1.0);
+    BoxSpace.Add(-2.0, 2.0);
+
+    FBoxPoint BoxPoint = FBoxPoint({2.0f, 0.0f});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FBoxPoint>(BoxPoint);
+
+    ESpaceValidationResult Result = BoxSpace.Validate(Point);
+    TestTrue(TEXT("BoxSpace.Validate(Point) == ESpaceValidationResult::OutOfBounds"), Result == ESpaceValidationResult::OutOfBounds);
 
     return true;
 }
@@ -266,7 +318,7 @@ bool FBoxSpaceValidateWrongDataTypeTest::RunTest(const FString& Parameters)
 
     ESpaceValidationResult Result = BoxSpace.Validate(Point);
 
-    TestEqual(TEXT("BoxSpace.Validate(Point) == ESpaceValidationResult::WrongDataType"), Result, ESpaceValidationResult::WrongDataType);
+    TestTrue(TEXT("BoxSpace.Validate(Point) == ESpaceValidationResult::WrongDataType"), Result == ESpaceValidationResult::WrongDataType);
 
     return true;
 }

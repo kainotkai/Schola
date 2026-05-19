@@ -44,7 +44,7 @@ struct SCHOLA_API FBoxPoint : public FPoint
 	 * @param[in] InValues The array of float values to initialize the point with.
 	 */
 	FBoxPoint(const TArray<float>& InValues)
-		: Values(InValues), Shape()
+		: Values(InValues), Shape({InValues.Num()})
 	{
 
 	}
@@ -54,7 +54,7 @@ struct SCHOLA_API FBoxPoint : public FPoint
 	 * @param[in] InValues The initializer list of float values.
 	 */
 	FBoxPoint(std::initializer_list<float> InValues)
-		: Values(InValues), Shape()
+		: Values(InValues), Shape({static_cast<int>(InValues.size())})
 	{
 	}
 

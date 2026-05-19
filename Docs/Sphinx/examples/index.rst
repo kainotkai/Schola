@@ -5,6 +5,7 @@ Examples
    :maxdepth: 2
 
    tag
+   state_tree_rl
 
 
 Robotics Examples

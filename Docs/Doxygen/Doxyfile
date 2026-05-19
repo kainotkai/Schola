@@ -1078,7 +1078,8 @@ RECURSIVE              = YES
 # Note that relative paths are relative to the directory from which Doxygen is
 # run.
 
-EXCLUDE                =
+EXCLUDE                = ../../Source/ScholaImitation/Private/Environment/ImitationPlayerController.cpp \
+                         ../../Source/ScholaImitation/Private/Environment/MultiAgentImitationPlayerController.cpp
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
 # directories that are symbolic links (a Unix file system feature) are excluded
@@ -1097,7 +1098,7 @@ EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = *.cs \
                          *.pb.cc \
                          *.pb.h \
-                         */Test/*
+                         */Test/* 
 
 # The EXCLUDE_SYMBOLS tag can be used to specify one or more symbol names
 # (namespaces, classes, functions, etc.) that should be excluded from the
@@ -2378,32 +2379,6 @@ DOCBOOK_OUTPUT         = docbook
 GENERATE_AUTOGEN_DEF   = NO
 
 #---------------------------------------------------------------------------
-# Configuration options related to Sqlite3 output
-#---------------------------------------------------------------------------
-
-# If the GENERATE_SQLITE3 tag is set to YES Doxygen will generate a Sqlite3
-# database with symbols found by Doxygen stored in tables.
-# The default value is: NO.
-
-GENERATE_SQLITE3       = NO
-
-# The SQLITE3_OUTPUT tag is used to specify where the Sqlite3 database will be
-# put. If a relative path is entered the value of OUTPUT_DIRECTORY will be put
-# in front of it.
-# The default directory is: sqlite3.
-# This tag requires that the tag GENERATE_SQLITE3 is set to YES.
-
-SQLITE3_OUTPUT         = sqlite3
-
-# The SQLITE3_RECREATE_DB tag is set to YES, the existing doxygen_sqlite3.db
-# database file will be recreated with each Doxygen run. If set to NO, Doxygen
-# will warn if a database file is already found and not modify it.
-# The default value is: YES.
-# This tag requires that the tag GENERATE_SQLITE3 is set to YES.
-
-SQLITE3_RECREATE_DB    = NO
-
-#---------------------------------------------------------------------------
 # Configuration options related to the Perl module output
 #---------------------------------------------------------------------------
 
@@ -2500,6 +2475,7 @@ INCLUDE_FILE_PATTERNS  =
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = "PURE_VIRTUAL(X,Y)={Y}" \
+                         FORCEINLINE= \
                          UCLASS(...)= \
                          USTRUCT(...)= \
                          UENUM(...)= \

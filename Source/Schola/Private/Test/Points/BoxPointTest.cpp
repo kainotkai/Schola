@@ -28,12 +28,8 @@ bool FBoxPointTArrayConstructorTest::RunTest(const FString& Parameters)
     TArray<float> Values = { 1.0f, 2.0f, 3.0f, 4.0f };
     FBoxPoint BoxPoint = FBoxPoint(Values);
 
-    TestEqual(TEXT("BoxPoint.Values.Num() == 4"), BoxPoint.Values.Num(), 4);
-    TestEqualExactFloat(TEXT("BoxPoint[0] == 1.0f"), BoxPoint[0], 1.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[1] == 2.0f"), BoxPoint[1], 2.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[2] == 3.0f"), BoxPoint[2], 3.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[3] == 4.0f"), BoxPoint[3], 4.0f);
-    TestEqual(TEXT("BoxPoint.Shape.Num() == 0"), BoxPoint.Shape.Num(), 0);
+    TestEqual(TEXT("BoxPoint.Values"), BoxPoint.Values, Values);
+    TestEqual(TEXT("BoxPoint.Shape"), BoxPoint.Shape, TArray<int>({4}));
     
     return true;
 }
@@ -44,11 +40,8 @@ bool FBoxPointInitializerListConstructorTest::RunTest(const FString& Parameters)
 {
     FBoxPoint BoxPoint = FBoxPoint({ 5.0f, 10.0f, 15.0f });
 
-    TestEqual(TEXT("BoxPoint.Values.Num() == 3"), BoxPoint.Values.Num(), 3);
-    TestEqualExactFloat(TEXT("BoxPoint[0] == 5.0f"), BoxPoint[0], 5.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[1] == 10.0f"), BoxPoint[1], 10.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[2] == 15.0f"), BoxPoint[2], 15.0f);
-    TestEqual(TEXT("BoxPoint.Shape.Num() == 0"), BoxPoint.Shape.Num(), 0);
+    TestEqual(TEXT("BoxPoint.Values"), BoxPoint.Values, TArray<float>({5.0f, 10.0f, 15.0f}));
+    TestEqual(TEXT("BoxPoint.Shape"), BoxPoint.Shape, TArray<int>({3}));
     
     return true;
 }
@@ -61,12 +54,8 @@ bool FBoxPointTArrayWithShapeConstructorTest::RunTest(const FString& Parameters)
     TArray<int> Shape = { 2, 3 };
     FBoxPoint BoxPoint = FBoxPoint(Values, Shape);
 
-    TestEqual(TEXT("BoxPoint.Values.Num() == 6"), BoxPoint.Values.Num(), 6);
-    TestEqual(TEXT("BoxPoint.Shape.Num() == 2"), BoxPoint.Shape.Num(), 2);
-    TestEqual(TEXT("BoxPoint.Shape[0] == 2"), BoxPoint.Shape[0], 2);
-    TestEqual(TEXT("BoxPoint.Shape[1] == 3"), BoxPoint.Shape[1], 3);
-    TestEqualExactFloat(TEXT("BoxPoint[0] == 1.0f"), BoxPoint[0], 1.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[5] == 6.0f"), BoxPoint[5], 6.0f);
+    TestEqual(TEXT("BoxPoint.Values"), BoxPoint.Values, Values);
+    TestEqual(TEXT("BoxPoint.Shape"), BoxPoint.Shape, Shape);
     
     return true;
 }
@@ -91,12 +80,8 @@ bool FBoxPointFromArrayTest::RunTest(const FString& Parameters)
     TArray<float> Values = { 1.0f, 2.0f, 3.0f };
 	FBoxPoint BoxPoint = FBoxPoint(Values.GetData(),3);
 
-    TestEqual(TEXT("BoxPoint.Values.Num() == 3"), BoxPoint.Values.Num(), 3);
-    TestEqual(TEXT("BoxPoint.Shape.Num() == 1"), BoxPoint.Shape.Num(), 1);
-    TestEqual(TEXT("BoxPoint.Shape[0] == 3"), BoxPoint.Shape[0], 3);
-    TestEqualExactFloat(TEXT("BoxPoint[0] == 1.0f"), BoxPoint[0], 1.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[1] == 2.0f"), BoxPoint[1], 2.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[2] == 3.0f"), BoxPoint[2], 3.0f);
+    TestEqual(TEXT("BoxPoint.Values"), BoxPoint.Values, Values);
+    TestEqual(TEXT("BoxPoint.Shape"), BoxPoint.Shape, TArray<int>({3}));
     
 	return true;
 }
@@ -122,8 +107,7 @@ bool FBoxPointAddTest::RunTest(const FString& Parameters)
     BoxPoint.Add(1.0f);
     BoxPoint.Add(2.0f);
 
-    TestEqualExactFloat(TEXT("BoxPoint[0] == 1.0f"), BoxPoint[0], 1.0f);
-    TestEqualExactFloat(TEXT("BoxPoint[1] == 2.0f"), BoxPoint[1], 2.0f);
+    TestEqual(TEXT("BoxPoint.Values"), BoxPoint.Values, TArray<float>({1.0f, 2.0f}));
     
     return true;
 }

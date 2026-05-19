@@ -22,7 +22,7 @@ void FSB3CheckpointSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder)
 	{
 		ArgBuilder.AddStringArg(TEXT("checkpoint-dir"), this->CheckpointDir.Path);
 		ArgBuilder.AddFlag(TEXT("save-vecnormalize"), this->bSaveVecNormalize);
-		ArgBuilder.AddStringArg(TEXT("name-prefix"), this->NamePrefix);
+		ArgBuilder.AddStringArg(TEXT("name-prefix-override"), this->NamePrefix);
 	}
 }
 

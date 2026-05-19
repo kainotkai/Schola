@@ -50,4 +50,13 @@ public:
     UFUNCTION(BlueprintPure, Category = "Schola|Space", meta = (DisplayName = "Is Of Type (Space)", ReturnDisplayName="Is Type"))
     static bool Space_IsOfType(UPARAM(DisplayName="Space") const FInstancedStruct& InSpace, UPARAM(DisplayName="Type") ESpaceType InType);
 
+
+    /**
+     * @brief Checks if a point is contained in a space.
+     * @param[in] InSpace The space to check.
+     * @param[in] InPoint The point to check.
+     * @return True if the point is contained in the space, false otherwise.
+     */
+    UFUNCTION(BlueprintPure, Category = "Schola|Space", meta = (DisplayName = "Contains (Space, Point)", ReturnDisplayName="Contains"))
+    static bool Space_Contains(UPARAM(DisplayName="Space") const FInstancedStruct& InSpace, UPARAM(DisplayName="Point") const FInstancedStruct& InPoint);
 };

@@ -3,6 +3,7 @@
 #include "Misc/AutomationTest.h"
 #include "Spaces/MultiDiscreteSpace.h"
 #include "Points/MultiBinaryPoint.h"
+#include "Points/MultiDiscretePoint.h"
 #if WITH_DEV_AUTOMATION_TESTS
 #define TestEqualExactFloat(TestMessage, Actual, Expected) TestEqual(TestMessage, (float)Actual, (float)Expected, 0.0001f)
 
@@ -135,7 +136,7 @@ bool FMultiDiscreteSpaceIsEmptyTrueTest::RunTest(const FString& Parameters)
 {
     FMultiDiscreteSpace DiscreteSpace = FMultiDiscreteSpace();
 
-    TestEqual(TEXT("DiscreteSpace.IsEmpty() == true"), DiscreteSpace.IsEmpty(), true);
+    TestTrue(TEXT("DiscreteSpace.IsEmpty() == true"), DiscreteSpace.IsEmpty());
 
     return true;
 }
@@ -147,7 +148,7 @@ bool FMultiDiscreteSpaceIsEmptyFalseTest::RunTest(const FString& Parameters)
     FMultiDiscreteSpace DiscreteSpace = FMultiDiscreteSpace();
     DiscreteSpace.Add(1);
 
-    TestEqual(TEXT("DiscreteSpace.IsEmpty() == false"), DiscreteSpace.IsEmpty(), false);
+    TestTrue(TEXT("DiscreteSpace.IsEmpty() == false"), !DiscreteSpace.IsEmpty());
 
     return true;
 }
@@ -167,6 +168,48 @@ bool FMultiDiscreteSpaceGetNumDimensionsTest::RunTest(const FString& Parameters)
 
 //Validation Tests
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiDiscreteSpaceValidateSuccessTest, "Schola.Spaces.MultiDiscreteSpace.Validate Success Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FMultiDiscreteSpaceValidateSuccessTest::RunTest(const FString& Parameters)
+{
+    FMultiDiscreteSpace DiscreteSpace = FMultiDiscreteSpace({3, 5});
+
+    FMultiDiscretePoint MultiDiscretePoint = FMultiDiscretePoint({1, 2});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FMultiDiscretePoint>(MultiDiscretePoint);
+
+    TestTrue(TEXT("MultiDiscreteSpace.Validate(Point) == ESpaceValidationResult::Success"), DiscreteSpace.Validate(Point) == ESpaceValidationResult::Success);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiDiscreteSpaceValidateWrongDimensionsTest, "Schola.Spaces.MultiDiscreteSpace.Validate Wrong Dimensions Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FMultiDiscreteSpaceValidateWrongDimensionsTest::RunTest(const FString& Parameters)
+{
+    FMultiDiscreteSpace DiscreteSpace = FMultiDiscreteSpace({3, 5});
+
+    FMultiDiscretePoint MultiDiscretePoint = FMultiDiscretePoint({1});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FMultiDiscretePoint>(MultiDiscretePoint);
+
+    TestEqual(TEXT("MultiDiscreteSpace.Validate(Point) == ESpaceValidationResult::WrongDimensions"), DiscreteSpace.Validate(Point), ESpaceValidationResult::WrongDimensions);
+
+    return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiDiscreteSpaceValidateOutOfBoundsTest, "Schola.Spaces.MultiDiscreteSpace.Validate Out Of Bounds Test", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+
+bool FMultiDiscreteSpaceValidateOutOfBoundsTest::RunTest(const FString& Parameters)
+{
+    FMultiDiscreteSpace DiscreteSpace = FMultiDiscreteSpace({3, 5});
+
+    FMultiDiscretePoint MultiDiscretePoint = FMultiDiscretePoint({5, 4});
+    TInstancedStruct<FPoint> Point = TInstancedStruct<FPoint>::Make<FMultiDiscretePoint>(MultiDiscretePoint);
+
+    TestTrue(TEXT("MultiDiscreteSpace.Validate(Point) == ESpaceValidationResult::OutOfBounds"), DiscreteSpace.Validate(Point) == ESpaceValidationResult::OutOfBounds);
+
+    return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FMultiDiscreteSpaceValidateWrongDataTypeTest, "Schola.Spaces.MultiDiscreteSpace.Validate Wrong Data Type Test ", EAutomationTestFlags_ApplicationContextMask | EAutomationTestFlags::ProductFilter)
 
 bool FMultiDiscreteSpaceValidateWrongDataTypeTest::RunTest(const FString& Parameters)
@@ -178,7 +221,7 @@ bool FMultiDiscreteSpaceValidateWrongDataTypeTest::RunTest(const FString& Parame
     TInstancedStruct<FPoint> Point;
     Point.InitializeAs<FMultiBinaryPoint>();
 
-    TestEqual(TEXT("DiscreteSpace.Validate(Point) == ESpaceValidationResult::WrongDataType"), DiscreteSpace.Validate(Point), ESpaceValidationResult::WrongDataType);
+    TestTrue(TEXT("DiscreteSpace.Validate(Point) == ESpaceValidationResult::WrongDataType"), DiscreteSpace.Validate(Point) == ESpaceValidationResult::WrongDataType);
 
     return true;
 }

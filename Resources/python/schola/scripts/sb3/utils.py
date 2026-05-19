@@ -9,7 +9,6 @@ from typing import List
 from stable_baselines3.common.callbacks import BaseCallback, CallbackList
 import numpy as np
 
-
 ENV_AXIS = 0
 INTERVAL_AXIS = 1
 
@@ -290,5 +289,6 @@ class CustomProgressBarCallback(BaseCallback):
         # Flush and close progress bar
         self.pbar.refresh()
         self.pbar.close()
+
 
 # end of adapted code

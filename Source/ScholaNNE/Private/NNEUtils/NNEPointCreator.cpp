@@ -43,7 +43,7 @@ void FNNEPointCreator::operator()(const FNNEDictBuffer& InBuffer)
         }
         else
         {
-			UE_LOG(LogScholaNNE, Error, TEXT("NNE Point Creator: Key %s not found in Dict Space"), *Key);
+			UE_LOGFMT(LogScholaNNE, Error, "FNNEPointCreator::operator(): Key {0} not found in Dict Space", Key);
         }
     }
 }
@@ -65,18 +65,7 @@ void FNNEPointCreator::operator()(const FNNEMultiBinaryBuffer& InBuffer)
 		this->OutputPoint.InitializeAs<FMultiBinaryPoint>();
 	}
 
-	TArray<bool>& PointValuesRef = this->OutputPoint.GetMutable<FMultiBinaryPoint>().Values;
-	for (int i = 0; i < InBuffer.Buffer.Num(); i++)
-	{
-		if (InBuffer.Buffer[i] > 0.5f)
-		{
-			PointValuesRef[i] = true;
-		}
-		else
-		{
-			PointValuesRef[i] = false;
-		}
-	}
+	this->OutputPoint.GetMutable<FMultiBinaryPoint>().Values = InBuffer.Buffer;
 }
 
 void FNNEPointCreator::operator()(const FNNEDiscreteBuffer& InBuffer)
@@ -85,18 +74,7 @@ void FNNEPointCreator::operator()(const FNNEDiscreteBuffer& InBuffer)
 	{
 		this->OutputPoint.InitializeAs<FDiscretePoint>();
 	}
-
-	FDiscretePoint& OutputPointRef = this->OutputPoint.GetMutable<FDiscretePoint>();
-	const FDiscreteSpace& SpaceRef = this->Space.Get<FDiscreteSpace>();
-
-	int CurrIndex = 0;
-	int NumDims = SpaceRef.GetNumDimensions();
-	
-	// Advance by element count, not bytes. GetTypeSize() returns bytes and must not be used for pointer arithmetic.
-	// TODO see if we can simplify this down a bit
-	const float* SliceStart = InBuffer.Buffer.GetData();
-	TConstArrayView<float> Slice = MakeConstArrayView<float>(SliceStart, SpaceRef.High);
-	OutputPointRef.Value = GetMaxIndex(Slice);
+	this->OutputPoint.GetMutable<FDiscretePoint>().Value = InBuffer.Buffer[0];
 }
 
 void FNNEPointCreator::operator()(const FNNEMultiDiscreteBuffer& InBuffer)
@@ -106,23 +84,37 @@ void FNNEPointCreator::operator()(const FNNEMultiDiscreteBuffer& InBuffer)
 		this->OutputPoint.InitializeAs<FMultiDiscretePoint>();
 	}
 
-	FMultiDiscretePoint&	   OutputPointRef = this->OutputPoint.GetMutable<FMultiDiscretePoint>();
-	const FMultiDiscreteSpace& SpaceRef = this->Space.Get<FMultiDiscreteSpace>();
-	int						   NumDims = SpaceRef.GetNumDimensions();
-	if (OutputPointRef.Values.Num() == 0)
+	const FMultiDiscreteSpace* DiscreteSpace = this->Space.GetPtr<FMultiDiscreteSpace>();
+	if (!DiscreteSpace)
 	{
-		OutputPointRef.Values.Init(0,NumDims);
+		UE_LOGFMT(LogScholaNNE, Error, "FNNEPointCreator::operator()(const FNNEMultiDiscreteBuffer&): Space type mismatch for MultiDiscrete conversion");
+		return;
 	}
 
-	int CurrIndex = 0;
-	for (int DimIndex = 0; DimIndex < NumDims; DimIndex++)
+	if (InBuffer.Buffer.Num() != DiscreteSpace->GetNumDimensions())
 	{
-		// Advance by element count, not bytes. GetTypeSize() returns bytes and must not be used for pointer arithmetic.
-		const float* SliceStart = InBuffer.Buffer.GetData() + CurrIndex;
-		TConstArrayView<float> Slice = MakeConstArrayView<float>(SliceStart, SpaceRef.High[DimIndex]);
-		int	MaxValueIndex = GetMaxIndex(Slice);
-		OutputPointRef.Values[DimIndex] = MaxValueIndex;
-		CurrIndex += SpaceRef.High[DimIndex];
+		UE_LOGFMT(LogScholaNNE, Error, "FNNEPointCreator::operator()(const FNNEMultiDiscreteBuffer&): Buffer dimensions ({0}) don't match DiscreteSpace dimensions ({1})",
+			InBuffer.Buffer.Num(), DiscreteSpace->GetNumDimensions());
+		return;
+	}
+
+	for (int DimIndex = 0; DimIndex < InBuffer.Buffer.Num(); DimIndex++)
+	{
+		const int64 Value = InBuffer.Buffer[DimIndex];
+		const int DimSize = DiscreteSpace->High[DimIndex];
+		if (Value < 0 || Value > static_cast<int64>(MAX_int32) || Value >= DimSize)
+		{
+			UE_LOGFMT(LogScholaNNE, Error, "FNNEPointCreator::operator()(const FNNEMultiDiscreteBuffer&): MultiDiscrete buffer value out of bounds at dimension {0} - value={1}, valid range=[0, {2})",
+				DimIndex, Value, DimSize);
+			return;
+		}
+	}
+
+	FMultiDiscretePoint&	   OutputPointRef = this->OutputPoint.GetMutable<FMultiDiscretePoint>();
+	OutputPointRef.Values.Reset(InBuffer.Buffer.Num());
+	for (const int64 Value : InBuffer.Buffer)
+	{
+		OutputPointRef.Values.Add(static_cast<int>(Value));
 	}
 }
 

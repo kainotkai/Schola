@@ -2,6 +2,7 @@
 
 #include "Misc/AutomationTest.h"
 
+#include "LogScholaTraining.h"
 #include "TrainingSettings/Ray/RLlibTrainingSettings.h"
 #include "TrainingUtils/ArgBuilder.h"
 
@@ -22,16 +23,16 @@ bool FRLlibTrainingSettingsTest::RunTest(const FString& Parameters)
 	RLlibSettings.GenerateTrainingArgs(ArgBuilder);
 	FString GeneratedArgs = ArgBuilder.Build();
 
-	TestTrue(TEXT("RLlib args should contain --training-settings.timesteps \"5000\""),
-		GeneratedArgs.Contains(TEXT("--training-settings.timesteps \"5000\"")));
-	TestTrue(TEXT("RLlib args should contain --training-settings.learning-rate \"0.001\""),
-		GeneratedArgs.Contains(TEXT("--training-settings.learning-rate \"0.001\"")));
-	TestTrue(TEXT("RLlib args should contain --training-settings.minibatch-size \"256\""),
-		GeneratedArgs.Contains(TEXT("--training-settings.minibatch-size \"256\"")));
-	TestTrue(TEXT("RLlib args should contain --training-settings.gamma \"0.95\""),
-		GeneratedArgs.Contains(TEXT("--training-settings.gamma \"0.95\"")));
-	TestTrue(TEXT("RLlib args should contain PPO algorithm"),
-		GeneratedArgs.Contains(TEXT("PPO")));
+	TestTrue(TEXT("RLlib args should contain --timesteps \"5000\""),
+		GeneratedArgs.Contains(TEXT("--timesteps \"5000\"")));
+	TestTrue(TEXT("RLlib args should contain --learning-rate \"0.001\""),
+		GeneratedArgs.Contains(TEXT("--learning-rate \"0.001\"")));
+	TestTrue(TEXT("RLlib args should contain --minibatch-size \"256\""),
+		GeneratedArgs.Contains(TEXT("--minibatch-size \"256\"")));
+	TestTrue(TEXT("RLlib args should contain --gamma \"0.95\""),
+		GeneratedArgs.Contains(TEXT("--gamma \"0.95\"")));
+	TestTrue(TEXT("RLlib args should contain ppo algorithm subcommand (cyclopts names are lowercase)"),
+		GeneratedArgs.Contains(TEXT(" ppo ")));
 
 	return true;
 }
@@ -51,10 +52,10 @@ bool FPythonGroundTruthRLlibTBTest::RunTest(const FString& Parameters)
 	FString GeneratedArgs = ArgBuilder.Build();
 
 	// Verify key arguments that Python expects
-	TestTrue(TEXT("Should contain logging-settings.schola-verbosity for Python compatibility"),
-		GeneratedArgs.Contains(TEXT("--logging-settings.schola-verbosity \"0\"")));
-	TestTrue(TEXT("Should contain logging-settings.rllib-verbosity for Python compatibility"),
-		GeneratedArgs.Contains(TEXT("--logging-settings.rllib-verbosity \"1\"")));
+	TestTrue(TEXT("Should contain --schola-verbosity for Python compatibility"),
+		GeneratedArgs.Contains(TEXT("--schola-verbosity \"0\"")));
+	TestTrue(TEXT("Should contain --rllib-verbosity for Python compatibility"),
+		GeneratedArgs.Contains(TEXT("--rllib-verbosity \"1\"")));
 
 	return true;
 }
@@ -65,20 +66,77 @@ bool FPythonGroundTruthNetworkArchTest::RunTest(const FString& Parameters)
 {
 	FRLlibTrainingSettings RLlibSettings;
 	RLlibSettings.NetworkArchitectureSettings.FCNetHiddens = { 256, 256 };
-	RLlibSettings.NetworkArchitectureSettings.bUseAttention = true;
-	RLlibSettings.NetworkArchitectureSettings.AttentionDims = 64;
 
 	FScriptArgBuilder ArgBuilder;
 	RLlibSettings.GenerateTrainingArgs(ArgBuilder);
 	FString GeneratedArgs = ArgBuilder.Build();
 
 	// Verify network architecture arguments
-	TestTrue(TEXT("Should contain --network-architecture-settings.fcnet-hiddens for network architecture"),
-		GeneratedArgs.Contains(TEXT("--network-architecture-settings.fcnet-hiddens")));
-	TestTrue(TEXT("Should contain --network-architecture-settings.use-attention when enabled"),
-		GeneratedArgs.Contains(TEXT("--network-architecture-settings.use-attention")));
-	TestTrue(TEXT("Should contain --network-architecture-settings.attention-dim \"64\" when attention is used"),
-		GeneratedArgs.Contains(TEXT("--network-architecture-settings.attention-dim \"64\"")));
+	TestTrue(TEXT("Should contain --fcnet-hiddens for network architecture"),
+		GeneratedArgs.Contains(TEXT("--fcnet-hiddens")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FPythonGroundTruthLSTMSettingsTest, "Schola.GymConnectors.PythonGroundTruth RLlib LSTM Settings Test", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FPythonGroundTruthLSTMSettingsTest::RunTest(const FString& Parameters)
+{
+	FRLlibTrainingSettings RLlibSettings;
+	RLlibSettings.NetworkArchitectureSettings.bUseLSTM = true;
+	RLlibSettings.NetworkArchitectureSettings.LSTMCellSize = 128;
+	RLlibSettings.NetworkArchitectureSettings.MaxSeqLen = 10;
+
+	FScriptArgBuilder ArgBuilder;
+	RLlibSettings.GenerateTrainingArgs(ArgBuilder);
+	FString GeneratedArgs = ArgBuilder.Build();
+
+	TestTrue(TEXT("Should contain --use-lstm when LSTM is enabled"),
+		GeneratedArgs.Contains(TEXT("--use-lstm")));
+	TestTrue(TEXT("Should contain --lstm-cell-size \"128\" when LSTM is used"),
+		GeneratedArgs.Contains(TEXT("--lstm-cell-size \"128\"")));
+	TestTrue(TEXT("Should contain --max-seq-len \"10\" when LSTM is used"),
+		GeneratedArgs.Contains(TEXT("--max-seq-len \"10\"")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FRLlibSACSettingsTest, "Schola.GymConnectors.Settings.Ray.RLlibSACSettings Test", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FRLlibSACSettingsTest::RunTest(const FString& Parameters)
+{
+	FRLlibTrainingSettings RLlibSettings;
+	RLlibSettings.Algorithm = ERLlibTrainingAlgorithm::SAC;
+	RLlibSettings.SACSettings.Tau = 0.005f;
+	RLlibSettings.SACSettings.TargetEntropy = TEXT("auto");
+	RLlibSettings.SACSettings.InitialAlpha = 1.0f;
+	RLlibSettings.SACSettings.NStep = 1;
+	RLlibSettings.SACSettings.bTwinQ = true;
+
+	FScriptArgBuilder ArgBuilder;
+	RLlibSettings.GenerateTrainingArgs(ArgBuilder);
+	FString GeneratedArgs = ArgBuilder.Build();
+
+	TestTrue(TEXT("SAC args should contain sac algorithm subcommand (cyclopts names are lowercase)"),
+		GeneratedArgs.Contains(TEXT(" sac ")));
+	TestTrue(TEXT("SAC args should contain --tau"),
+		GeneratedArgs.Contains(TEXT("--tau")));
+	TestTrue(TEXT("SAC args should contain --target-entropy"),
+		GeneratedArgs.Contains(TEXT("--target-entropy")));
+	TestTrue(TEXT("SAC args should contain --initial-alpha"),
+		GeneratedArgs.Contains(TEXT("--initial-alpha")));
+	TestTrue(TEXT("SAC args should contain --n-step"),
+		GeneratedArgs.Contains(TEXT("--n-step")));
+	TestTrue(TEXT("SAC args should not contain --no-twin-q when bTwinQ is true"),
+		!GeneratedArgs.Contains(TEXT("--no-twin-q")));
+
+	// Test twin_q false adds --no-twin-q
+	RLlibSettings.SACSettings.bTwinQ = false;
+	FScriptArgBuilder ArgBuilder2;
+	RLlibSettings.GenerateTrainingArgs(ArgBuilder2);
+	FString GeneratedArgs2 = ArgBuilder2.Build();
+	TestTrue(TEXT("SAC args should contain --no-twin-q when bTwinQ is false"),
+		GeneratedArgs2.Contains(TEXT("--no-twin-q")));
 
 	return true;
 }
@@ -98,16 +156,16 @@ bool FConditionalFlagsTest::RunTest(const FString& Parameters)
 	RLlibSettings.GenerateTrainingArgs(ArgBuilder);
 	FString GeneratedArgs = ArgBuilder.Build();
 
-	TestTrue(TEXT("Should contain --checkpoint-settings.enable-checkpoints when bEnableCheckpoints is true"),
-		GeneratedArgs.Contains(TEXT("--checkpoint-settings.enable-checkpoints")));
-	TestTrue(TEXT("Should contain --checkpoint-settings.save-freq \"2000\""),
-		GeneratedArgs.Contains(TEXT("--checkpoint-settings.save-freq \"2000\"")));
-	TestTrue(TEXT("Should contain --checkpoint-settings.save-final-policy when bSaveFinalModel is true"),
-		GeneratedArgs.Contains(TEXT("--checkpoint-settings.save-final-policy")));
-	TestTrue(TEXT("Should contain --checkpoint-settings.export-onnx when bExportToONNX is true"),
-		GeneratedArgs.Contains(TEXT("--checkpoint-settings.export-onnx")));
+	TestTrue(TEXT("Should contain --enable-checkpoints when bEnableCheckpoints is true"),
+		GeneratedArgs.Contains(TEXT("--enable-checkpoints")));
+	TestTrue(TEXT("Should contain --save-freq \"2000\""),
+		GeneratedArgs.Contains(TEXT("--save-freq \"2000\"")));
+	TestTrue(TEXT("Should contain --save-final-policy when bSaveFinalModel is true"),
+		GeneratedArgs.Contains(TEXT("--save-final-policy")));
+	TestTrue(TEXT("Should contain --export-onnx when bExportToONNX is true"),
+		GeneratedArgs.Contains(TEXT("--export-onnx")));
 
-	UE_LOG(LogTemp, Display, TEXT("Conditional Flags Test - Generated Args: %s"), *GeneratedArgs);
+	UE_LOGFMT(LogScholaTraining, Display, "Conditional Flags Test: Generated Args: {0}", GeneratedArgs);
 
 	return true;
 }

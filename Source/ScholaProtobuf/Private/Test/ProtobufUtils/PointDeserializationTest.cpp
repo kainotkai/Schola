@@ -48,10 +48,7 @@ bool FProtobufMultiDiscretePointDeserializationTest::RunTest(const FString& Para
 	TestTrue(TEXT("MultiDiscrete point deserialized as multi_discrete_point"), Multi != nullptr);
 	if (Multi)
 	{
-		TestEqual(TEXT("MultiDiscrete size == 3"), Multi->Values.Num(), 3);
-		TestEqual(TEXT("Value[0] == 1"), Multi->Values[0], 1);
-		TestEqual(TEXT("Value[1] == 2"), Multi->Values[1], 2);
-		TestEqual(TEXT("Value[2] == 3"), Multi->Values[2], 3);
+		TestEqual(TEXT("MultiDiscrete Values"), Multi->Values, TArray<int>({1, 2, 3}));
 	}
 
 	return true;
@@ -74,11 +71,7 @@ bool FProtobufMultiBinaryPointDeserializationTest::RunTest(const FString& Parame
 	TestTrue(TEXT("MultiBinary point deserialized as multi_binary_point"), Multi != nullptr);
 	if (Multi)
 	{
-		TestEqual(TEXT("MultiBinary size == 4"), Multi->Values.Num(), 4);
-		TestEqual(TEXT("Value[0] == 0"), Multi->Values[0], (uint8)0);
-		TestEqual(TEXT("Value[1] == 1"), Multi->Values[1], (uint8)1);
-		TestEqual(TEXT("Value[2] == 1"), Multi->Values[2], (uint8)1);
-		TestEqual(TEXT("Value[3] == 0"), Multi->Values[3], (uint8)0);
+		TestEqual(TEXT("MultiBinary Values"), Multi->Values, TArray<bool>({false, true, true, false}));
 	}
 
 	return true;

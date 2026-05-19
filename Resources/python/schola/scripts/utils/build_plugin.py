@@ -12,6 +12,7 @@ Usage examples:
 
 This script follows the cyclopts-based CLI style used elsewhere in this repository.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,10 +27,14 @@ from cyclopts import App
 
 # Logging setup (match pattern in other scripts)
 if not logging.getLogger().handlers:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
+    )
 logger = logging.getLogger(__name__)
 
-app = App(name="build-plugin", help="Package an Unreal plugin using RunUAT BuildPlugin.")
+app = App(
+    name="build-plugin", help="Package an Unreal plugin using RunUAT BuildPlugin."
+)
 
 
 def _which(cmd: str) -> Optional[str]:
@@ -99,7 +104,9 @@ def main(
     logger.debug("Plugin folder: %s", plugin_folder)
 
     if not plugin_folder.exists() or not plugin_folder.is_dir():
-        raise FileNotFoundError(f"Plugin folder does not exist or is not a directory: {plugin_folder}")
+        raise FileNotFoundError(
+            f"Plugin folder does not exist or is not a directory: {plugin_folder}"
+        )
 
     uplugin = find_uplugin(plugin_folder)
     if uplugin is None:
@@ -113,7 +120,9 @@ def main(
         uat_path_resolved = Path(uat_path).expanduser().resolve()
     else:
         # Default recommended by the task
-        default_win = Path("C:/Program Files/Epic Games/UE_5.6/Engine/Build/BatchFiles/RunUAT.bat")
+        default_win = Path(
+            "C:/Program Files/Epic Games/UE_5.6/Engine/Build/BatchFiles/RunUAT.bat"
+        )
         if default_win.exists():
             uat_path_resolved = default_win
         else:
@@ -151,7 +160,12 @@ def main(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Build command
-    cmd: List[str] = [str(uat_path_resolved), "BuildPlugin", f"-Plugin={str(uplugin)}", f"-Package={str(out_dir)}"]
+    cmd: List[str] = [
+        str(uat_path_resolved),
+        "BuildPlugin",
+        f"-Plugin={str(uplugin)}",
+        f"-Package={str(out_dir)}",
+    ]
     if target_platform:
         # BuildPlugin expects a -TargetPlatforms argument with comma-separated list
         cmd.append(f"-TargetPlatforms={target_platform}")

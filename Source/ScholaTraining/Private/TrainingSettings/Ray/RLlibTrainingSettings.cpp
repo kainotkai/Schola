@@ -9,26 +9,32 @@ void FRLlibTrainingSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder)
 
 	switch (this->Algorithm)
 	{
-		case (ERLlibTrainingAlgorithm::PPO):
-			ArgBuilder.AddPositionalArgument(TEXT("PPO"));
-			this->PPOSettings.GenerateTrainingArgs(ArgBuilder);
+		case (ERLlibTrainingAlgorithm::APPO):
+			ArgBuilder.AddPositionalArgument(TEXT("appo"));
+			this->APPOSettings.GenerateTrainingArgs(ArgBuilder);
 			break;
 		case (ERLlibTrainingAlgorithm::IMPALA):
-			ArgBuilder.AddPositionalArgument(TEXT("IMPALA"));
+			ArgBuilder.AddPositionalArgument(TEXT("impala"));
 			this->IMPALASettings.GenerateTrainingArgs(ArgBuilder);
 			break;
+		case (ERLlibTrainingAlgorithm::SAC):
+			ArgBuilder.AddPositionalArgument(TEXT("sac"));
+			this->SACSettings.GenerateTrainingArgs(ArgBuilder);
+			break;
 		default:
-			ArgBuilder.AddPositionalArgument(TEXT("APPO"));
-			this->APPOSettings.GenerateTrainingArgs(ArgBuilder);
+			ArgBuilder.AddPositionalArgument(TEXT("ppo"));
+			this->PPOSettings.GenerateTrainingArgs(ArgBuilder);
 			break;
 	}
 
-	ArgBuilder.AddIntArg(TEXT("training-settings.timesteps"), this->Timesteps);
-	ArgBuilder.AddFloatArg(TEXT("training-settings.learning-rate"), this->LearningRate);
-	ArgBuilder.AddIntArg(TEXT("training-settings.minibatch-size"), this->MinibatchSize);
-	ArgBuilder.AddIntArg(TEXT("training-settings.train-batch-size-per-learner"), this->TrainBatchSizePerLearner);
-	ArgBuilder.AddIntArg(TEXT("training-settings.num-sgd-iter"), this->NumSGDIter);
-	ArgBuilder.AddFloatArg(TEXT("training-settings.gamma"), this->Gamma);
+	ArgBuilder.AddPositionalArgument(TEXT("editor"));
+
+	ArgBuilder.AddIntArg(TEXT("timesteps"), this->Timesteps);
+	ArgBuilder.AddFloatArg(TEXT("learning-rate"), this->LearningRate);
+	ArgBuilder.AddIntArg(TEXT("minibatch-size"), this->MinibatchSize);
+	ArgBuilder.AddIntArg(TEXT("train-batch-size-per-learner"), this->TrainBatchSizePerLearner);
+	ArgBuilder.AddIntArg(TEXT("num-sgd-iter"), this->NumSGDIter);
+	ArgBuilder.AddFloatArg(TEXT("gamma"), this->Gamma);
 	
 	this->CheckpointSettings.GenerateTrainingArgs(ArgBuilder);
 	this->LoggingSettings.GenerateTrainingArgs(ArgBuilder);

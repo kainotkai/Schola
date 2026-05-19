@@ -14,6 +14,7 @@ URPCImitationConnector::URPCImitationConnector()
 
 void URPCImitationConnector::Init(const FTrainingDefinition& TrainingDefns)
 {
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: gRPCImitationConnector Init");
 	// Cache the training definitions for reconnection scenarios
 	this->CachedTrainingDefn = TrainingDefns;
 	
@@ -67,7 +68,7 @@ void URPCImitationConnector::Init(const FTrainingDefinition& TrainingDefns)
 
 		// Set up cleanup on connector close
 		this->OnConnectorClosed.AddLambda([this]() {
-			UE_LOG(LogScholaProtobuf, Log, TEXT("Imitation Connector Closed"));
+			UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::Init(): Imitation Connector Closed");
 		});
 		
 		this->CommunicationManager->StartBackends();
@@ -76,8 +77,8 @@ void URPCImitationConnector::Init(const FTrainingDefinition& TrainingDefns)
 		if (this->bRunScriptOnPlay && !FParse::Param(FCommandLine::Get(), TEXT("ScholaDisableScript")))
 		{
 			FScriptArgBuilder ArgBuilder = FScriptArgBuilder();
-			this->ScriptSettings.GetTrainingArgs(ArgBuilder);
-			this->ServerSettings.GetTrainingArgs(ArgBuilder);
+			this->ScriptSettings.GetArgs(ArgBuilder);
+			this->ServerSettings.GetArgs(ArgBuilder);
 			FString Args = ArgBuilder.Build();
 
 			this->Script = this->ScriptSettings.GetLaunchableScript();
@@ -91,7 +92,7 @@ void URPCImitationConnector::Init(const FTrainingDefinition& TrainingDefns)
 	else
 	{
 		// Reconnection scenario: server already running, prepare for new client
-		UE_LOG(LogScholaProtobuf, Log, TEXT("Server already initialized, preparing for new connection"));
+		UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::Init(): Server already initialized, preparing for new connection");
 		
 		// Reset connection state for new client
 		this->SetStatus(EImitationConnectorStatus::NotStarted);
@@ -105,10 +106,10 @@ void URPCImitationConnector::Init(const FTrainingDefinition& TrainingDefns)
 			{
 				break;
 			}
-			UE_LOG(LogScholaProtobuf, Warning, TEXT("Drained stale start request from previous connection"));
+			UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::Init(): Drained stale start request from previous connection");
 		}
 		
-		UE_LOG(LogScholaProtobuf, Log, TEXT("Reset ImitationStateService for new connection"));
+		UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::Init(): Reset ImitationStateService for new connection");
 	}
 }
 
@@ -132,7 +133,7 @@ bool URPCImitationConnector::CheckForStart()
 				if (EnvSettings.has_seed())
 				{
 					Environments[i]->SeedEnvironment(EnvSettings.seed());
-					UE_LOG(LogScholaProtobuf, Log, TEXT("Environment %d seeded with %d"), i, EnvSettings.seed());
+					UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::CheckForStart(): Environment {0} seeded with {1}", i, EnvSettings.seed());
 				}
 				
 				if (EnvSettings.options_size() > 0)
@@ -143,7 +144,7 @@ bool URPCImitationConnector::CheckForStart()
 						Options.Add(FString(OptPair.first.c_str()), FString(OptPair.second.c_str()));
 					}
 					Environments[i]->SetEnvironmentOptions(Options);
-					UE_LOG(LogScholaProtobuf, Log, TEXT("Environment %d has %d options supplied"), i, EnvSettings.options_size());
+					UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::CheckForStart(): Environment {0} has {1} options supplied", i, EnvSettings.options_size());
 				}
 			}
 		}
@@ -155,7 +156,7 @@ bool URPCImitationConnector::CheckForStart()
 		
 		// Republish training definitions for the new client
 		this->TrainingDefinitionService->Publish(this->CachedTrainingDefn);
-		UE_LOG(LogScholaProtobuf, Log, TEXT("Republished TrainingDefinition for new client"));
+		UE_LOGFMT(LogScholaProtobuf, Verbose, "URPCImitationConnector::CheckForStart(): Republished TrainingDefinition for new client");
 	}
 	
 	return this->Status == EImitationConnectorStatus::Running;

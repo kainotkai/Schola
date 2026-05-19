@@ -2,6 +2,7 @@
 """
 Helpers for working with entry_point plugins for Schola
 """
+
 from typing import List
 
 

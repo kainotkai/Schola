@@ -8,6 +8,11 @@ public class Schola : ModuleRules
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        if (System.Environment.GetEnvironmentVariable("SCHOLA_MEASURE_CPP_COVERAGE") == "1")
+        {
+            OptimizeCode = CodeOptimization.Never;
+        }
+
         // Suppress Clang warning for USTRUCTs with virtual functions (FPoint and FSpace hierarchies)
         // on UE 5.5 Linux. This warning is triggered by Unreal's TCppStructOps::Destruct calling
         // explicit destructor on non-final types with virtual functions.

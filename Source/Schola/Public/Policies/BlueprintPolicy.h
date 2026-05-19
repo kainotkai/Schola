@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Common/InteractionDefinition.h"
+#include "Common/InstancedStructUtils.h"
 #include "Spaces/Space.h"
 #include "Policies/PolicyInterface.h"
 #include "Points/Point.h"
@@ -18,7 +19,7 @@
  * Derive from this class in Blueprint and implement the Think and Init events
  * to create a custom policy.
  */
-UCLASS(Blueprintable, BlueprintType, Abstract)
+UCLASS(Blueprintable, BlueprintType, Abstract, EditInlineNew)
 class SCHOLA_API UBlueprintPolicy : public UObject, public IPolicy
 {
 	GENERATED_BODY()
@@ -33,7 +34,7 @@ public:
 	 */
 	bool Think(const TInstancedStruct<FPoint>& InObservations, TInstancedStruct<FPoint>& OutAction) override
 	{
-		this->Think(reinterpret_cast<const FInstancedStruct&>(InObservations), reinterpret_cast<FInstancedStruct&>(OutAction));
+		this->Think(ToUntypedInstancedStruct(InObservations), ToUntypedInstancedStruct(OutAction));
 		return true;
 	}
 

@@ -23,7 +23,6 @@ struct FPoint;
 class SCHOLAIMITATION_API IImitationScholaEnvironment
 {
 public:
-
 	/**
 	 * @brief Initialize the environment and retrieve agent definitions.
 	 * @param[out] OutAgentDefinitions Map of agent names to their interaction definitions
@@ -58,7 +57,7 @@ public:
 	 * @brief Virtual destructor for proper cleanup.
 	 */
 	virtual ~IImitationScholaEnvironment() = default;
-}; 
+};
 
 /**
  * @brief Template wrapper that adapts Blueprint-implementable environment interfaces to IImitationScholaEnvironment.
@@ -84,7 +83,7 @@ public:
 
 	void InitializeEnvironment(TMap<FString, FInteractionDefinition>& OutDefinition) override
 	{
-		//This should return definitions for outputs, map will go to different agents
+		// This should return definitions for outputs, map will go to different agents
 		T::Execute_InitializeEnvironment(this->GetObject(), OutDefinition);
 	};
 
@@ -102,7 +101,7 @@ public:
 	 * @param[out] OutAgentStates Map of agent names to their imitation states
 	 */
 	void Step(TMap<FString, FImitationAgentState>& OutAgentStates) override
-	{	
+	{
 		T::Execute_Step(this->GetObject(), OutAgentStates);
 	};
 
@@ -123,7 +122,6 @@ public:
 	{
 		T::Execute_SeedEnvironment(this->GetObject(), Seed);
 	};
-
 };
 
 /**

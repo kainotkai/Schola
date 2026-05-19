@@ -1,0 +1,52 @@
+# Copyright (c) 2026 Advanced Micro Devices, Inc. All Rights Reserved.
+"""
+Settings dataclasses for the RLlib evaluation command.
+"""
+
+from typing import Annotated, Optional
+from pathlib import Path
+from dataclasses import dataclass, field
+
+from cyclopts import Parameter, validators
+
+from schola.scripts.common.settings import EnvironmentSettings
+
+from schola.scripts.rllib.settings import LoggingSettings, ResourceSettings
+
+
+@dataclass
+class RllibEvalScriptSettings:
+    """
+    Top-level settings for evaluating an RLlib checkpoint produced by Schola training.
+    """
+
+    checkpoint: Annotated[
+        Optional[Path],
+        Parameter(
+            group="Evaluation Arguments",
+            required=True,
+            validator=validators.Path(exists=True, file_okay=True, dir_okay=True),
+            alias="-r",
+        ),
+    ] = None
+    "Path to a Ray Tune / RLlib checkpoint directory (for example ``.../checkpoint_000050``) (required)."
+
+    n_eval_episodes: Annotated[
+        int, Parameter(validator=validators.Number(gte=1), group="Evaluation Arguments")
+    ] = 10
+    "Requested number of evaluation episodes; applied when the restored ``Algorithm`` config exposes ``evaluation_duration`` / ``evaluation_duration_unit``."
+
+    resource_settings: Annotated[
+        ResourceSettings, Parameter(group="Resource Arguments", name="*")
+    ] = field(default_factory=ResourceSettings)
+    "Ray resource options for the short-lived evaluation process."
+
+    logging_settings: Annotated[
+        LoggingSettings, Parameter(group="Logging Arguments", name="*")
+    ] = field(default_factory=LoggingSettings)
+    "Logging verbosity for Schola and RLlib."
+
+    environment_settings: Annotated[
+        EnvironmentSettings, Parameter(group="Environment Arguments", name="*")
+    ] = field(default_factory=EnvironmentSettings)
+    "Settings for the environment to use during evaluation"

@@ -20,9 +20,11 @@
 #include "StructUtils/InstancedStruct.h"
 #include "ImitationConnectors/AbstractImitationConnector.h"
 THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include "GymConnector.pb.h"
 #include "Spaces.pb.h"
 #include "ImitationState.pb.h"
+#include "ScholaProtobufMacroGuardEnd.h"
 THIRD_PARTY_INCLUDES_END
 
 /**
@@ -43,6 +45,7 @@ public:
 	ProtobufPointDeserializer(TInstancedStruct<FPoint>& InitialPoint)
 		: DeserializedPoint(InitialPoint){};
 
+	/** Dispatches on oneof case and fills DeserializedPoint based on the real type of point. */
 	void Deserialize(const Schola::Point& InPoint)
 	{
 		switch (InPoint.point_case())
@@ -69,8 +72,10 @@ public:
 		}
 	};
 
+	/** Deserializes a nested dict point into FDictPoint. */
 	void Deserialize(const Schola::DictPoint& InDictPoint) 
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Deserialize DictPoint");
 		DeserializedPoint.InitializeAs<FDictPoint>();
 		FDictPoint& Point = DeserializedPoint.GetMutable<FDictPoint>();
 		for (auto& Pair : InDictPoint.values())
@@ -80,23 +85,31 @@ public:
 		}
 	};
 
+	/** Deserializes a flat multi-binary vector into FMultiBinaryPoint. */
 	void Deserialize(const Schola::MultiBinaryPoint& InBinaryPoint) 
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Deserialize MultiBinaryPoint");
 		DeserializedPoint.InitializeAs<FMultiBinaryPoint>(InBinaryPoint.values().data(), InBinaryPoint.values_size());
 	};
 
+	/** Deserializes box values and shape into FBoxPoint. */
 	void Deserialize(const Schola::BoxPoint& InBoxPoint) 
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Deserialize BoxPoint");
 		DeserializedPoint.InitializeAs<FBoxPoint>(InBoxPoint.values().data(), InBoxPoint.values_size());
 	};
 
+	/** Deserializes multi-discrete indices into FMultiDiscretePoint. */
 	void Deserialize(const Schola::MultiDiscretePoint& InMultiDiscretePoint)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Deserialize MultiDiscretePoint");
 		DeserializedPoint.InitializeAs<FMultiDiscretePoint>(InMultiDiscretePoint.values().data(), InMultiDiscretePoint.values_size());
 	};
 
+	/** Deserializes a single discrete index into FDiscretePoint. */
 	void Deserialize(const Schola::DiscretePoint& InDiscretePoint)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Deserialize DiscretePoint");
 		DeserializedPoint.InitializeAs<FDiscretePoint>(InDiscretePoint.value());
 	};
 
@@ -120,6 +133,7 @@ public:
 	ProtobufSpaceDeserializer(TInstancedStruct<FSpace>& InitialSpace)
 		: DeserializedSpace(InitialSpace) {}
 
+	/** Dispatches on space oneof case and fills DeserializedSpace. */
 	void Deserialize(const Schola::Space& InSpace)
 	{
 		switch (InSpace.space_case())
@@ -145,6 +159,7 @@ public:
 		}
 	};
 
+	/** Deserializes nested named subspaces into FDictSpace. */
 	void Deserialize(const Schola::DictSpace& InDictSpace)
 	{
 		DeserializedSpace.InitializeAs<FDictSpace>();
@@ -156,21 +171,25 @@ public:
 		}
 	};
 
+	/** Deserializes shape into FMultiBinarySpace. */
 	void Deserialize(const Schola::MultiBinarySpace& InMultiBinarySpace)
 	{
 		DeserializedSpace.InitializeAs<FMultiBinarySpace>(InMultiBinarySpace.shape());
 	};
 
+	/** Deserializes upper bound into FDiscreteSpace. */
 	void Deserialize(const Schola::DiscreteSpace& InDiscreteSpace)
 	{
 		DeserializedSpace.InitializeAs<FDiscreteSpace>(InDiscreteSpace.high());
 	};
 
+	/** Deserializes per-axis highs into FMultiDiscreteSpace. */
 	void Deserialize(const Schola::MultiDiscreteSpace& InMultiDiscreteSpace)
 	{
 		DeserializedSpace.InitializeAs<FMultiDiscreteSpace>(InMultiDiscreteSpace.high().data(), InMultiDiscreteSpace.high_size());
 	};
 
+	/** Deserializes per-dimension bounds and global shape into FBoxSpace. */
 	void Deserialize(const Schola::BoxSpace& InBoxSpace)
 	{
 		DeserializedSpace.InitializeAs<FBoxSpace>();
@@ -195,12 +214,23 @@ public:
 namespace ProtobufDeserializer
 {
 
+	/** Scalar / identity conversion when protobuf and Unreal types match. (e.g. int)
+	 * @tparam UnrealV Unreal type to convert to.
+	 * @tparam ProtoV Protobuf type to convert from.
+	 * @param[in] InProtobufValue Protobuf value to convert from.
+	 * @param[out] OutUnrealValue Unreal value to convert to.
+	 */
 	template<typename UnrealV, typename ProtoV>
 	inline void FromProto(const ProtoV& InProtobufValue, UnrealV& OutUnrealValue)
 	{
 		OutUnrealValue = InProtobufValue;
 	}
 
+	/** Copies a protobuf repeated field of primitives into a TArray. 
+	 * @tparam ProtoV Element Type that is natively convertable to an Unreal Type.
+	 * @param[in] InProtobufRepeatedField Protobuf repeated field to convert from.
+	 * @param[out] OutUnrealArray Unreal array to convert to.
+	 */
 	template <typename ProtoV>
 	void FromProto(const google::protobuf::RepeatedField<ProtoV>& InProtobufRepeatedField, TArray<ProtoV>& OutUnrealArray)
 	{
@@ -212,6 +242,12 @@ namespace ProtobufDeserializer
 		}
 	}
 
+	/** Converts each element of a repeated message field via FromProto element-wise. 
+	 * @tparam UnrealV Unreal type to convert to.
+	 * @tparam ProtoV Protobuf type to convert from.
+	 * @param[in] InProtobufRepeatedField Protobuf repeated field to convert from.
+	 * @param[out] OutUnrealArray Unreal array to convert to.
+	 */
 	template <typename UnrealV, typename ProtoV>
 	void FromProto(const google::protobuf::RepeatedPtrField<ProtoV>& InProtobufRepeatedField, TArray<UnrealV>& OutUnrealArray)
 	{
@@ -225,6 +261,13 @@ namespace ProtobufDeserializer
 		}
 	}
 
+	/** Converts a protobuf map with arbitrary key type into TMap. 
+	 * @tparam UnrealV Unreal type to convert to.
+	 * @tparam ProtoV Protobuf type to convert from.
+	 * @tparam KeyType Type of the key in the protobuf map. Supported in both Unreal and Protobuf.
+	 * @param[in] InProtobufMap Protobuf map to convert from.
+	 * @param[out] OutUnrealMap Unreal map to convert to.
+	 */
 	template <typename UnrealV, typename ProtoV, typename KeyType>
 	void FromProto(const google::protobuf::Map<KeyType, ProtoV>& InProtobufMap, TMap<KeyType, UnrealV>& OutUnrealMap)
 	{
@@ -237,6 +280,12 @@ namespace ProtobufDeserializer
 		}
 	}
 
+	/** Converts a string-keyed protobuf map into TMap<FString, ...>. 
+	 * @tparam UnrealV Unreal type to convert to.
+	 * @tparam ProtoV Protobuf type to convert from.
+	 * @param[in] InProtobufMap Protobuf map to convert from.
+	 * @param[out] OutUnrealMap Unreal map to convert to.
+	 */
 	template <typename UnrealV, typename ProtoV>
 	void FromProto(const google::protobuf::Map<std::string, ProtoV>& InProtobufMap, TMap<FString, UnrealV>& OutUnrealMap)
 	{
@@ -250,46 +299,59 @@ namespace ProtobufDeserializer
 	}
 
 	// Update Messages
+	/** Parses connector status and nested step or reset payload into FTrainingStateUpdate. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::StateUpdate& InStateUpdate, FTrainingStateUpdate& OutTrainingStateUpdate);
 
+	/** Populates multi-env reset data from protobuf. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::Reset& InResetProto, FTrainingReset& OutTrainingStateUpdate);
 
+	/** Populates multi-env step data from protobuf. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::Step& InStepProto, FTrainingStep& OutTrainingStateUpdate);
 
+	/** Converts environment reset options and optional seed into FEnvReset. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::EnvironmentSettings& InEnvSettingsProto, FEnvReset& OutEnvResetSettings);
 
+	/** Converts one environment step update (actions, etc.) into FEnvStep. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::EnvironmentStep& InEnvStepProto, FEnvStep& OutEnvStep);
 
+	/** Parses gym connector start request (e.g. autoreset mode). */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::GymConnectorStartRequest& InStartRequestProto, FStartRequest& OutStartRequest);
 
 	// Spaces and Points
 
+	/** Deserializes a protobuf Point oneof into OutPoint. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::Point& InPointProto, TInstancedStruct<FPoint>& OutPoint);
 
+	/** Deserializes a protobuf Space oneof into OutSpace. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::Space& InSpaceProto, TInstancedStruct<FSpace>& OutSpace);
 
 	// Basic Types
+	/** UTF-8 std::string to FString. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const std::string& InString, FString& OutString);
 
 	// Imitation Learning Messages
+	/** Converts one imitation agent  state into FImitationAgentState. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::ImitationAgentState& InImitationAgentStateProto, FImitationAgentState& OutImitationAgentState);
 
+	/** Converts one imitation environment state into FImitationEnvironmentState. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::ImitationEnvironmentState& InImitationEnvStateProto, FImitationEnvironmentState& OutImitationEnvState);
 
+	/** Parses connector status and nested step or reset payload into FImitationTrainingState. */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::ImitationTrainingState& InImitationTrainingStateProto, FImitationTrainingState& OutImitationTrainingState);
 
+	/** Parses root imitation message (training + optional initial state). */
 	template<>
 	SCHOLAPROTOBUF_API void FromProto(const Schola::ImitationState& InImitationStateProto, FImitationState& OutImitationState);
 };

@@ -1,175 +1,129 @@
 # Copyright (c) 2025 Advanced Micro Devices, Inc. All Rights Reserved.
 
-from datetime import datetime
+from itertools import islice
 import json
 import subprocess
-from typing import Callable, List, Literal, TypedDict
-from dataclasses import dataclass
+from typing import Callable, Dict, List, Literal, Optional, Any, Sequence, Tuple, TypedDict
 import sys
-import os
+import time
 
 import pytest
+import logging
+logger = logging.getLogger(__name__)
 import pathlib
-import re
 from functools import cache
-from typing import Dict, List, Optional, Any, Tuple
 
+from unreal_test_classes import UnrealTestBatch, UnrealTestEvent, UnrealTestResult, UnrealTestFile, UnrealTestItem
 from schola.core.utils.ubt import (
+    UBTCommand,
     get_project_file,
     get_editor_executable_path,
     get_ue_version,
     get_ubt_path,
     build_executable,
 )
-
+from opencppcoverage import (
+    OPENCPPCOVERAGE_ENV,
+    OpenCppCoverageRuntime,
+    UnrealCoverageTestBatch,
+    find_opencppcoverage_exe,
+    merge_opencpp_batches,
+    resolve_schola_plugin_root,
+    set_measure_cpp_coverage_env,
+)
 
 # Constants
-MAX_SEARCH_DEPTH = 10
 CPP_EXTENSIONS = {".cpp", ".cc"}
-AUTOMATION_TEST_PATTERN = r'\w+_AUTOMATION_TEST\s*\([^,]+,\s*"([^"]+)"'
 
+def batched(iterable, size):
+    it = iter(iterable)
+    batch = list(islice(it, size))
+    while batch:
+        yield batch
+        batch = list(islice(it, size))
 
-@dataclass
-class UnrealTestEvent:
-    message: str
-    filename: str
-    line_number: int
-    timestamp: str
-
-    @classmethod
-    def make(cls,event_entry):
-        return cls(
-            message=event_entry["event"].get("message", ""),
-            filename=event_entry.get("filename", ""),
-            line_number=event_entry.get("lineNumber", 0),
-            timestamp=event_entry.get("timestamp", datetime.now().isoformat()),
-        )
-    
-    @classmethod
-    def make_from_item(cls, item: "UnrealTestItem", msg: str):
-        return cls(
-            message=msg,
-            filename=item.cpp_file,
-            line_number=item.lineno,
-            timestamp=datetime.now().isoformat(),
-        )
-
-@dataclass
-class UnrealTestResult:
-    name: str
-    test_path: str
-    outcome: Literal["passed", "failed", "skipped"]
-    duration: float
-    errors: List[UnrealTestEvent]
-    warnings: List[UnrealTestEvent]
-
-    @property
-    def num_warnings(self) -> bool:
-        return len(self.warnings)
-    
-    @property
-    def num_errors(self) -> bool:
-        return len(self.errors)
-
-    @property
-    def passed(self) -> bool:
-        return self.outcome == "passed"
-    
-    @property
-    def failed(self) -> bool:
-        return self.outcome == "failed"
-    
-    @property
-    def skipped(self) -> bool:
-        return self.outcome == "skipped"
-
-    @property
-    def sanitized_test_path(self) -> str:
-        return self.test_path.strip()
-
-    @classmethod
-    def make(cls,test_results):
-        
-        entries = filter(lambda x: "event" in x, test_results.get("entries", []))
-        errors = filter(lambda x: x["event"].get("type", "").lower() == "error", entries)
-        warnings = filter(lambda x: x["event"].get("type", "").lower() == "warning", entries)
-        
-        duration = float(test_results.get("duration", 0))
-        
-        outcome = test_results.get("state", "").strip().lower()
-        if outcome == "success":
-            outcome = "passed"
-        elif outcome == "fail":
-            outcome = "failed"
-        else:
-            outcome = "skipped"
-        # hard fail if we don't have a valid display name or full test path
-        if not test_results["testDisplayName"] or not test_results["fullTestPath"]:
-            raise Exception(f"Invalid test results: {test_results}. Test display name or full test path is missing.")
-        
-        return cls(
-            name=test_results["testDisplayName"],
-            test_path=test_results["fullTestPath"],
-            outcome=outcome,
-            duration=test_results.get("duration", 0),
-            errors=[UnrealTestEvent.make(entry) for entry in errors],
-            warnings=[UnrealTestEvent.make(entry) for entry in warnings],
-        )
-    
 
 def run_unreal_tests(
-    editor_path, uproject_path, report_path: pathlib.Path, tests_to_run
+    unreal_test_batches: Sequence[UnrealTestBatch],
+    editor_path: pathlib.Path,
+    uproject_path: pathlib.Path,
+    global_timeout: int,
 ):
     """Run Unreal automation tests using a simple blocking subprocess call."""
-
-    timeout = int(os.getenv("SCHOLA_UNREAL_TIMEOUT", "600"))  # seconds
-
-    tests_to_run_cmd = f"-ExecCmds=Automation RunTest {tests_to_run};Quit"
-    
-    command = [
-        str(editor_path),
-        f"-project={uproject_path}",
-        "-unattended",
-        "-nullrhi",
-        "-NoTrace",
-        f"-ReportExportPath={report_path}",
-        "-log",
-        f"{tests_to_run_cmd}",
-    ]
-
-    print(f"Running Unreal Test Command: {' '.join(command)}")
-
     try:
-        result = subprocess.run(
-            command,
-            timeout=timeout,
-            capture_output=True,
-        )
-        
-        stdout_str = result.stdout.decode("utf-8", errors="replace")
-        stderr_str = result.stderr.decode("utf-8", errors="replace")
-        
-        # 0 is success, 255 is some test came back as failed but the overall test run was successful
-        if result.returncode != 0 and result.returncode != 255:
-            raise Exception(f"Unreal Automation Test failed with error {result.returncode}\nstdout: {stdout_str}\nstderr: {stderr_str}")
+        for test_batch in unreal_test_batches:
+            test_batch.prepare()
             
-        print(f"Unreal Automation Test Results Saved To: {report_path}")
-        
-    except subprocess.TimeoutExpired:
-        raise Exception(f"Unreal Automation Test timed out after {timeout} seconds.")
+        remaining_test_batches = [test_batch for test_batch in unreal_test_batches]
+        start_time = time.time()
 
+        # There is a weird edge case, where batch_0 times-out, and batch_n failes to retry a critical failure because we were waiting for batch_0.
+        # We handle this by never waiting more than half the remaining timeout for a single batch 
+        # This can still fail but would require several threads to timeout while also having critical failures.
+        while remaining_test_batches:
+            failed_test_batches = []
+            
+            # Check if we've already exceeded the global timeout, and there are no active processes, since we are between rounds of retries
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= global_timeout:
+                logger.warning(
+                    "Global timeout of %s seconds reached. Killing all remaining processes.",
+                    global_timeout,
+                )
+                for test_batch in remaining_test_batches:
+                    test_batch.clean_up()
+                break
+            
+            for test_batch in remaining_test_batches:
+                test_batch.run(editor_path, uproject_path)
 
-def load_unreal_test_results(report_path: pathlib.Path) -> Dict[str, UnrealTestResult]:
-    report_file = report_path / "index.json"
-    if not report_file.resolve().exists():
-        raise FileNotFoundError(f"Expected Report file at {report_path} but no file found. This can sometimes mean Unreal failed to build correctly.")
-    with open(report_file, "r", encoding="utf-8-sig") as f:
-        data = json.load(f)
-    test_results = {}
-    for test in data["tests"]:
-        test_result = UnrealTestResult.make(test)
-        test_results[test_result.sanitized_test_path] = test_result
-    return test_results
+            for test_batch in remaining_test_batches:
+                # Calculate remaining time for this batch
+                elapsed_time = time.time() - start_time
+                remaining_time = max(0, global_timeout - elapsed_time)
+                
+                if remaining_time <= 0:
+                    logger.warning(
+                        "Global timeout of %s seconds reached. Killing batch %s.",
+                        global_timeout,
+                        test_batch.batch_index,
+                    )
+                    test_batch.clean_up()
+                    continue
+                
+                try:
+                    stdout_str, stderr_str = test_batch.process.communicate(timeout=remaining_time/2)
+                    # 0 is success, 255 is some test came back as failed but the overall test run was successful
+                    if test_batch.process.returncode != 0 and test_batch.process.returncode != 255:
+                        logger.warning(
+                            "Unreal Automation Test batch %s failed with error %s. Retrying...",
+                            test_batch.batch_index,
+                            test_batch.process.returncode,
+                        )
+                        test_batch.retries += 1
+                        failed_test_batches.append(test_batch)
+                    else:
+                        logger.info(
+                            "Unreal Automation Test batch %s completed with no errors",
+                            test_batch.batch_index,
+                        )
+
+                except subprocess.TimeoutExpired:
+                    logger.warning(
+                        "Unreal Automation Test batch %s timed out (local timeout of %s seconds reached), killing process.",
+                        test_batch.batch_index,
+                        remaining_time / 2,
+                    )
+                    test_batch.clean_up()
+
+            # retry all the failed test batches
+            remaining_test_batches = failed_test_batches
+    except:
+        # cleanup all the test batches if something unexpected occurs
+        for test_batch in unreal_test_batches:
+            test_batch.clean_up()
+        raise Exception("Unreal Automation Test failed with unknown error, killing all batches..")
+
 
 def get_uproject_file(project_dir: pathlib.Path) -> Optional[pathlib.Path]:
     uproject_file = get_project_file(project_dir)
@@ -187,6 +141,12 @@ def get_build_unreal_from_config(config) -> bool:
     if build_option is not None:
         return build_option
     return config.getini("build_unreal")
+
+def get_unreal_timeout_from_config(config) -> int:
+    timeout_option = config.getoption("--unreal-timeout")
+    if timeout_option is not None:
+        return int(timeout_option)
+    return int(config.getini("unreal_timeout"))
 
 def pytest_addoption(parser):
     try:
@@ -238,16 +198,97 @@ def pytest_addoption(parser):
     except ValueError:
         pass  # Exists in .ini
 
+    try:
+        parser.addoption(
+            "--schola-cpp-coverage-html",
+            action="store_true",
+            default=None,
+            help="Generate HTML coverage report for Schola C++ tests.",
+        )
+    except ValueError:
+        pass
+
+    try:
+        parser.addoption(
+            "--schola-cpp-coverage-cobertura",
+            action="store_true",
+            default=None,
+            help="Generate Cobertura (XML) coverage report for Schola C++ tests.",
+        )
+    except ValueError:
+        pass
+
+    try:
+        parser.addini(
+            "schola_cpp_coverage_html",
+            type="bool",
+            default=False,
+            help="Generate HTML coverage report for Schola C++ tests.",
+        )
+    except ValueError:
+        pass
+
+    try:
+        parser.addini(
+            "schola_cpp_coverage_cobertura",
+            type="bool",
+            default=False,
+            help="Generate Cobertura (XML) coverage report for Schola C++ tests.",
+        )
+    except ValueError:
+        pass
+
+    try:
+        parser.addoption(
+            "--unreal-timeout",
+            action="store",
+            default=None,
+            type=int,
+            metavar="SECONDS",
+            help="Global timeout in seconds for all Unreal test batches (overrides unreal_timeout ini).",
+        )
+    except ValueError:
+        pass
+
+    try:
+        parser.addini(
+            "unreal_timeout",
+            help="Global timeout in seconds for all Unreal test batches",
+            default="240",
+        )
+    except ValueError:
+        pass
+
 @pytest.fixture(scope="session")
 def unreal_path(request) -> pathlib.Path:
     return get_engine_path_from_config(request.config)
 
+def is_cpp_coverage_html_enabled(config) -> bool:
+    coverage_option = config.getoption("--schola-cpp-coverage-html")
+    if coverage_option is not None:
+        return coverage_option
+    return config.getini("schola_cpp_coverage_html")
+
+def is_cpp_coverage_cobertura_enabled(config) -> bool:
+    coverage_option = config.getoption("--schola-cpp-coverage-cobertura")
+    if coverage_option is not None:
+        return coverage_option
+    return config.getini("schola_cpp_coverage_cobertura")
+
+def is_cpp_coverage_enabled(config) -> bool:
+    return is_cpp_coverage_html_enabled(config) or is_cpp_coverage_cobertura_enabled(config)
 
 @pytest.fixture(scope="session")
 def unreal_report_dir(tmp_path_factory) -> pathlib.Path:
     """Create a session-scoped temporary directory for Unreal test reports."""
     report_dir = tmp_path_factory.mktemp("unreal_test_reports")
     return report_dir
+
+@pytest.fixture(scope="session")
+def unreal_command_line_file_dir(tmp_path_factory) -> pathlib.Path:
+    """Create a session-scoped temporary directory for the Unreal Command Line Args written to a file."""
+    command_line_file_dir = tmp_path_factory.mktemp("unreal_command_line_args")
+    return command_line_file_dir
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -259,89 +300,6 @@ def pytest_sessionstart(session):
     session.config._unreal_report_dir = report_dir
 
 
-class UnrealTestFile(pytest.File):
-
-    def collect(self):
-        # Skip C++ test collection on Linux
-        if sys.platform != "win32":
-            return
-            
-        test_details = []
-        
-        with open(self.path, "r", encoding="utf-8", errors="ignore") as f:
-            for i,line in enumerate(f.readlines()):
-                found_tests = re.findall(AUTOMATION_TEST_PATTERN, line)
-                # If we found any tests, add them to the list
-                if len(found_tests) > 0:
-                    test_details += zip(found_tests, [i] * len(found_tests))
-
-        for test_path, line_number in test_details:
-            name = test_path.split(".")[-1] # Use the last part of the full path
-            yield UnrealTestItem.from_parent(self, name=name, test_path=test_path, cpp_file=self.path, line_number=line_number)
-
-
-class UnrealTestItem(pytest.Item):
-
-    def __init__(self, name:str, test_path:str, cpp_file:pathlib.Path=None, line_number:int=0, **kwargs):
-        name = name.strip()
-        super().__init__(name=name,**kwargs)
-        self.unreal_result = None  # Will be populated by pytest_runtestloop
-        self.cpp_file = cpp_file
-        self.lineno = line_number 
-        self.test_path = test_path
-
-    @property
-    def sanitized_test_path(self) -> str:
-        return self.test_path.strip()
-
-    def runtest(self):
-        if self.unreal_result is None:
-            pytest.skip(
-                "Unreal Engine did not execute this test. "
-                "Verify --engine-path, --test-hierarchy-path, and any test filters."
-            )
-
-        else:
-            self._handle_test_outcome(self.unreal_result)
-
-    # Handles unreal test results depending on success or failure of test execution
-    def _handle_test_outcome(self, result: UnrealTestResult):
-        if result.skipped:
-            pytest.skip("Test not executed in this batch")
-        elif result.passed:
-            pass
-        elif result.failed:
-            # Format error messages from Unreal entries
-            message_parts = [f"Test failed with {result.num_errors} errors and {result.num_warnings} warnings"]
-            
-            # Add error details
-            for entry in result.errors:
-                message_parts.append(f"\n  Error: {entry.message}")
-                if entry.filename and entry.line_number:
-                    message_parts.append(f"\n    at {entry.filename}:{entry.line_number}")
-            
-            # Add warning details
-            for entry in result.warnings:
-                message_parts.append(f"\n  Warning: {entry.message}")
-                if entry.filename and entry.line_number:
-                    message_parts.append(f"\n    at {entry.filename}:{entry.line_number}")
-            
-            message = "".join(message_parts)
-            raise UnrealTestException(message)
-
-    def repr_failure(self, excinfo):
-        if isinstance(excinfo.value, UnrealTestException):
-            return excinfo.value.args[0]
-        return super().repr_failure(excinfo)
-
-    def reportinfo(self):
-        if self.cpp_file:
-            return self.cpp_file, self.lineno, f"usecase: {self.name}"
-        return self.fspath, 0, f"usecase: {self.name}"
-
-# Use this to have custom exceptions
-class UnrealTestException(Exception):
-    pass
 
 def is_cpp_test_file(file_path: pathlib.Path) -> bool:
     if file_path.suffix.lower() not in CPP_EXTENSIONS:
@@ -370,82 +328,118 @@ def pytest_ignore_collect(collection_path: pathlib.Path, config):
 
 class UnrealTestRunner:
 
-    def __init__(self, session, unreal_items: List[UnrealTestItem], report_dir: pathlib.Path):
+    def __init__(self, session, unreal_items: List[UnrealTestItem], report_dir: pathlib.Path, command_line_file_dir: pathlib.Path):
         self.session = session
         self.unreal_items = unreal_items
         self.unreal_path = get_engine_path_from_config(session.config)
         self.should_build = get_build_unreal_from_config(session.config)
+        self.generate_cpp_coverage_report = is_cpp_coverage_enabled(session.config)
         self.report_dir = report_dir
+        self.command_line_file_dir = command_line_file_dir
 
-    def mark_all_unreal_tests_failed(self, msg:str):
-        for item in self.unreal_items:
-            item.unreal_result = UnrealTestResult(
-                name=item.name,
-                test_path=item.test_path,
-                outcome="failed",
-                duration=0.0,
-                errors=[UnrealTestEvent.make_from_item(item, msg)],
-                warnings=[]
-            )
-
-    def _build_and_run_unreal_tests(self, report_dir: pathlib.Path, editor_path: pathlib.Path) -> bool:
-        tests_to_run = "+".join((item.test_path for item in self.unreal_items))
-        # handle running from the project directory or the Schola directory
-        uproject_path = get_uproject_file(self.session.config.rootpath) or get_uproject_file(self.session.config.rootpath.parent.parent)
+    def run_tests(self) -> bool:
+        # Setup the report directory
+        
+        editor_path = get_editor_executable_path(self.unreal_path)
+        max_tests_per_batch = 100
+        batches_list = list(batched(self.unreal_items, max_tests_per_batch))
+        # handle if we are in a few common subdirectories of the project/using common pytest.ini file locations
+        uproject_path = (get_uproject_file(self.session.config.rootpath)
+        or get_uproject_file(self.session.config.rootpath.parent.parent)
+        or get_uproject_file(self.session.config.inipath.parent)
+        or get_uproject_file(self.session.config.inipath.parent.parent.parent))
+        
         if not uproject_path:
-            print("Error Building Unreal Project: No .uproject file found in directory")
+            logger.error(
+                "Error Building Unreal Project: No .uproject file found in directory"
+            )
+            unreal_test_batches = [
+                UnrealTestBatch(batch, self.report_dir, i, self.command_line_file_dir)
+                for i, batch in enumerate(batches_list)
+            ]
+            for test_batch in unreal_test_batches:
+                test_batch.mark_all_unreal_tests_failed("Unreal Engine failed to build and run tests")
             return False
-        # Build the project if requested
+
+        # Try and generate the OpenCppCoverage runtime if we are generating a coverage report
+        opencpp: Optional[OpenCppCoverageRuntime] = None
+        if self.generate_cpp_coverage_report:
+            occ_exe = find_opencppcoverage_exe()
+            if not occ_exe:
+                logger.warning(
+                    "Schola C++ coverage is enabled but OpenCppCoverage was not found on PATH "
+                    "(set %s to its executable). Skipping C++ code coverage; Unreal tests will run without OpenCppCoverage.",
+                    OPENCPPCOVERAGE_ENV,
+                )
+            else:
+                plugin_root = resolve_schola_plugin_root(uproject_path, self.unreal_items[0].cpp_file)
+                if not plugin_root:
+                    logger.warning(
+                        "Could not locate Schola.uplugin for this project; skipping OpenCppCoverage.",
+                    )
+                else:
+                    opencpp = OpenCppCoverageRuntime(
+                        occ_exe=occ_exe,
+                        plugin_root=plugin_root,
+                        engine_path=self.unreal_path,
+                    )
+        # if opencpp is None, we weren't able to load the OpenCppCoverage runtime, 
+        # so we will just run the tests without coverage
+
+        if opencpp is not None:
+            unreal_test_batches = [
+                UnrealCoverageTestBatch(
+                    batch, self.report_dir, i, self.command_line_file_dir, opencpp=opencpp
+                )
+                for i, batch in enumerate(batches_list)
+            ]
+        else:
+            unreal_test_batches = [
+                UnrealTestBatch(batch, self.report_dir, i, self.command_line_file_dir)
+                for i, batch in enumerate(batches_list)
+            ]
+
         if self.should_build:
+            set_measure_cpp_coverage_env(self.generate_cpp_coverage_report)
             try:
                 self._build_unreal_project(uproject_path)
+                set_measure_cpp_coverage_env(False)
             except Exception as e:
-                print(f"Error building Unreal project: {e}")
+                set_measure_cpp_coverage_env(False)
+                logger.error("Error building Unreal project: %s", e)
+                for test_batch in unreal_test_batches: 
+                    test_batch.mark_all_unreal_tests_failed("Unreal Engine failed to build and run tests")
                 return False
+        
         try:
             run_unreal_tests(
                 editor_path=editor_path,
                 uproject_path=uproject_path,
-                report_path=report_dir,
-                tests_to_run=tests_to_run,
+                unreal_test_batches=unreal_test_batches,
+                global_timeout=get_unreal_timeout_from_config(self.session.config),
             )
         except Exception as e:
-            print(f"Error running Unreal tests: {e}")
+            logger.error("Error running Unreal tests: %s", e)
+            for test_batch in unreal_test_batches: 
+                test_batch.mark_all_unreal_tests_failed("Error Running Tests")
             return False
-        
+
+        if opencpp is not None:
+
+            merge_opencpp_batches(
+                opencpp,
+                unreal_test_batches, # type: ignore
+                self.report_dir,
+                export_html=is_cpp_coverage_html_enabled(self.session.config),
+                export_cobertura=is_cpp_coverage_cobertura_enabled(self.session.config),
+            )
+
+        for test_batch in unreal_test_batches:
+            test_batch.load_test_results()
+
         return True
 
-    def run_batch_tests(self) -> bool:
-        # Setup the report directory
-        
-        editor_path = get_editor_executable_path(self.unreal_path)
-        success = self._build_and_run_unreal_tests(self.report_dir, editor_path)
-        if not success:
-            self.mark_all_unreal_tests_failed("Unreal Engine failed to build and run tests")
-            return False
-        
-        try:
-            results = load_unreal_test_results(self.report_dir)
-        except Exception as e:
-            print(f"Error loading Unreal test results: {e}")
-            self.mark_all_unreal_tests_failed("Unreal Engine failed to load test results")
-            return False
-
-        for item in self.unreal_items:
-            if item.sanitized_test_path in results:
-                item.unreal_result = results[item.sanitized_test_path]
-            else:
-                # Mark the test as failed if it is not in the results
-                item.unreal_result = UnrealTestResult(
-                    name=item.name,
-                    outcome="failed",
-                    duration=0.0,
-                    errors=[UnrealTestEvent(message="Test not found in Unreal Engine results", filename=item.cpp_file, line_number=item.lineno, timestamp="")],
-                    warnings=[]
-                )
-        return True
-
-    def _build_unreal_project(self, uproject_path: pathlib.Path) -> Tuple[bool, str]:
+    def _build_unreal_project(self, uproject_path: pathlib.Path):
         """Build the Unreal project before running tests."""
         project_folder = uproject_path.parent
         
@@ -468,29 +462,32 @@ class UnrealTestRunner:
             raise Exception("Could not find Unreal Build Tool (UBT) path")
         
         # Setup build directory
-        build_dir = project_folder / "Build" / "Staged"
-        build_dir.mkdir(parents=True, exist_ok=True)
+        #build_dir = project_folder / "Build" / "Staged"
+        #build_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"\nBuilding Unreal project: {uproject_path}")
-        print(f"Using UBT at: {ubt_path}")
-        print(f"Build Directory: {build_dir}")
+        logger.info("Building Unreal project: %s", uproject_path)
+        logger.info("Using UBT at: %s", ubt_path)
         
-        result = build_executable(
-            project_file=str(uproject_path),
-            build_dir=str(build_dir),
-            ubt_path=str(ubt_path),
+        command = UBTCommand(
+            ubt_path=ubt_path,
+            project_file=uproject_path,
             should_package=False,
-            should_cook=True,
-            force_monolithic=False,
+            should_cook=False, # No need to cook content since tests should not have visibility on content
+            force_monolithic=False, # Tests run from editor build so no need for monolithic build
+            all_maps=False, # No need to cook any maps since tests should not have visibility on content
+            should_clean=False, # No need to clean since we are not building a new project
         )
-        print("="*10 + " Unreal Build Output " + "="*10)
-        print(result.stdout.decode('utf-8', errors='ignore'))
-        print("="*10 + " End of Unreal Build Output " + "="*10)
+        
+        result = command.run()
+
+        logger.info("=" * 10 + " Unreal Build Output " + "=" * 10)
+        logger.info(result.stdout.decode("utf-8", errors="ignore"))
+        logger.info("=" * 10 + " End of Unreal Build Output " + "=" * 10)
         if result.returncode != 0:
             if result.stderr:
-                print("="*10 + " Unreal Build Error " + "="*10)
-                print(result.stderr.decode('utf-8', errors='ignore'))
-                print("="*10 + " Unreal Build Error " + "="*10)
+                logger.error("=" * 10 + " Unreal Build Error " + "=" * 10)
+                logger.error(result.stderr.decode("utf-8", errors="ignore"))
+                logger.error("=" * 10 + " Unreal Build Error " + "=" * 10)
             raise Exception(f"Unreal build failed with return code {result.returncode}")
              
 @pytest.hookimpl(tryfirst=True)
@@ -505,15 +502,20 @@ def pytest_runtestloop(session):
 
     unreal_items = [item for item in session.items if isinstance(item, UnrealTestItem)]
 
-    # Run Unreal tests in batch if we have any (only on Windows)
+    # Run Unreal tests in batch if we have any (only on Windows, since linux can hang)
     if unreal_items and sys.platform == "win32":
         # Ensure report directory exists (create if pytest_sessionstart wasn't called)
         if not hasattr(session.config, '_unreal_report_dir'):
             tmp_path_factory = session.config._tmp_path_factory
             session.config._unreal_report_dir = tmp_path_factory.mktemp("unreal_test_reports")
+        if not hasattr(session.config, '_unreal_command_line_file_dir'):
+            tmp_path_factory = session.config._tmp_path_factory
+            session.config._unreal_command_line_file_dir = tmp_path_factory.mktemp("unreal_command_line_args")
         report_dir = session.config._unreal_report_dir
-        runner = UnrealTestRunner(session, unreal_items, report_dir)
-        runner.run_batch_tests()
+        command_line_file_dir = session.config._unreal_command_line_file_dir
+
+        runner = UnrealTestRunner(session, unreal_items, report_dir, command_line_file_dir)
+        runner.run_tests()
     
     # Run all tests (including the now-populated Unreal tests)
     _run_all_tests(session)
@@ -530,3 +532,8 @@ def _run_all_tests(session):
             raise session.Failed(session.shouldfail)
         if session.shouldstop:
             raise session.Interrupted(session.shouldstop)
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_sessionfinish(session, exitstatus):
+    set_measure_cpp_coverage_env(False)

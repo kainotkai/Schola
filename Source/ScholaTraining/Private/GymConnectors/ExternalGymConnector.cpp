@@ -10,7 +10,8 @@ UExternalGymConnector::UExternalGymConnector()
 
 FTrainingStateUpdate* UExternalGymConnector::ResolveEnvironmentStateUpdate()
 {
-	UE_LOG(LogScholaTraining, Verbose, TEXT("Resolving State Update"))
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaTraining: ExternalGymConnector Resolve Environment State Update");
+	UE_LOGFMT(LogScholaTraining, Verbose, "UExternalGymConnector::ResolveEnvironmentStateUpdate(): Resolving State Update");
 	TFuture<FTrainingStateUpdate*> UpdateFuture = this->RequestStateUpdate();
 	if(this->ExternalSettings.bUseTimeout)
 	{
@@ -20,7 +21,7 @@ FTrainingStateUpdate* UExternalGymConnector::ResolveEnvironmentStateUpdate()
 		}
 		else
 		{
-			UE_LOG(LogScholaTraining, Warning, TEXT("Gym Connector Timed out. Marking as errored"));
+			UE_LOGFMT(LogScholaTraining, Warning, "UExternalGymConnector::ResolveEnvironmentStateUpdate(): Gym Connector timed out. Marking as errored");
 			this->Status = EConnectorStatus::Error;
 			UpdateFuture.Reset();
 			return nullptr;

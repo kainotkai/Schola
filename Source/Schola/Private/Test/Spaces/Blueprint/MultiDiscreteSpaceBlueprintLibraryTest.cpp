@@ -19,10 +19,7 @@ bool FMultiDiscreteSpaceBlueprintLibrary_ArrayToMultiDiscreteSpace_BasicTest::Ru
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiDiscreteSpace& MultiDiscreteSpace = Result.Get<FMultiDiscreteSpace>();
-	TestEqual(TEXT("MultiDiscreteSpace.High.Num() == 3"), MultiDiscreteSpace.High.Num(), 3);
-	TestEqual(TEXT("MultiDiscreteSpace.High[0] == 2"), MultiDiscreteSpace.High[0], 2);
-	TestEqual(TEXT("MultiDiscreteSpace.High[1] == 3"), MultiDiscreteSpace.High[1], 3);
-	TestEqual(TEXT("MultiDiscreteSpace.High[2] == 4"), MultiDiscreteSpace.High[2], 4);
+	TestEqual(TEXT("MultiDiscreteSpace.High"), MultiDiscreteSpace.High, High);
 
     return true;
 }
@@ -54,8 +51,7 @@ bool FMultiDiscreteSpaceBlueprintLibrary_ArrayToMultiDiscreteSpace_SingleTest::R
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiDiscreteSpace& MultiDiscreteSpace = Result.Get<FMultiDiscreteSpace>();
-    TestEqual(TEXT("MultiDiscreteSpace.High.Num() == 1"), MultiDiscreteSpace.High.Num(), 1);
-    TestEqual(TEXT("MultiDiscreteSpace.High[0] == 10"), MultiDiscreteSpace.High[0], 10);
+    TestEqual(TEXT("MultiDiscreteSpace.High"), MultiDiscreteSpace.High, High);
 
     return true;
 }
@@ -71,8 +67,7 @@ bool FMultiDiscreteSpaceBlueprintLibrary_ArrayToMultiDiscreteSpace_LargeTest::Ru
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiDiscreteSpace& MultiDiscreteSpace = Result.Get<FMultiDiscreteSpace>();
-	TestEqual(TEXT("MultiDiscreteSpace.High.Num() == 8"), MultiDiscreteSpace.High.Num(), 8);
-    TestEqual(TEXT("MultiDiscreteSpace.High[7] == 40"), MultiDiscreteSpace.High[7], 40);
+	TestEqual(TEXT("MultiDiscreteSpace.High"), MultiDiscreteSpace.High, High);
 
     return true;
 }
@@ -89,10 +84,7 @@ bool FMultiDiscreteSpaceBlueprintLibrary_MultiDiscreteSpaceToArray_BasicTest::Ru
 
     TArray<int32> Result = UMultiDiscreteSpaceBlueprintLibrary::MultiDiscreteSpaceToArray(Space);
 
-    TestEqual(TEXT("Result.Num() == 3"), Result.Num(), 3);
-    TestEqual(TEXT("Result[0] == 5"), Result[0], 5);
-    TestEqual(TEXT("Result[1] == 10"), Result[1], 10);
-    TestEqual(TEXT("Result[2] == 15"), Result[2], 15);
+    TestEqual(TEXT("Result"), Result, TArray<int32>({5, 10, 15}));
 
     return true;
 }
@@ -106,11 +98,7 @@ bool FMultiDiscreteSpaceBlueprintLibrary_MultiDiscreteSpaceToArray_RoundTripTest
     TInstancedStruct<FMultiDiscreteSpace> Space = UMultiDiscreteSpaceBlueprintLibrary::ArrayToMultiDiscreteSpace(OriginalArray);
     TArray<int32> Result = UMultiDiscreteSpaceBlueprintLibrary::MultiDiscreteSpaceToArray(Space);
 
-    TestEqual(TEXT("Round trip array length"), Result.Num(), OriginalArray.Num());
-    for (int32 i = 0; i < OriginalArray.Num(); i++)
-    {
-        TestEqual(FString::Printf(TEXT("Round trip array[%d]"), i), Result[i], OriginalArray[i]);
-    }
+    TestEqual(TEXT("Round trip array"), Result, OriginalArray);
 
     return true;
 }

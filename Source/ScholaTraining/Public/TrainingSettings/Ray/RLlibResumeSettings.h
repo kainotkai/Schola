@@ -23,6 +23,7 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bLoadModel", DisplayName = "Resume From Policy Saved to:"), Category = "Resume Settings")
 	FFilePath ModelPath;
 
+	/** Appends resume / checkpoint arguments for RLlib training scripts. */
 	void GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const;
 
 	virtual ~FRLlibResumeSettings();

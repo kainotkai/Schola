@@ -25,7 +25,12 @@ public:
 	 * @param[in] Response The message to send to the client
 	 */
 	virtual void Respond(Out* Response) = 0;
-	
+
+	/**
+	 * @brief Serialize an Unreal value to protobuf and send it as the exchange response.
+	 * @tparam UnrealType Unreal struct type supported by ProtobufSerializer::ToProto. Must serialize to type Out.
+	 * @param[in] InUnrealObject Value to convert and pass to Respond(Out*).
+	 */
 	template<typename UnrealType>
 	void Respond(const UnrealType& InUnrealObject)
 	{

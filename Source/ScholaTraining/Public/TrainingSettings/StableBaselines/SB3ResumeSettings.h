@@ -39,6 +39,11 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bLoadVecNormalize", FilePathFilter = "pkl", DisplayName = "Load VecNormalize Parameters Saved to:"), Category = "Resume Settings")
 	FFilePath VecNormalizePath;
 
+	/** When resuming, reset the internal timestep counter to 0 (passes --reset-timestep to the script). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Resume Settings")
+	bool bResetTimestep = false;
+
+	/** Appends resume-related arguments for Stable Baselines 3 training scripts. */
 	void GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) const;
 
 	virtual ~FSB3ResumeSettings();

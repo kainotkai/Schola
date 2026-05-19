@@ -20,17 +20,17 @@ class ImitationConnectorServiceStub(object):
                 '/Schola.ImitationConnectorService/RequestState',
                 request_serializer=ImitationConnector__pb2.ImitationStateRequest.SerializeToString,
                 response_deserializer=ImitationState__pb2.ImitationState.FromString,
-                )
+                _registered_method=True)
         self.RequestTrainingDefinition = channel.unary_unary(
                 '/Schola.ImitationConnectorService/RequestTrainingDefinition',
                 request_serializer=ImitationConnector__pb2.ImitationDefinitionRequest.SerializeToString,
                 response_deserializer=Definitions__pb2.TrainingDefinition.FromString,
-                )
+                _registered_method=True)
         self.StartImitationConnector = channel.unary_unary(
                 '/Schola.ImitationConnectorService/StartImitationConnector',
                 request_serializer=ImitationConnector__pb2.ImitationConnectorStartRequest.SerializeToString,
                 response_deserializer=ImitationConnector__pb2.ImitationConnectorStartResponse.FromString,
-                )
+                _registered_method=True)
 
 
 class ImitationConnectorServiceServicer(object):
@@ -76,6 +76,7 @@ def add_ImitationConnectorServiceServicer_to_server(servicer, server):
     generic_handler = grpc.method_handlers_generic_handler(
             'Schola.ImitationConnectorService', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('Schola.ImitationConnectorService', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
@@ -93,11 +94,21 @@ class ImitationConnectorService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.ImitationConnectorService/RequestState',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Schola.ImitationConnectorService/RequestState',
             ImitationConnector__pb2.ImitationStateRequest.SerializeToString,
             ImitationState__pb2.ImitationState.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def RequestTrainingDefinition(request,
@@ -110,11 +121,21 @@ class ImitationConnectorService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.ImitationConnectorService/RequestTrainingDefinition',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Schola.ImitationConnectorService/RequestTrainingDefinition',
             ImitationConnector__pb2.ImitationDefinitionRequest.SerializeToString,
             Definitions__pb2.TrainingDefinition.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def StartImitationConnector(request,
@@ -127,8 +148,18 @@ class ImitationConnectorService(object):
             wait_for_ready=None,
             timeout=None,
             metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/Schola.ImitationConnectorService/StartImitationConnector',
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/Schola.ImitationConnectorService/StartImitationConnector',
             ImitationConnector__pb2.ImitationConnectorStartRequest.SerializeToString,
             ImitationConnector__pb2.ImitationConnectorStartResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

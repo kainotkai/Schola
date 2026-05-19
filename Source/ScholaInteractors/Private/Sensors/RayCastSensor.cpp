@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
 #include "CollisionQueryParams.h"
+#include "Async/ParallelFor.h"
 #include "Common/LogSchola.h"
 
 void URayCastSensor::GetObservationSpace_Implementation(FInstancedStruct& OutObservationSpace) const
@@ -28,7 +29,7 @@ void URayCastSensor::GetObservationSpace_Implementation(FInstancedStruct& OutObs
 
 void URayCastSensor::GenerateRayEndpoints(int32 InNumRays, float InRayDegrees, FVector InBaseEnd, FVector InStart, FTransform InTransform, FVector InEndOffset, TArray<FVector>& OutRayEndpoints)
 {
-
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaInteractors: RayCastSensor GenerateRayEndpoints");
 	OutRayEndpoints.Init(FVector(), InNumRays);
 
 	float Delta;
@@ -69,115 +70,93 @@ void URayCastSensor::AppendEmptyTags(FBoxPoint& OutObservations)
 	}
 }
 
-void URayCastSensor::HandleRayMiss(FBoxPoint& OutObservations, const FVector& Start, const FVector& RayEndpoint)
-{
-	AppendEmptyTags(OutObservations);
-	// Tack on the did I hit and hit distance variables
-	OutObservations.Values.Emplace(0.0);
-	OutObservations.Values.Emplace(0.0);
-	if (bDrawDebugLines)
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE_STR("Schola: RaySensor Debug Lines");
-		DrawDebugLine(
-			GetWorld(),
-			Start,
-			RayEndpoint,
-			DebugMissColor,
-			false,
-			0,
-			0,
-			kLineGirth);
-	}
-}
-
-void URayCastSensor::HandleRayHit(const FHitResult& InHitResult, FBoxPoint& OutObservations, const FVector& InStart)
+void URayCastSensor::HandleRayHit(const UWorld* World, const TArray<FName>& TrackedTags, const FHitResult& InHitResult, TArrayView<float>& OutObservations, const FVector& InStart)
 {
 	// A Precondition is that the HitResult Suceeded, thus Hit.GetActor is always valid
-
 	const AActor* HitObject = InHitResult.GetActor();
 
 	const TArray<FName>& AttachedTags = HitObject->Tags;
 
-	// Fast Path where we just slap a bunch of zeroes and call it a day
-	if (AttachedTags.Num() == 0)
+	for (int TagIndex = 0; TagIndex < TrackedTags.Num(); TagIndex++)
 	{
-		AppendEmptyTags(OutObservations);
-	}
-	else
-	{
-		for (const FName& TrackedTag : TrackedTags)
+		if (AttachedTags.Contains(TrackedTags[TagIndex]))
 		{
-			bool bIsTrackedTagFound = false;
-			for (int i = 0; i < AttachedTags.Num() && !bIsTrackedTagFound; i++)
-			{
-				bIsTrackedTagFound = AttachedTags[i] == TrackedTag;
-			}
-
-			OutObservations.Values.Emplace(static_cast<float>(bIsTrackedTagFound));
+			OutObservations[TagIndex] = 1.0;
 		}
 	}
-
-	if (bDrawDebugLines)
-	{
-		TRACE_CPUPROFILER_EVENT_SCOPE_STR("Schola: RaySensor Debug Lines");
-		DrawDebugLine(
-			GetWorld(),
-			InStart,
-			InHitResult.ImpactPoint,
-			DebugHitColor,
-			false,
-			0,
-			0,
-			kLineGirth);
-
-		DrawDebugSphere(
-			this->GetWorld(),
-			InHitResult.ImpactPoint - InHitResult.ImpactNormal * kSphereRadius,
-			kSphereRadius,
-			12,
-			DebugHitColor);
-	}
-
-	// At this point we have a hit and it has some tags
-	// Loop through each tracked tag and check if we find some
-	// Always adds 0/1 to the OutObservations for each tag
-	OutObservations.Values.Emplace(1.0f);
-	OutObservations.Values.Emplace(InHitResult.Time);
+	OutObservations[TrackedTags.Num()] = 1.0f;
+	OutObservations[TrackedTags.Num() + 1] = InHitResult.Time;
 }
 
 void URayCastSensor::CollectObservations_Implementation(FInstancedStruct& OutObservations)
 {
-	TRACE_CPUPROFILER_EVENT_SCOPE_STR("Schola: RaySensor Observation Collection");
+	TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaInteractors: RayCastSensor CollectObservations");
     OutObservations.InitializeAs<FBoxPoint>();
 	FBoxPoint& BoxPoint = OutObservations.GetMutable<FBoxPoint>();
 
     
     TArray<FVector> Endpoints;
-	GenerateRayEndpoints(NumRays, RayDegrees, this->GetForwardVector() * RayLength, this->GetComponentLocation(), this->GetRelativeTransform(), RayEndOffset, Endpoints);
+	FVector			StartLocation = this->GetComponentLocation();
+	GenerateRayEndpoints(NumRays, RayDegrees, this->GetForwardVector() * RayLength, StartLocation, this->GetRelativeTransform(), RayEndOffset, Endpoints);
 
 	FCollisionQueryParams TraceParams = FCollisionQueryParams(FName(*FString("RayCastSensor")), this->bTraceComplex, this->GetOwner());
-        
-        
-	for (auto RayEndpoint : Endpoints)
-	{
+	int					  RaySliceSize = TrackedTags.Num() + 2; // +2 for hit/miss and distance
+	BoxPoint.Values.Init(0,NumRays * (RaySliceSize));
+	TArray<float>& ObservationArray = BoxPoint.Values;
+	UWorld*		   World = this->GetWorld();
+	// This will try and balance the work across the workers as much as possible by making sure
+	// each has atleast MinParallelBatchSize rays to work on.
+	ParallelFor(TEXT("Parallel Raycast"), Endpoints.Num(), MinParallelBatchSize, [&Endpoints,
+		&ObservationArray,
+		RaySliceSize,
+		&TraceParams,
+		this](int32 RayIdx) {
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaInteractors: RayCastSensor BatchRayProcessing");
+	    // Last thread will operate on a truncated batch
+
+		int32			  StartIdx = RayIdx * RaySliceSize;
+		TArrayView<float> ObservationView(&ObservationArray[StartIdx], RaySliceSize);
+
 		FHitResult Hit;
-		bool	   bHasHit = GetWorld()->LineTraceSingleByChannel(
+		bool	   bHasHit = this->GetWorld()->LineTraceSingleByChannel(
 				Hit,
 				this->GetComponentLocation(),
-				RayEndpoint,
+				Endpoints[RayIdx],
 				this->CollisionChannel,
 				TraceParams,
 				FCollisionResponseParams::DefaultResponseParam);
 
 		if (bHasHit)
 		{
-			HandleRayHit(Hit, BoxPoint, this->GetComponentLocation());
+			HandleRayHit(this->GetWorld(), this->TrackedTags, Hit, ObservationView, this->GetComponentLocation());
 		}
-		else
+
+		if (this->bDrawDebugLines)
 		{
-			HandleRayMiss(BoxPoint, this->GetComponentLocation(), RayEndpoint);
+			FColor&	 DebugLineColor = bHasHit ? this->DebugHitColor : this->DebugMissColor;
+			FVector& DebugLineEnd = bHasHit ? Hit.ImpactPoint : Endpoints[RayIdx];
+
+			DrawDebugLine(
+				this->GetWorld(),
+				this->GetComponentLocation(),
+				DebugLineEnd,
+				DebugLineColor,
+				false,
+				0,
+				0,
+				kLineGirth);
+			// draw the hit sphere
+			if (bHasHit)
+			{
+				DrawDebugSphere(
+					this->GetWorld(),
+					Hit.ImpactPoint - Hit.ImpactNormal * kSphereRadius,
+					kSphereRadius,
+					12,
+					DebugHitColor);
+			}
 		}
-	}
+	}, this->bEnableParallelTracing ? EParallelForFlags::None : EParallelForFlags::ForceSingleThread);
 }
 
 FString URayCastSensor::GenerateId() const

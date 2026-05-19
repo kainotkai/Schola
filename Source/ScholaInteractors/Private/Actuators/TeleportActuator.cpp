@@ -67,7 +67,7 @@ void UTeleportActuator::TakeAction(const FMultiDiscretePoint& ActionPoint)
     AActor* OwnerActor = GetOwner();
     if (!OwnerActor)
     {
-        UE_LOG(LogScholaInteractors, Warning, TEXT("TeleportComponentActuator %s: No Owner to teleport."), *GetName());
+        UE_LOGFMT(LogScholaInteractors, Warning, "UTeleportActuator::TakeAction(): No Owner to teleport - {0}", GetName());
         return;
     }
     const FVector Delta = ConvertActionToVector(ActionPoint);
@@ -80,7 +80,7 @@ void UTeleportActuator::TakeAction_Implementation(const FInstancedStruct& InActi
     const FMultiDiscretePoint* MD = InAction.GetPtr<FMultiDiscretePoint>();
     if (!MD)
     {
-        UE_LOG(LogScholaInteractors, Warning, TEXT("TeleportComponentActuator %s: InAction is not a MultiDiscretePoint."), *GetName());
+        UE_LOGFMT(LogScholaInteractors, Warning, "UTeleportActuator::TakeAction_Implementation(): InAction is not a MultiDiscretePoint - {0}", GetName());
         return;
     }
     TakeAction(*MD);

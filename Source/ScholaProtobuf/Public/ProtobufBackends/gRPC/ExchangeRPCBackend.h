@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Common/LogSchola.h"
 #include "CoreMinimal.h"
 #include "HAL/Runnable.h"
 #include "HAL/RunnableThread.h"
@@ -9,23 +10,38 @@
 #include "Containers/Queue.h"
 #include "./CallData.h"
 #include "./RPCBackend.h"
-#include <grpcpp/server.h>
 #include "ProtobufUtils/ProtobufSerializer.h"
 #include "ProtobufUtils/ProtobufDeserializer.h"
 #include "ProtobufBackends/ExchangeBackend.h"
 
 
+/**
+ * @brief CallData for bidirectional exchange RPCs; fulfills a future when a request is ready.
+ * @tparam ServiceType gRPC service type.
+ * @tparam RequestType Protobuf request type.
+ * @tparam ResponseType Protobuf response type.
+ */
 template <class ServiceType, typename RequestType, typename ResponseType>
 class TExchangeCallData : public TCallData<ServiceType, RequestType, ResponseType>
 {
 protected:
+	/** Promise completed when an incoming request is ready for Unreal to consume. */
 	TPromise<const RequestType*> RequestPromise;
+	/** Base CallData type for this RPC shape. */
 	using CallData = TCallData<ServiceType, RequestType, ResponseType>;
 
 public:
+	/** True once FulfillRequestPromise has run for the current exchange. */
 	bool bHasRequest = false;
+	/** True for the initial CallData that bootstraps the RPC stream. */
 	bool bIsFirst = false;
 
+	/**
+	 * @param[in] Service gRPC service instance.
+	 * @param[in] CQueue Completion queue for async steps.
+	 * @param[in] TargetRPC Service method pointer for this RPC.
+	 * @param[in] bIsFirst Whether this is the bootstrap CallData instance.
+	 */
 	TExchangeCallData(ServiceType* Service, ServerCompletionQueue* CQueue, CallData::AsyncAPIHandler TargetRPC, bool bIsFirst = false)
 		: CallData(Service, CQueue, TargetRPC, false, false), bIsFirst(bIsFirst)
 	{
@@ -68,6 +84,7 @@ public:
 
 		this->RequestPromise.EmplaceValue(new RequestType());
 	}
+	/** Resets the pending request future to a default-constructed request after a failure path. */
 	void Fail()
 	{
 		// We just die and then wait until we get vomitted onto the completion queue
@@ -86,6 +103,12 @@ public:
 // A debug int for tracking logs across Exchanges
 static int ExchangeID = 0;
 
+/**
+ * @brief Runnable worker for exchange-style RPC completion-queue processing.
+ * @tparam ServiceType gRPC service type.
+ * @tparam RequestType Protobuf request type.
+ * @tparam ResponseType Protobuf response type.
+ */
 template <class ServiceType, typename RequestType, typename ResponseType>
 class ExchangeRPCWorker : public FRunnable
 {
@@ -97,9 +120,13 @@ private:
 	int LocalID;
 
 public:
-	// The thread object this worker runs on
+	/** OS thread running Run() for exchange completion events. */
 	FRunnableThread* Thread = nullptr;
 
+	/**
+	 * @param[in] CQueue Completion queue to poll (owned by parent backend).
+	 * @param[in] ID Worker id for logging.
+	 */
 	ExchangeRPCWorker(ServerCompletionQueue* CQueue, int ID)
 	{
 		LocalID = ID;
@@ -131,12 +158,13 @@ public:
 		bool  ok = true;
 		while (true)
 		{
+			
 			bool Status = CQueue->Next(&tag, &ok);
 			// Gotta check this way because if the queue was empty we also get a nonsense tag
 			if (!Status)
 			{
 				// Queue drained so we can exit
-				UE_LOG(LogScholaCommunicator, Verbose, TEXT("Exchange Queue %d Drained and Shutdown"), LocalID);
+				UE_LOGFMT(LogScholaCommunicator, Verbose, "ExchangeRPCWorker::Run(): Exchange Queue {0} Drained and Shutdown", LocalID);
 				return -1;
 			}
 			else if (!ok)
@@ -148,28 +176,29 @@ public:
 				if (tag != nullptr)
 				{
 					
-					UE_LOG(LogScholaCommunicator, Verbose, TEXT("Bad Event in Exchange Queue %d, cleaning up the tag"), LocalID);
+					UE_LOGFMT(LogScholaCommunicator, Verbose, "ExchangeRPCWorker::Run(): Bad Event in Exchange Queue {0}, cleaning up the tag", LocalID);
 					_ExchCallData* CallData = static_cast<_ExchCallData*>(tag);
 					if (CallData->HasResponse())
 					{
-						UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("Bad Event was Message: %s"), *FString(CallData->GetRequest().DebugString().c_str()));
+						UE_LOGFMT(LogScholaCommunicator, VeryVerbose, "ExchangeRPCWorker::Run(): Bad Event was Message: {0}", FString(CallData->GetRequest().DebugString().c_str()));
 					}
 					CallData->CleanUp();
 				}
 				else
 				{
-					UE_LOG(LogScholaCommunicator, Warning, TEXT("Empty Event in Exchange Queue %d. How did you get here? The Queue should be empty in this case."), LocalID);
+					UE_LOGFMT(LogScholaCommunicator, Warning, "ExchangeRPCWorker::Run(): Empty Event in Exchange Queue {0}. How did you get here? The Queue should be empty in this case.", LocalID);
 				}
 			}
 			else
 			{
+				TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: ExchangeRPCWorker Processing CallData");
 				_ExchCallData* CallData = static_cast<_ExchCallData*>(tag);
 
 				if (CallData->IsReady())
 				{
 					if (CallData->HasResponse())
 					{
-						UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("Message in Exchange Queue %d,: %s"), LocalID, *FString(CallData->GetRequest().DebugString().c_str()));
+						UE_LOGFMT(LogScholaCommunicator, VeryVerbose, "ExchangeRPCWorker::Run(): Message in Exchange Queue {0}: {1}", LocalID, FString(CallData->GetRequest().DebugString().c_str()));
 					}
 					// fulfill the request promise but don't put it back on the queue
 					// Note we will never double fullfill because we don't get back on the queue until we are out of process state
@@ -189,7 +218,7 @@ public:
 	 */
 	void Start()
 	{
-		UE_LOG(LogScholaCommunicator, Verbose, TEXT("Starting Exchange Worker %d"), LocalID);
+		UE_LOGFMT(LogScholaCommunicator, Verbose, "ExchangeRPCWorker::Start(): Starting Exchange Worker {0}", LocalID);
 		Thread = FRunnableThread::Create(this, TEXT("ExchangeRPCWorker"), 0, TPri_Normal);
 	}
 
@@ -198,7 +227,7 @@ public:
 	 */
 	virtual void Stop()
 	{
-		UE_LOG(LogScholaCommunicator, Verbose, TEXT("Shutting Down Exchange Queue %d"), LocalID);
+		UE_LOGFMT(LogScholaCommunicator, Verbose, "ExchangeRPCWorker::Stop(): Shutting Down Exchange Queue {0}", LocalID);
 		CQueue->Shutdown();
 		// Wait for the CQueue to drain
 		if (Thread != nullptr)
@@ -216,6 +245,9 @@ public:
 	}
 };
 
+/**
+ * @brief gRPC exchange backend: async request/response pairing for bidirectional RPCs.
+ */
 template <class ServiceType, typename RequestType, typename ResponseType>
 class TExchangeRPCBackend : public TRPCBackend<ServiceType, RequestType, ResponseType>, public IExchangeBackend<RequestType, ResponseType>
 {
@@ -229,6 +261,11 @@ private:
 	using gRPCBackend = TRPCBackend<ServiceType, RequestType, ResponseType>;
 
 public:
+	/**
+	 * @param[in] TargetRPC Service method used for exchange RPCs.
+	 * @param[in] Service gRPC service instance.
+	 * @param[in] CQueue Completion queue shared with the server.
+	 */
 	TExchangeRPCBackend(gRPCBackend::AsyncRPCHandle TargetRPC, std::shared_ptr<ServiceType> Service, std::unique_ptr<ServerCompletionQueue> CQueue)
 		: gRPCBackend(TargetRPC, Service, std::move(CQueue))
 	{
@@ -238,13 +275,14 @@ public:
 
 	~TExchangeRPCBackend()
 	{
-		UE_LOG(LogScholaCommunicator, Warning, TEXT("Manually Deleting ExchangeRPC Backend %d"), LocalID);
+		UE_LOGFMT(LogScholaCommunicator, Verbose, "TExchangeRPCBackend::~TExchangeRPCBackend(): Manually Deleting ExchangeRPC Backend {0}", LocalID);
 		Shutdown();
 		delete this->Worker;
 	}
 
 	TFuture<const RequestType*> Receive() override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: ExchangeRPCBackend Receive");
 		int TempId = MsgID++;
 		// New CallData goes on a pending queue see: https://github.com/grpc/grpc/blob/v1.47.4/src/core/lib/surface/server.cc#L413
 		checkf(CurrExchange == nullptr, TEXT("Existing Exchange needs to be completed before a new exchange can be started"));
@@ -252,17 +290,18 @@ public:
 		CurrExchange = CallDataPtr;
 		CallDataPtr->Id = TempId;
 		CallDataPtr->Create();
-		UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("ExchangeRPcBackend %d: Started Exchange %d"), LocalID, CurrExchange->Id);
+		UE_LOGFMT(LogScholaCommunicator, VeryVerbose, "TExchangeRPCBackend::Receive(): Exchange {0}: Started Exchange {1}", LocalID, CurrExchange->Id);
 
 		return CurrExchange->GetRequestFuture();
 	}
 
 	void Respond(ResponseType* Response) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("Schola: ExchangeRPCBackend Respond");
 		assert(Service.Get() != nullptr);
 		assert(CQueue.Get() != nullptr);
 		checkf(CurrExchange != nullptr, TEXT("No Existing Exchange to Complete."));
-		UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("ExchangeRPcBackend %d: Completed Exchange %d"), LocalID, CurrExchange->Id);
+		UE_LOGFMT(LogScholaCommunicator, VeryVerbose, "TExchangeRPCBackend::Respond(): Exchange {0}: Completed Exchange {1}", LocalID, CurrExchange->Id);
 		CurrExchange->SetResponse(Response);
 		CurrExchange->Submit();
 		CurrExchange = nullptr;
@@ -270,6 +309,7 @@ public:
 
 	virtual void Initialize() {};
 
+	/** Starts the exchange completion-queue worker thread. */
 	virtual void Start()
 	{
 		Worker->Start();
@@ -290,7 +330,7 @@ public:
 		// Clean up any stale exchange state from previous connection
 		if (CurrExchange != nullptr)
 		{
-			UE_LOG(LogScholaCommunicator, Warning, TEXT("ExchangeRPCBackend %d: Completing stale exchange on reset"), LocalID);
+			UE_LOGFMT(LogScholaCommunicator, Verbose, "TExchangeRPCBackend::Reset(): Exchange {0}: Completing stale exchange on reset", LocalID);
 			// Properly complete the pending exchange to avoid orphaning the CallData
 			// This prevents the assertion failure when a new exchange is started
 			Respond(new ResponseType());

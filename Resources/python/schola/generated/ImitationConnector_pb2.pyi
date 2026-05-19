@@ -4,14 +4,15 @@ import schola.generated.Definitions_pb2 as _Definitions_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
-from typing import ClassVar as _ClassVar, Mapping as _Mapping, Optional as _Optional, Union as _Union
+from collections.abc import Mapping as _Mapping
+from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class ImitationConnectorStartRequest(_message.Message):
-    __slots__ = ["environments"]
+    __slots__ = ("environments",)
     class EnvironmentsEntry(_message.Message):
-        __slots__ = ["key", "value"]
+        __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
         VALUE_FIELD_NUMBER: _ClassVar[int]
         key: int
@@ -22,13 +23,13 @@ class ImitationConnectorStartRequest(_message.Message):
     def __init__(self, environments: _Optional[_Mapping[int, _StateUpdates_pb2.EnvironmentSettings]] = ...) -> None: ...
 
 class ImitationConnectorStartResponse(_message.Message):
-    __slots__ = []
-    def __init__(self) -> None: ...
-
-class ImitationDefinitionRequest(_message.Message):
-    __slots__ = []
+    __slots__ = ()
     def __init__(self) -> None: ...
 
 class ImitationStateRequest(_message.Message):
-    __slots__ = []
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ImitationDefinitionRequest(_message.Message):
+    __slots__ = ()
     def __init__(self) -> None: ...

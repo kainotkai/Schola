@@ -21,6 +21,11 @@ public class ScholaInteractors : ModuleRules
         // Use explicit or shared precompiled headers
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        if (System.Environment.GetEnvironmentVariable("SCHOLA_MEASURE_CPP_COVERAGE") == "1")
+        {
+            OptimizeCode = CodeOptimization.Never;
+        }
+
         // Public include paths - none needed beyond defaults
         PublicIncludePaths.AddRange(new string[] { });
 

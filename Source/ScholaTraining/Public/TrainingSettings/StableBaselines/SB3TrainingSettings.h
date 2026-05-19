@@ -62,6 +62,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Training Settings")
 	bool bDisplayProgressBar = true;
 
+	/** When true, skips post-training evaluation (passes --disable-eval to the script). Useful to avoid hanging when training with few steps and deterministic eval. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Training Settings")
+	bool bDisableEval = false;
+
 	/** The reinforcement learning algorithm to use (e.g., SAC, PPO). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Training Settings")
 	ESB3TrainingAlgorithm Algorithm = ESB3TrainingAlgorithm::PPO;

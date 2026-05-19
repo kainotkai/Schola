@@ -3,12 +3,14 @@
 """
 Utility Functions and Classes for managing environment and agent ids.
 """
+
 from functools import cached_property, singledispatchmethod
 from typing import List, Optional, Tuple, TypeVar, Dict, Iterable, Union
 
 K = TypeVar("K")
 V = TypeVar("V")
 T = TypeVar("T")
+AgentTypes = Union[Dict[int, Dict[str, str]], List[Dict[str, str]]]
 
 
 # A generic recursive dictionary type
@@ -50,6 +52,9 @@ class IdManager:
     ----------
     ids : List[List[int]]
         A nested list of lists of ids to manage, index in the list is first id, second id is stored in the second list.
+    agent_types : dict or list of dict, optional
+            Optional per-agent type metadata, either ``{env_id: {agent_id: type}}``
+            or a list aligned with ``ids`` indices.
 
     Attributes
     ----------
@@ -58,8 +63,66 @@ class IdManager:
 
     """
 
-    def __init__(self, ids: List[List[str]]):
+    def __init__(
+        self,
+        ids: List[List[str]],
+        agent_types: Optional[AgentTypes] = None,
+    ):
         self.ids = ids
+        self._agent_types = self._normalize_agent_types(agent_types or {})
+
+    def _get_agent_types_for_env(
+        self, agent_types: AgentTypes, env_id: int
+    ) -> Dict[str, str]:
+        """
+        Read one environment's agent types from either protocol metadata shape.
+        """
+        if isinstance(agent_types, list):
+            if env_id < len(agent_types):
+                return agent_types[env_id]
+            return {}
+        return agent_types.get(env_id, {})
+
+    def _normalize_agent_types(
+        self, agent_types: AgentTypes
+    ) -> Dict[int, Dict[str, str]]:
+        """
+        Normalize optional per-agent metadata to the managed environment/agent IDs.
+
+        Missing agent types are stored as empty strings, matching Schola's
+        "no grouping type" convention.
+        """
+        return {
+            env_id: {
+                agent_id: self._get_agent_types_for_env(agent_types, env_id).get(
+                    agent_id, ""
+                )
+                for agent_id in agent_ids
+            }
+            for env_id, agent_ids in enumerate(self.ids)
+        }
+
+    @property
+    def agent_types(self) -> Dict[int, Dict[str, str]]:
+        """
+        Nested mapping of environment IDs to agent IDs to optional agent types.
+        """
+        return {
+            env_id: dict(agent_types)
+            for env_id, agent_types in self._agent_types.items()
+        }
+
+    def agent_types_for_env(self, env_id: int) -> Dict[str, str]:
+        """
+        Get the agent type mapping for one managed environment.
+        """
+        return dict(self._agent_types.get(env_id, {}))
+
+    def get_agent_type(self, env_id: int, agent_id: str) -> str:
+        """
+        Get one agent's type, or an empty string when it has no type metadata.
+        """
+        return self._agent_types.get(env_id, {}).get(agent_id, "")
 
     def flatten_dict_of_dicts(
         self, nested_id_dict: Dict[int, Dict[str, T]], default: Optional[T] = None
@@ -85,7 +148,9 @@ class IdManager:
                 output_list[self.id_map[first_id][second_id]] = value
         return output_list
 
-    def flatten_list_of_dicts(self, nested_id_list: List[Dict[str,T]], default: Optional[T] = None):
+    def flatten_list_of_dicts(
+        self, nested_id_list: List[Dict[str, T]], default: Optional[T] = None
+    ):
         """
         Flatten a list of dictionaries with nested ids into a single list.
 
@@ -107,10 +172,10 @@ class IdManager:
             for second_id, value in nested_ids.items():
                 output_list[self.id_map[first_id][second_id]] = value
         return output_list
-    
+
     def nest_list_to_dict_of_dicts(
-        self, id_list: List[T], default: Optional[T] = None
-    ) -> Dict[int, Dict[int, T]]:
+        self, id_list: Iterable[T], default: Optional[T] = None
+    ) -> Dict[int, Dict[str, Optional[T]]]:
         """
         Nest a list of values, indexed by flattened id, into a dictionary of nested ids.
 
@@ -266,4 +331,12 @@ class IdManager:
 
     @property
     def num_envs(self) -> int:
+        """
+        Number of top-level environments (length of ``ids``).
+
+        Returns
+        -------
+        int
+            Count of environment slots managed by this instance.
+        """
         return len(self.ids)

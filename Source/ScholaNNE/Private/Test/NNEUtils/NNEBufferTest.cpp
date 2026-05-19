@@ -10,27 +10,30 @@
 // Minimal visitor for core behavior checks
 struct FTestBufferVisitor : public FNNEBufferVisitor
 {
-	const FNNEDiscreteBuffer* DiscreteRef = nullptr;
-	const FNNEMultiDiscreteBuffer*	 MultiDiscreteRef = nullptr;
-	const FNNEBoxBuffer* BoxRef = nullptr;
-	const FNNEMultiBinaryBuffer* BinaryRef = nullptr;
-	const FNNEDictBuffer* DictRef = nullptr;
-	TArray<float> CopiedData;
+	const FNNEDiscreteBuffer*	   DiscreteRef = nullptr;
+	const FNNEMultiDiscreteBuffer* MultiDiscreteRef = nullptr;
+	const FNNEBoxBuffer*		   BoxRef = nullptr;
+	const FNNEMultiBinaryBuffer*   BinaryRef = nullptr;
+	const FNNEDictBuffer*		   DictRef = nullptr;
+	TArray<bool>				   CopiedBoolData;
+	TArray<float>				   CopiedFloatData;
+	TArray<int64>				   CopiedIntData;
+	TArray<int64>				   CopiedMultiDiscreteData;
 
 	void operator()(const FNNEDiscreteBuffer& InBuffer) override
 	{
 		DiscreteRef = &InBuffer;
-		CopiedData = InBuffer.Buffer;
+		CopiedIntData = InBuffer.Buffer;
 	}
 	void operator()(const FNNEBoxBuffer& InBuffer) override
 	{
 		BoxRef = &InBuffer;
-		CopiedData = InBuffer.Buffer;
+		CopiedFloatData = InBuffer.Buffer;
 	}
 	void operator()(const FNNEMultiBinaryBuffer& InBuffer) override
 	{
 		BinaryRef = &InBuffer;
-		CopiedData = InBuffer.Buffer;
+		CopiedBoolData = InBuffer.Buffer;
 	}
 	void operator()(const FNNEDictBuffer& InBuffer) override
 	{
@@ -40,7 +43,7 @@ struct FTestBufferVisitor : public FNNEBufferVisitor
 	void operator()(const FNNEMultiDiscreteBuffer& InBuffer) override
 	{
 		MultiDiscreteRef = &InBuffer;
-		CopiedData = InBuffer.Buffer;
+		CopiedMultiDiscreteData = InBuffer.Buffer;
 	}
 };
 
@@ -49,7 +52,7 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNNEStateBufferBasicsTest, "Schola.Policies.NNE
 bool FNNEStateBufferBasicsTest::RunTest(const FString& Parameters)
 {
 	// 3 sequences, dim=2
-	FNNEStateBuffer StateBuffer(3, 2);
+	FNNEStateBuffer StateBuffer({ -1, -1, 2 }, 3);
 
 	// Fill with rows: [1,2] [3,4] [5,6]
 	StateBuffer.StateBuffer[0] = 1.0f;
@@ -85,32 +88,26 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNNEDiscreteBufferBasicsTest, "Schola.Policies.
 
 bool FNNEDiscreteBufferBasicsTest::RunTest(const FString& Parameters)
 {
-	FNNEDiscreteBuffer Buffer(7);
-	Buffer.Buffer[0] = 0.1f;
-	Buffer.Buffer[3] = 0.8f;
-	Buffer.Buffer[6] = 0.2f;
-
-	// Visitor
+	FNNEDiscreteBuffer Buffer;
+	Buffer.Buffer[0] = 2;
 	FTestBufferVisitor Visitor;
 	Buffer.Accept(Visitor);
 	TestTrue(TEXT("Visitor captured DiscreteBuffer"), Visitor.DiscreteRef != nullptr);
-	TestEqual(TEXT("Visitor copied size"), Visitor.CopiedData.Num(), 7);
-	TestEqualExactFloat(TEXT("Visitor copy matches [0]"), Visitor.CopiedData[0], 0.1f);
-	TestEqualExactFloat(TEXT("Visitor copy matches [3]"), Visitor.CopiedData[3], 0.8f);
-	TestEqualExactFloat(TEXT("Visitor copy matches [6]"), Visitor.CopiedData[6], 0.2f);
+	TestEqual(TEXT("Visitor copied size"), Visitor.CopiedIntData.Num(), 1);
+	TestEqual(TEXT("Visitor copy matches [0]"), Visitor.CopiedIntData[0], (int64)2);
 
 	// Binding
 	UE::NNE::FTensorBindingCPU Binding = Buffer.MakeBinding();
-	TestEqual(TEXT("Binding size"), Binding.SizeInBytes, 7 * sizeof(float));
+	TestEqual(TEXT("Binding size"), Binding.SizeInBytes, sizeof(int64));
 	TestEqual(TEXT("Binding data ptr"), Binding.Data, (void*)Buffer.Buffer.GetData());
-	float* BindingData = static_cast<float*>(Binding.Data);
-	TestEqualExactFloat(TEXT("Binding data mirrors buffer [3]"), BindingData[3], 0.8f);
+	int64* BindingData = static_cast<int64*>(Binding.Data);
+	TestEqual(TEXT("Binding data mirrors buffer [0]"), BindingData[0], (int64)2);
 
 	// Copy independence
 	FNNEDiscreteBuffer Copy = Buffer;
-	Copy.Buffer[0] = 9.9f;
-	TestEqualExactFloat(TEXT("Copy mutated [0]"), Copy.Buffer[0], 9.9f);
-	TestEqualExactFloat(TEXT("Original unaffected [0]"), Buffer.Buffer[0], 0.1f);
+	Copy.Buffer[0] = 9;
+	TestEqual(TEXT("Copy mutated [0]"), Copy.Buffer[0], (int64)9);
+	TestEqual(TEXT("Original unaffected [0]"), Buffer.Buffer[0], (int64)2);
 
 	return true;
 }
@@ -141,19 +138,44 @@ bool FNNEBoxAndBinaryBufferTest::RunTest(const FString& Parameters)
 	// Binary
 	{
 		FNNEMultiBinaryBuffer Binary(4);
-		Binary.Buffer[0] = 1.0f;
-		Binary.Buffer[1] = 0.0f;
-		Binary.Buffer[2] = 1.0f;
-		Binary.Buffer[3] = 0.0f;
+		Binary.Buffer[0] = true;
+		Binary.Buffer[1] = false;
+		Binary.Buffer[2] = true;
+		Binary.Buffer[3] = false;
 
 		UE::NNE::FTensorBindingCPU Binding = Binary.MakeBinding();
-		TestEqual(TEXT("Binary binding size"), Binding.SizeInBytes, 4 * sizeof(float));
+		TestEqual(TEXT("Binary binding size"), Binding.SizeInBytes, 4 * sizeof(bool));
 		TestEqual(TEXT("Binary binding ptr"), Binding.Data, (void*)Binary.Buffer.GetData());
-		TestEqualExactFloat(TEXT("Binary[0]"), Binary.Buffer[0], 1.0f);
-		TestEqualExactFloat(TEXT("Binary[1]"), Binary.Buffer[1], 0.0f);
-		TestEqualExactFloat(TEXT("Binary[2]"), Binary.Buffer[2], 1.0f);
-		TestEqualExactFloat(TEXT("Binary[3]"), Binary.Buffer[3], 0.0f);
+		TestEqual(TEXT("Binary[0]"), Binary.Buffer[0], true);
+		TestEqual(TEXT("Binary[1]"), Binary.Buffer[1], false);
+		TestEqual(TEXT("Binary[2]"), Binary.Buffer[2], true);
+		TestEqual(TEXT("Binary[3]"), Binary.Buffer[3], false);
 	}
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNNEMultiDiscreteBufferBasicsTest, "Schola.Policies.NNE.NNEBuffer.MultiDiscreteBuffer Basics", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FNNEMultiDiscreteBufferBasicsTest::RunTest(const FString& Parameters)
+{
+	FNNEMultiDiscreteBuffer Buffer(2);
+	Buffer.Buffer[0] = 1;
+	Buffer.Buffer[1] = 2;
+
+	FTestBufferVisitor Visitor;
+	Buffer.Accept(Visitor);
+	TestTrue(TEXT("Visitor captured MultiDiscreteBuffer"), Visitor.MultiDiscreteRef != nullptr);
+	TestEqual(TEXT("Visitor copied size"), Visitor.CopiedMultiDiscreteData.Num(), 2);
+	TestEqual(TEXT("Visitor copy matches [0]"), Visitor.CopiedMultiDiscreteData[0], (int64)1);
+	TestEqual(TEXT("Visitor copy matches [1]"), Visitor.CopiedMultiDiscreteData[1], (int64)2);
+
+	UE::NNE::FTensorBindingCPU Binding = Buffer.MakeBinding();
+	TestEqual(TEXT("Binding size"), Binding.SizeInBytes, 2 * sizeof(int64));
+	TestEqual(TEXT("Binding data ptr"), Binding.Data, (void*)Buffer.Buffer.GetData());
+	int64* BindingData = static_cast<int64*>(Binding.Data);
+	TestEqual(TEXT("Binding data mirrors buffer [0]"), BindingData[0], (int64)1);
+	TestEqual(TEXT("Binding data mirrors buffer [1]"), BindingData[1], (int64)2);
 
 	return true;
 }
@@ -169,10 +191,8 @@ bool FNNEDictBufferBasicTest::RunTest(const FString& Parameters)
 	Pos.GetMutable<FNNEBoxBuffer>().Buffer[2] = 3.0f;
 
 	TInstancedStruct<FNNEPointBuffer> Act;
-	Act.InitializeAs<FNNEDiscreteBuffer>(2);
-	Act.GetMutable<FNNEDiscreteBuffer>().Buffer[0] = 0.7f;
-	Act.GetMutable<FNNEDiscreteBuffer>().Buffer[1] = 0.3f;
-
+	Act.InitializeAs<FNNEDiscreteBuffer>();
+	Act.GetMutable<FNNEDiscreteBuffer>().Buffer[0] = 2;
 	TMap<FString, TInstancedStruct<FNNEPointBuffer>> Map;
 	Map.Add("position", Pos);
 	Map.Add("action", Act);
@@ -188,9 +208,7 @@ bool FNNEDictBufferBasicTest::RunTest(const FString& Parameters)
 	TestEqualExactFloat(TEXT("Pos[2]"), PosRef.Buffer[2], 3.0f);
 
 	const FNNEDiscreteBuffer& ActRef = Dict.Buffers["action"].Get<FNNEDiscreteBuffer>();
-	TestEqualExactFloat(TEXT("Act[0]"), ActRef.Buffer[0], 0.7f);
-	TestEqualExactFloat(TEXT("Act[1]"), ActRef.Buffer[1], 0.3f);
-
+	TestEqualExactFloat(TEXT("Act[0]"), ActRef.Buffer[0], 2);
 	return true;
 }
 
@@ -199,24 +217,20 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FNNEDiscreteBufferInstancedStructTest, "Schola.
 bool FNNEDiscreteBufferInstancedStructTest::RunTest(const FString& Parameters)
 {
 	TInstancedStruct<FNNEPointBuffer> BufferInstance;
-	BufferInstance.InitializeAs<FNNEDiscreteBuffer>(4);
+	BufferInstance.InitializeAs<FNNEDiscreteBuffer>();
 
 	FNNEDiscreteBuffer& Discrete = BufferInstance.GetMutable<FNNEDiscreteBuffer>();
-	Discrete.Buffer[0] = 11.0f;
-	Discrete.Buffer[1] = 22.0f;
-	Discrete.Buffer[2] = 33.0f;
-	Discrete.Buffer[3] = 44.0f;
+	Discrete.Buffer[0] = 5;
 
 	FTestBufferVisitor Visitor;
 	BufferInstance.Get<FNNEPointBuffer>().Accept(Visitor);
 	TestTrue(TEXT("Visitor got Discrete"), Visitor.DiscreteRef != nullptr);
-	TestEqual(TEXT("Visitor size"), Visitor.CopiedData.Num(), 4);
-	TestEqualExactFloat(TEXT("Visitor[0]"), Visitor.CopiedData[0], 11.0f);
-	TestEqualExactFloat(TEXT("Visitor[3]"), Visitor.CopiedData[3], 44.0f);
+	TestEqual(TEXT("Visitor size"), Visitor.DiscreteRef->Buffer.Num(), 1);
+	TestEqualExactFloat(TEXT("Visitor[0]"), Visitor.DiscreteRef->Buffer[0], 5);
 
-	const FNNEDiscreteBuffer& ConstBuffer = BufferInstance.Get<FNNEDiscreteBuffer>();
+	const FNNEDiscreteBuffer&  ConstBuffer = BufferInstance.Get<FNNEDiscreteBuffer>();
 	UE::NNE::FTensorBindingCPU Binding = ConstBuffer.MakeBinding();
 	TestEqual(TEXT("Binding ptr"), Binding.Data, (void*)ConstBuffer.Buffer.GetData());
-	TestEqual(TEXT("Binding size"), Binding.SizeInBytes, 4 * sizeof(float));
+	TestEqual(TEXT("Binding size"), Binding.SizeInBytes, sizeof(int64));
 	return true;
 }

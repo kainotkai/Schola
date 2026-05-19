@@ -7,17 +7,17 @@ void FRLlibCheckpointSettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilde
 
 	if (this->bSaveFinalModel)
 	{
-		ArgBuilder.AddFlag(TEXT("checkpoint-settings.save-final-policy"));
-		ArgBuilder.AddFlag(TEXT("checkpoint-settings.export-onnx"), this->bExportToONNX);
+		ArgBuilder.AddFlag(TEXT("save-final-policy"));
+		ArgBuilder.AddFlag(TEXT("export-onnx"), this->bExportToONNX);
 	}
 
 	if (this->bEnableCheckpoints)
 	{
-		ArgBuilder.AddFlag(TEXT("checkpoint-settings.enable-checkpoints"));
-		ArgBuilder.AddIntArg(TEXT("checkpoint-settings.save-freq"), this->SaveFreq);
+		ArgBuilder.AddFlag(TEXT("enable-checkpoints"));
+		ArgBuilder.AddIntArg(TEXT("save-freq"), this->SaveFreq);
 	}
 
-	ArgBuilder.AddConditionalStringArg(TEXT("checkpoint-settings.checkpoint-dir"), this->CheckpointDir.Path, !this->CheckpointDir.Path.IsEmpty());
+	ArgBuilder.AddConditionalStringArg(TEXT("checkpoint-dir"), this->CheckpointDir.Path, !this->CheckpointDir.Path.IsEmpty());
 }
 
 FRLlibCheckpointSettings::~FRLlibCheckpointSettings()

@@ -38,23 +38,18 @@ void UMovementInputActuator::TakeAction_Implementation(const FInstancedStruct& I
 		return;
 	}
 
-	// Unknown point type
-	const UScriptStruct* ReceivedStruct = InAction.GetScriptStruct();
-	const FString TypeName = ReceivedStruct ? ReceivedStruct->GetName() : TEXT("null");
-	UE_LOG(LogScholaInteractors, Warning, TEXT("MovementInputActuator %s: Received action is not a BoxPoint or DictPoint. Type: %s"), 
-		*GenerateId(), *TypeName);
+	UE_LOGFMT(LogScholaInteractors, Warning, "UMovementInputActuator::TakeAction_Implementation(): Received action is {0} not a BoxPoint or DictPoint - {1}", InAction.GetScriptStruct() ? InAction.GetScriptStruct()->GetName() : TEXT("null"), GetName());
 }
 
 void UMovementInputActuator::TakeAction(const FBoxPoint& Action)
 {
-	// Convert the action to a movement vector
-	FVector MovementInput = ConvertActionToFVector(Action);
+	APawn* OwnerPawn = nullptr;
+	FVector MovementInput = ConvertActionToFVector(Action, OwnerPawn);
 
 	// Broadcast the delegate for debugging/logging
 	OnMovementDelegate.Broadcast(MovementInput);
 
-	// Get the owning pawn and apply movement
-	APawn* OwnerPawn = Cast<APawn>(GetOwner());
+	// Apply movement if owner resolved to a Pawn
 	if (OwnerPawn)
 	{
 		// Apply movement along each enabled axis
@@ -75,29 +70,31 @@ void UMovementInputActuator::TakeAction(const FBoxPoint& Action)
 	}
 	else
 	{
-		UE_LOG(LogScholaInteractors, Warning, TEXT("MovementInputActuator %s: Owner is not a Pawn, cannot apply movement input"), *GenerateId());
+		UE_LOGFMT(LogScholaInteractors, Warning, "UMovementInputActuator::TakeAction(): Owner is not a Pawn - cannot apply movement input - {0}", GetName());
 	}
 }
 
-FVector UMovementInputActuator::ConvertActionToFVector(const FBoxPoint& Action) const
+FVector UMovementInputActuator::ConvertActionToFVector(const FBoxPoint& Action, APawn*& OutOwnerPawn) const
 {
+	OutOwnerPawn = Cast<APawn>(GetOwner());
+
 	FVector Result = FVector::ZeroVector;
 	int32 Index = 0;
 
-	// Extract values from the BoxPoint based on enabled dimensions
+	// Extract and clamp values from the BoxPoint based on enabled dimensions
 	if (bHasXDimension && Index < Action.Values.Num())
 	{
-		Result.X = Action.Values[Index++];
+		Result.X = FMath::Clamp(Action.Values[Index++], MinSpeed, MaxSpeed);
 	}
 
 	if (bHasYDimension && Index < Action.Values.Num())
 	{
-		Result.Y = Action.Values[Index++];
+		Result.Y = FMath::Clamp(Action.Values[Index++], MinSpeed, MaxSpeed);
 	}
 
 	if (bHasZDimension && Index < Action.Values.Num())
 	{
-		Result.Z = Action.Values[Index++];
+		Result.Z = FMath::Clamp(Action.Values[Index++], MinSpeed, MaxSpeed);
 	}
 
 	return Result;

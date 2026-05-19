@@ -109,7 +109,7 @@ public:
 	 * @brief Append additional arguments to the script.
 	 * @param[in] AdditionalArgs The arguments to append to the script.
 	 */
-	void AppendArgs(FString& AdditionalArgs);
+	void AppendArgs(const FString& AdditionalArgs);
 
 	/**
 	 * @brief Launch the script in a background thread.

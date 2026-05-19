@@ -27,7 +27,7 @@ public:
 
 	/** Whether to save training logs with tensorboard */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Logging Settings|Tensorboard")
-	bool bSaveTBLogs = true;
+	bool bSaveTBLogs = false;
 
 	/** The frequency to save tensorboard logs */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "bSaveTBLogs"), Category = "Logging Settings|Tensorboard")

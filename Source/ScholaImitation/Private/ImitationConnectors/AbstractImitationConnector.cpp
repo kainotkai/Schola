@@ -27,7 +27,7 @@ void UAbstractImitationConnector::Init(const TArray<TScriptInterface<IBaseImitat
 {
 	if (InEnvironments.Num() == 0)
 	{
-		UE_LOG(LogScholaImitation, Warning, TEXT("No Environments provided to Imitation Connector"));
+		UE_LOGFMT(LogScholaImitation, Warning, "UAbstractImitationConnector::Init(): No environments provided");
 		return;
 	}
 
@@ -55,16 +55,16 @@ void UAbstractImitationConnector::PrepareEnvironments(const TArray<TScriptInterf
 		if (TempEnv.GetObject()->GetClass()->ImplementsInterface(UMultiAgentImitationScholaEnvironment::StaticClass()))
 		{
 			this->Environments.Add(new TImitationScholaEnvironment<IMultiAgentImitationScholaEnvironment>(TempEnv.GetObject()));
-			UE_LOG(LogScholaImitation, Log, TEXT("Collected MultiAgent Imitation Environment %s"), *TempEnv.GetObject()->GetName());
+			UE_LOGFMT(LogScholaImitation, Verbose, "UAbstractImitationConnector::PrepareEnvironments(): Collected MultiAgent Imitation Environment {0}", TempEnv.GetObject()->GetName());
 		}
 		else if (TempEnv.GetObject()->GetClass()->ImplementsInterface(USingleAgentImitationScholaEnvironment::StaticClass()))
 		{
 			this->Environments.Add(new TImitationScholaEnvironment<ISingleAgentImitationScholaEnvironment>(TempEnv.GetObject()));
-			UE_LOG(LogScholaImitation, Log, TEXT("Collected SingleAgent Imitation Environment %s"), *TempEnv.GetObject()->GetName());
+			UE_LOGFMT(LogScholaImitation, Verbose, "UAbstractImitationConnector::PrepareEnvironments(): Collected SingleAgent Imitation Environment {0}", TempEnv.GetObject()->GetName());
 		}
 		else
 		{
-			UE_LOG(LogScholaImitation, Warning, TEXT("Collected Environment %s does not implement a known Schola Imitation Environment Interface"), *TempEnv.GetObject()->GetName());
+			UE_LOGFMT(LogScholaImitation, Warning, "UAbstractImitationConnector::PrepareEnvironments(): Collected environment {0} does not implement a known Schola Imitation Environment interface", TempEnv.GetObject()->GetName());
 		}
 	}
 }
@@ -77,7 +77,7 @@ void UAbstractImitationConnector::CollectEnvironments(TArray<TScriptInterface<IB
 	for (AActor* TempEnv : TempEnvArray)
 	{
 		OutCollectedEnvironments.Add(TScriptInterface<IBaseImitationScholaEnvironment>(TempEnv));
-		UE_LOG(LogScholaImitation, Log, TEXT("Collected Imitation Environment %s"), *TempEnv->GetName());
+		UE_LOGFMT(LogScholaImitation, Verbose, "UAbstractImitationConnector::CollectEnvironments(): Collected Imitation Environment {0}", TempEnv->GetName());
 	}
 }
 

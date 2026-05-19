@@ -66,4 +66,4 @@ Finally, while the play in editor is running, Open a terminal emulator or comman
 
 .. code-block:: bash
    
-   schola sb3 train sac --enable-checkpoints --checkpoint-dir .\ckpt\task1 --save-final-policy --protocol.port 8000 --timesteps 100000 --pbar
+   schola sb3 train sac editor --enable-checkpoints --checkpoint-dir .\ckpt\task1 --save-final-policy --port 8000 --timesteps 100000 --pbar

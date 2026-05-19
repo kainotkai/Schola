@@ -317,13 +317,13 @@ Since `SB3 <https://stable-baselines3.readthedocs.io/>`_ does not support multi-
   
       .. code-block:: bash  
   
-         schola rllib train ppo --protocol.port 8000 --training-settings.timesteps 2000000 --network-architecture-settings.use-attention 
+         schola rllib train ppo editor --port 8000 --timesteps 2000000 --use-lstm
 
       3. Gradually increase the runner's speed in the ``Runner`` Blueprint → ``Character Movement: Walking`` → ``Max Walk Speed`` as the taggers improve and can consistently catch the slower runner.
 
       .. note::
 
-         The ``--network-architecture-settings.use-attention`` argument is used to enable the attention mechanism in RLlib. This gives temporal context to the agent allowing it to track the velocity of other agents, as well as not immediately forget prior observations, which can be crucial in complex environments. Its use is optional. Enabling it improves the agent's ability to navigate around obstacles, but will increase the number of training steps required.
+         The ``--use-lstm`` argument enables an LSTM layer in the RLlib model (see network architecture settings). This gives temporal context to the agent allowing it to track the velocity of other agents, as well as not immediately forget prior observations, which can be crucial in complex environments. Its use is optional. Enabling it improves the agent's ability to navigate around obstacles, but will increase the number of training steps required.
 
    .. group-tab:: Run from Unreal Editor  
 

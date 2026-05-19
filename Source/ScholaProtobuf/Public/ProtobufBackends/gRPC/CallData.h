@@ -19,10 +19,18 @@
 
 #pragma once
 
+#include "HAL/Platform.h"
+
+THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include <grpc/grpc.h>
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/server.h>
 #include <grpcpp/server_context.h>
+#include "ScholaProtobufMacroGuardEnd.h"
+THIRD_PARTY_INCLUDES_END
+
+#include "Common/LogSchola.h"
 
 using grpc::Server;
 using grpc::ServerAsyncResponseWriter;
@@ -116,12 +124,19 @@ public:
 	 */
 	void Create()
 	{
-
-		GPR_ASSERT(CallDataStatus == CREATE);
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: CallData Create");
+		if (CallDataStatus != CREATE)
+		{
+			UE_LOGFMT(
+				LogScholaCommunicator,
+				Fatal,
+				"TCallData::Create(): invalid CallDataStatus; expected CREATE (got {0}).",
+				static_cast<int>(CallDataStatus));
+		}
 		// Make this instance progress to the PROCESS state.
 		CallDataStatus = PROCESS;
 		// call the
-		UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("Creating CallData"));
+		UE_LOGFMT(LogScholaCommunicator, VeryVerbose, "TCallData::Create(): Creating CallData");
 		std::invoke(this->TargetRPC, this->Service, SContext, &Request, &Responder, CQueue, CQueue, this);
 	}
 
@@ -130,15 +145,21 @@ public:
 	 */
 	void Submit()
 	{
-
-		GPR_ASSERT(CallDataStatus == PROCESS);
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: CallData Submit");
+		if (CallDataStatus != PROCESS)
+		{
+			UE_LOGFMT(
+				LogScholaCommunicator,
+				Fatal,
+				"TCallData::Submit(): invalid CallDataStatus; expected PROCESS (got {0}).",
+				static_cast<int>(CallDataStatus));
+		}
 		CallDataStatus = FINISH;
 		// create a default message if none has been set
 		if (Response == nullptr)
 		{
 			Response = new ResponseType();
 		}
-		// UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("Submitted Message %d %s"), this->Id, *FString(Response->DebugString().c_str()));
 		Responder.Finish(*Response, Status::OK, this);
 	}
 
@@ -147,8 +168,15 @@ public:
 	 */
 	void Reset()
 	{
-		GPR_ASSERT(CallDataStatus == FINISH);
-		UE_LOG(LogScholaCommunicator, VeryVerbose, TEXT("Resetting CallData"));
+		if (CallDataStatus != FINISH)
+		{
+			UE_LOGFMT(
+				LogScholaCommunicator,
+				Fatal,
+				"TCallData::Reset(): invalid CallDataStatus; expected FINISH before reset (got {0}).",
+				static_cast<int>(CallDataStatus));
+		}
+		UE_LOGFMT(LogScholaCommunicator, VeryVerbose, "TCallData::Reset(): Resetting CallData");
 		if (Response != nullptr)
 		{
 			delete this->Response;
@@ -172,7 +200,14 @@ public:
 	void Finish()
 	{
 		// Once in the FINISH state, deallocate ourselves (CallData).
-		GPR_ASSERT(CallDataStatus == FINISH);
+		if (CallDataStatus != FINISH)
+		{
+			UE_LOGFMT(
+				LogScholaCommunicator,
+				Fatal,
+				"TCallData::Finish(): invalid CallDataStatus; expected FINISH before cleanup (got {0}).",
+				static_cast<int>(CallDataStatus));
+		}
 		this->CleanUp();
 	}
 
@@ -217,6 +252,7 @@ public:
 	 */
 	void SetResponse(ResponseType* NewResponse)
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: CallData SetResponse");
 		if (this->Response != nullptr)
 		{
 			delete this->Response;

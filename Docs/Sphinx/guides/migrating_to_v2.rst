@@ -1,4 +1,4 @@
-Migrating from Schola V1.3 to V2
+Migrating from Schola V1.3 to V2.1
 ==================================
 
 Schola V2 introduces significant improvements to the API, including better separation of concerns, more flexible environment interfaces, and improved Python integration. This guide will help you migrate your existing Schola V1.3 projects to V2.
@@ -35,11 +35,11 @@ Environment Connection
 .. code-block:: python
 
    from schola.core.simulators.unreal import UnrealEditor
-   from schola.core.protocols.protobuf.gRPC import gRPCProtocol
-   from schola.gym import GymEnv
+   from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
+   from schola.gym.env import GymEnv
    
    # Define protocol (communication layer)
-   protocol = gRPCProtocol(url="localhost", port=50051)
+   protocol = GrpcProtocol(url="localhost", port=50051)
    
    # Define simulator (Unreal Engine management)
    simulator = UnrealEditor()
@@ -72,23 +72,23 @@ CLI Changes
 
 .. code-block:: bash
 
-   # Stable Baselines 3
-   schola sb3 train ppo --learning-rate 0.0003 --n-steps 2048
-   schola sb3 train sac --buffer-size 1000000
+   # Stable Baselines 3 (``editor`` = attach to a running Unreal Editor session)
+   schola sb3 train ppo editor --learning-rate 0.0003 --n-steps 2048
+   schola sb3 train sac editor --buffer-size 1000000
    
    # RLlib
-   schola rllib train ppo --learning-rate 0.0003
+   schola rllib train ppo editor --learning-rate 0.0003
    
-   # Or using module invocation
-   python -m schola.scripts.sb3.train ppo
-   python -m schola.scripts.rllib.train ppo
+   # Or using module invocation (same nested tokens as the ``schola`` entry point)
+   python -m schola.scripts.launch sb3 train ppo editor --learning-rate 0.0003 --n-steps 2048
+   python -m schola.scripts.launch rllib train ppo editor --learning-rate 0.0003
 
 Key changes:
 
 * V1.3 used separate entry points (``schola-sb3``, ``schola-rllib``)
 * V2 uses a unified ``schola`` command with subcommands
 * V2 adds explicit ``train`` subcommand for better organization
-* Algorithm is now a subcommand for sb3 (``ppo``, ``sac``) and RLlib (``ppo``, ``sac``, ``impala``)
+* Algorithm is now a subcommand for sb3 (``ppo``, ``sac``) and RLlib (``ppo``, ``sac``, ``impala``, ``appo``), followed by a simulator subcommand (``editor``, ``executable``, or ``project``)
 
 Vectorized Environments
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -105,7 +105,7 @@ Vectorized Environments
 
 .. code-block:: python
 
-   from schola.gym import GymVectorEnv
+   from schola.gym.env import GymVectorEnv
    simulator = ...
    protocol = ...
    # Environment vectorization is now handled by Unreal internally
@@ -134,12 +134,12 @@ In V2, auto-reset behavior is **explicitly configured** when creating the enviro
 
 .. code-block:: python
 
-   from schola.gym import GymVectorEnv
+   from schola.gym.env import GymVectorEnv
    from schola.core.simulators.unreal import UnrealEditor
-   from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+   from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
    from gymnasium.vector.vector_env import AutoresetMode
    
-   protocol = gRPCProtocol(url="localhost", port=50051)
+   protocol = GrpcProtocol(url="localhost", port=50051)
    simulator = UnrealEditor()
    
    # For vectorized environments - explicitly specify autoreset_mode
@@ -540,9 +540,10 @@ V2 introduces dedicated interfaces for imitation learning (behavior cloning).
 .. code-block:: python
 
    from schola.minari.datacollector import ScholaDataCollector
-   from schola.core.protocols.protobuf.offlinegRPC import gRPCImitationProtocol
+   from schola.core.protocols.protobuf.offline_grpc_protocol import GrpcImitationProtocol
+   from schola.core.simulators.unreal import UnrealEditor
    
-   protocol = gRPCImitationProtocol(url="localhost", port=50051)
+   protocol = GrpcImitationProtocol(url="localhost", port=50051)
    simulator = UnrealEditor()
    
    collector = ScholaDataCollector(protocol, simulator, seed = 123)
@@ -669,7 +670,7 @@ Issue: "Python connection timeout"
 **Solution**:
 
 1. Verify port numbers match between Unreal and Python
-2. Increase ``environment_start_timeout`` in ``gRPCProtocolArgs``
+2. Increase ``environment_start_timeout`` in ``GrpcProtocolConfig`` (or deprecated ``gRPCProtocolArgs``)
 3. Check firewall settings
 
 Additional Resources

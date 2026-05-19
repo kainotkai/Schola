@@ -1,7 +1,10 @@
 # Copyright (c) 2024 Advanced Micro Devices, Inc. All Rights Reserved.
 
+import logging
 from pathlib import Path
 from sphinx.application import Sphinx
+
+logger = logging.getLogger(__name__)
 import sphinx.builders
 import sphinx.parsers
 import sphinx.transforms
@@ -90,7 +93,7 @@ def visit_blueprint_node(self : HTML5Translator, node: blueprint):
             {node.attributes["code"]}
     """
     if node.attributes["imagefallback"] != None:
-        print(node.attributes["imagefallback"])
+        logger.debug("%s", node.attributes["imagefallback"])
         html_node = f"""<noscript>  
             <img src="{node.attributes["imagefallback"]}" alt="{node.attributes["heading"]} Fallback Image">  
         </noscript>""" + html_node

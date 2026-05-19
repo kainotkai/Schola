@@ -7,6 +7,12 @@ public class ScholaProtobuf : ModuleRules
 	public ScholaProtobuf(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		if (System.Environment.GetEnvironmentVariable("SCHOLA_MEASURE_CPP_COVERAGE") == "1")
+		{
+			OptimizeCode = CodeOptimization.Never;
+		}
+
         PublicIncludePaths.AddRange(new string[] { });
 		PrivateIncludePaths.AddRange(new string[] { "ScholaProtobuf/Private"});
 		// Make generated code available to other modules

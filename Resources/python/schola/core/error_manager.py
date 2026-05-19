@@ -16,19 +16,38 @@ class ScholaException(Exception):
     ...
 
 
-class WrappedGRPCException(ScholaException, metaclass=abc.ABCMeta):
+class WrappedGrpcException(ScholaException, metaclass=abc.ABCMeta):
     """
-    Base class for all Schola exceptions that wrap GRPC exceptions, to add more information.
+    Base class for all Schola exceptions that wrap gRPC errors, to add more information.
     """
 
     @classmethod
     @abc.abstractmethod
-    def comes_from(cls, exception): ...
+    def comes_from(cls, exception):
+        """
+        Return whether ``exception`` should be wrapped by this Schola exception type.
+
+        Parameters
+        ----------
+        exception : grpc.RpcError
+            gRPC error raised from a Schola RPC call.
+
+        Returns
+        -------
+        bool
+            ``True`` if this class should replace ``exception`` when handling the error.
+        """
+        ...
 
 
-class NoServerError(WrappedGRPCException):
+class NoServerError(WrappedGrpcException):
     """
-    An Error that occurs when the server is not detected. Either Unreal is not running or the connection is not established.
+    Error raised when the Schola gRPC server is not reachable (Unreal not running or not in play).
+
+    Parameters
+    ----------
+    exception : grpc.RpcError
+        Original gRPC error; retained for exception chaining when re-raised.
     """
 
     def __init__(self, exception):
@@ -41,15 +60,33 @@ class NoServerError(WrappedGRPCException):
 
     @classmethod
     def comes_from(cls, exception):
+        """
+        Match ``UNAVAILABLE`` with a ``failed to connect to all addresses`` detail prefix.
+
+        Parameters
+        ----------
+        exception : grpc.RpcError
+            gRPC error to classify.
+
+        Returns
+        -------
+        bool
+            ``True`` if the error indicates no server at the configured address.
+        """
         return (
             exception.code() == grpc.StatusCode.UNAVAILABLE
             and exception.details().startswith("failed to connect to all addresses")
         )
 
 
-class UnrealCrashedError(WrappedGRPCException):
+class UnrealCrashedError(WrappedGrpcException):
     """
-    An Error that occurs when Unreal has stopped responding.
+    Error raised when the Unreal session appears to have stopped or torn down the stream.
+
+    Parameters
+    ----------
+    exception : grpc.RpcError
+        Original gRPC error; retained for exception chaining when re-raised.
     """
 
     def __init__(self, exception):
@@ -60,6 +97,19 @@ class UnrealCrashedError(WrappedGRPCException):
 
     @classmethod
     def comes_from(cls, exception):
+        """
+        Match cancelled/unavailable/unknown statuses that indicate a dead or removed stream.
+
+        Parameters
+        ----------
+        exception : grpc.RpcError
+            gRPC error to classify.
+
+        Returns
+        -------
+        bool
+            ``True`` if the error likely indicates Unreal stopped responding.
+        """
         code_cancelled = exception.code() == grpc.StatusCode.CANCELLED
         details_cancelled = (
             exception.code() == grpc.StatusCode.UNAVAILABLE
@@ -72,9 +122,14 @@ class UnrealCrashedError(WrappedGRPCException):
         return code_cancelled or details_cancelled or stream_cancelled
 
 
-class MissingMethodError(WrappedGRPCException):
+class MissingMethodError(WrappedGrpcException):
     """
-    An Error that occurs when a method is called that doesn't exist in the Unreal environment.
+    Error raised when the server reports the RPC or Schola endpoint is not implemented.
+
+    Parameters
+    ----------
+    exception : grpc.RpcError
+        Original gRPC error; retained for exception chaining when re-raised.
     """
 
     def __init__(self, exception):
@@ -85,12 +140,30 @@ class MissingMethodError(WrappedGRPCException):
 
     @classmethod
     def comes_from(cls, exception):
+        """
+        Match gRPC ``UNIMPLEMENTED`` (method or service missing on server).
+
+        Parameters
+        ----------
+        exception : grpc.RpcError
+            gRPC error to classify.
+
+        Returns
+        -------
+        bool
+            ``True`` if the server does not implement the requested RPC.
+        """
         return exception.code() == grpc.StatusCode.UNIMPLEMENTED
 
 
 class EnvironmentException(ScholaException):
     """
-    An Exception that occurs when there is a generic issue with an environment wrapping a ScholaEnvironment
+    Exception for generic issues in a Gymnasium (or similar) wrapper around Schola.
+
+    Parameters
+    ----------
+    message : str
+        Explanation of the environment error.
     """
 
     def __init__(self, message):
@@ -102,7 +175,7 @@ ALL_EXCEPTIONS = [NoServerError, UnrealCrashedError, MissingMethodError]
 
 class ScholaErrorContextManager(ContextDecorator):
     """
-    Wrapper for GRPC that redirects any grpc errors to our own more descriptive custom ones.
+    Context manager / decorator that maps known :class:`grpc.RpcError` values to Schola exceptions.
     """
 
     def __init__(self):
@@ -112,6 +185,24 @@ class ScholaErrorContextManager(ContextDecorator):
         pass
 
     def __exit__(self, exc_type, exc_value, exc_tb):
+        """
+        If ``exc_value`` is a :class:`grpc.RpcError` that matches a known Schola
+        wrapper, replace it with that wrapper; otherwise propagate.
+
+        Parameters
+        ----------
+        exc_type : type or None
+            Exception type, or None when the block completed without error.
+        exc_value : BaseException or None
+            Exception instance raised in the block, if any.
+        exc_tb : types.TracebackType or None
+            Traceback for ``exc_value``.
+
+        Returns
+        -------
+        bool or None
+            ``False`` to re-raise after handling, ``None`` to propagate unchanged.
+        """
         if isinstance(exc_value, grpc.RpcError):
             # check if it matches any of our current custom exceptions
             for exception_class in ALL_EXCEPTIONS:
@@ -125,13 +216,18 @@ class ScholaErrorContextManager(ContextDecorator):
 
 class NoAgentsException(ScholaException):
     """
-    An Exception that occurs when no environments are detected in Unreal Engine.
+    Exception raised when an environment in the Schola definition has no registered agents.
 
-    This exception is raised when the connection to Unreal is successful, and the definition 
+    This exception is raised when the connection to Unreal is successful, and the definition
     contained environment(s), but some environment(s) had no agents.
+
+    Parameters
+    ----------
+    env_id : int
+        Environment index in the Schola definition that had no agents.
     """
 
-    def __init__(self, env_id):
+    def __init__(self, env_id: int):
         self.env_id = env_id
 
     def __str__(self):
@@ -140,7 +236,7 @@ class NoAgentsException(ScholaException):
 
 class NoEnvironmentsException(ScholaException):
     """
-    An Exception that occurs when no environments are detected in Unreal Engine.
+    Exception raised when Unreal returns no environment definitions after a successful connection.
 
     This exception is raised when the connection to Unreal is successful but
     no environment definitions are received, indicating that no environment

@@ -13,6 +13,7 @@
 #include "TrainingSettings/Ray/Algorithms/RLlibPPOSettings.h"
 #include "TrainingSettings/Ray/Algorithms/RLlibAPPOSettings.h"
 #include "TrainingSettings/Ray/Algorithms/RLlibIMPALASettings.h"
+#include "TrainingSettings/Ray/Algorithms/RLlibSACSettings.h"
 
 #include "RLlibTrainingSettings.generated.h"
 
@@ -28,7 +29,9 @@ enum class ERLlibTrainingAlgorithm
 	/** Asynchronous Proximal Policy Optimization. */
 	APPO,
 	/** Importance Weighted Actor-Learner Architecture. */
-	IMPALA
+	IMPALA,
+	/** Soft Actor-Critic */
+	SAC
 };
 
 
@@ -102,6 +105,10 @@ public:
 	/** IMPALA specific settings */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "Algorithm==ERLlibTrainingAlgorithm::IMPALA", EditConditionHides, DisplayName = "IMPALA Algorithm Settings"), Category = "Algorithm Settings")
 	FRLlibIMPALASettings IMPALASettings;
+
+	/** SAC specific settings */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "Algorithm==ERLlibTrainingAlgorithm::SAC", EditConditionHides, DisplayName = "SAC Algorithm Settings"), Category = "Algorithm Settings")
+	FRLlibSACSettings SACSettings;
 
 	/**
 	 * @brief Generate command-line arguments for the RLlib training script.

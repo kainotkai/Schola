@@ -7,6 +7,7 @@
 #include "StructUtils/InstancedStruct.h"
 #include "Points/Point.h"
 #include "Common/InteractionDefinition.h"
+#include "Common/InstancedStructUtils.h"
 
 #include "AgentInterface.generated.h"
 /**
@@ -23,8 +24,8 @@ enum class EAgentStatus : uint8
 /**
  * @brief An interface implemented by classes that represent an inference agent.
  */
-UINTERFACE(Blueprintable)
-class UAgent : public UInterface
+UINTERFACE(Blueprintable, BlueprintType)
+class SCHOLA_API UAgent : public UInterface
 {
 	GENERATED_BODY()
 };
@@ -32,7 +33,7 @@ class UAgent : public UInterface
 /**
  * @class IAgent
  * @brief Interface for inference agents in the Schola framework.
- * 
+ *
  * This interface defines the core functionality that all agents must implement,
  * including status management, action space definition, action execution, and
  * observation gathering.
@@ -42,7 +43,6 @@ class SCHOLA_API IAgent
 	GENERATED_BODY()
 
 public:
-	
 	/**
 	 * @brief Gets the current status of the agent.
 	 * @return The current agent status (Running, Stopped, or Error).
@@ -59,11 +59,11 @@ public:
 
 	/**
 	 * @brief Defines the observation and action spaces for this agent.
-	 * 
+	 *
 	 * This method should populate the output parameter with the observation
 	 * and action space definitions that describe how this agent interacts
 	 * with its environment.
-	 * 
+	 *
 	 * @param[out] OutInteractionDefinition The interaction definition for this agent.
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Schola|Agent")
@@ -71,10 +71,10 @@ public:
 
 	/**
 	 * @brief Executes an action provided to the agent.
-	 * 
+	 *
 	 * This method takes an action from the action space and executes it,
 	 * causing the agent to perform the corresponding behavior.
-	 * 
+	 *
 	 * @param[in] InAction The action to execute, represented as an instanced struct.
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Schola|Agent")
@@ -82,16 +82,16 @@ public:
 
 	/**
 	 * @brief Gathers the current observations from the agent's environment.
-	 * 
+	 *
 	 * This method populates the output parameter with the current state
 	 * observations from the agent's environment.
-	 * 
+	 *
 	 * @param[out] OutObservations The current observations from the agent's perspective.
 	 */
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Schola|Agent")
 	void Observe(FInstancedStruct& OutObservations);
 
-	//Typed API
+	// Typed API
 
 	/**
 	 * @brief Type-safe wrapper for executing an action with a strongly-typed Point.
@@ -100,7 +100,7 @@ public:
 	 */
 	static void Execute_Act(UObject* Obj, const TInstancedStruct<FPoint>& InAction)
 	{
-		IAgent::Execute_Act(Obj, reinterpret_cast<const FInstancedStruct&>(InAction));
+		IAgent::Execute_Act(Obj, ToUntypedInstancedStruct(InAction));
 	};
 
 	/**
@@ -110,6 +110,6 @@ public:
 	 */
 	static void Execute_Observe(UObject* Obj, TInstancedStruct<FPoint>& OutObservations)
 	{
-		IAgent::Execute_Observe(Obj, reinterpret_cast<FInstancedStruct&>(OutObservations));
+		IAgent::Execute_Observe(Obj, ToUntypedInstancedStruct(OutObservations));
 	};
 };

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Logging/StructuredLog.h"
 
 /**
  * @file LogScholaNNE.h

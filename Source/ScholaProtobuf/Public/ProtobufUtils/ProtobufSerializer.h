@@ -22,10 +22,12 @@
 #include "ImitationDataTypes/ImitationEnvironmentState.h"
 #include "StructUtils/InstancedStruct.h"
 THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include "Spaces.pb.h"
 #include "Points.pb.h"
 #include "GymConnector.pb.h"
 #include "ImitationState.pb.h"
+#include "ScholaProtobufMacroGuardEnd.h"
 THIRD_PARTY_INCLUDES_END
 
 using Schola::DictPoint;
@@ -54,6 +56,7 @@ public:
 
 	void operator()(const FDictPoint& Point) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize DictPoint");
 		for (const TPair<FString,TInstancedStruct<FPoint>>& Pair : Point.Points)
 		{
 			DictPoint* ConcretePoint = SerializedPointBuffer->mutable_dict_point();
@@ -65,6 +68,7 @@ public:
 
 	void operator()(const FMultiBinaryPoint& Point) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize MultiBinaryPoint");
 		Schola::MultiBinaryPoint* PointMsg = SerializedPointBuffer->mutable_multi_binary_point();
 		for (auto& PointValue : Point.Values)
 		{
@@ -74,12 +78,14 @@ public:
 
 	void operator()(const FDiscretePoint& Point) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize DiscretePoint");
 		Schola::DiscretePoint* PointMsg = SerializedPointBuffer->mutable_discrete_point();
 		PointMsg->set_value(Point.Value);
 	};
 
 	void operator()(const FMultiDiscretePoint& Point) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize MultiDiscretePoint");
 		Schola::MultiDiscretePoint* PointMsg = SerializedPointBuffer->mutable_multi_discrete_point();
 		// PointMsg->mutable_values()->Add(Point.Values.begin(), Point.Values.end()); leads to a compile error here
 		for (auto& PointValue : Point.Values)
@@ -90,6 +96,7 @@ public:
 
 	void operator()(const FBoxPoint& Point) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize BoxPoint");
 		BoxPoint* PointMsg = SerializedPointBuffer->mutable_box_point();
 		for (auto& PointValue : Point.Values)
 		{
@@ -102,6 +109,7 @@ public:
 		}
 	};
 
+	/** @return Underlying Schola::Point buffer (e.g. after visiting dict entries). */
 	Schola::Point* GetDictPoint()
 	{
 		return SerializedPointBuffer;
@@ -129,6 +137,7 @@ public:
 
 	void operator()(const FDictSpace& Space) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize DictSpace");
 		Schola::DictSpace* ConcreteSpace = SerializedSpaceBuffer->mutable_dict_space();
 		for (const TPair<FString, TInstancedStruct<FSpace>>& Pair : Space.Spaces)
 		{
@@ -140,18 +149,21 @@ public:
 
 	void operator()(const FMultiBinarySpace& Space) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize MultiBinarySpace");
 		Schola::MultiBinarySpace* ConcreteSpace = SerializedSpaceBuffer->mutable_multi_binary_space();
 		ConcreteSpace->set_shape(Space.Shape);
 	};
 
 	void operator()(const FDiscreteSpace& Space) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize DiscreteSpace");
 		Schola::DiscreteSpace* ConcreteSpace = SerializedSpaceBuffer->mutable_discrete_space();
 		ConcreteSpace->set_high(Space.High);
 	};
 
 	void operator()(const FMultiDiscreteSpace& Space) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize MultiDiscreteSpace");
 		Schola::MultiDiscreteSpace* ConcreteSpace = SerializedSpaceBuffer->mutable_multi_discrete_space();
 		for (int SpaceValue : Space.High)
 		{
@@ -161,6 +173,7 @@ public:
 
 	void operator()(const FBoxSpace& Space) override
 	{
+		TRACE_CPUPROFILER_EVENT_SCOPE_STR("ScholaProtobuf: Serialize BoxSpace");
 		Schola::BoxSpace* ConcreteSpace = SerializedSpaceBuffer->mutable_box_space();
 		for (const FBoxSpaceDimension& SpaceValue : Space.Dimensions)
 		{

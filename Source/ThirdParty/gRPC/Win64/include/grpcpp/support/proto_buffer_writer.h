@@ -19,17 +19,20 @@
 #ifndef GRPCPP_SUPPORT_PROTO_BUFFER_WRITER_H
 #define GRPCPP_SUPPORT_PROTO_BUFFER_WRITER_H
 
-#include <type_traits>
-
 #include <grpc/byte_buffer.h>
+#include <grpc/event_engine/memory_allocator.h>
 #include <grpc/impl/grpc_types.h>
 #include <grpc/slice.h>
 #include <grpc/slice_buffer.h>
-#include <grpc/support/log.h>
 #include <grpcpp/impl/codegen/config_protobuf.h>
 #include <grpcpp/impl/serialization_traits.h>
 #include <grpcpp/support/byte_buffer.h>
 #include <grpcpp/support/status.h>
+
+#include <type_traits>
+
+#include "absl/log/absl_check.h"
+#include "absl/strings/cord.h"
 
 /// This header provides an object that writes bytes directly into a
 /// grpc::ByteBuffer, via the ZeroCopyOutputStream interface
@@ -57,12 +60,15 @@ class ProtoBufferWriter : public grpc::protobuf::io::ZeroCopyOutputStream {
   /// \param[out] byte_buffer A pointer to the grpc::ByteBuffer created
   /// \param block_size How big are the chunks to allocate at a time
   /// \param total_size How many total bytes are required for this proto
-  ProtoBufferWriter(ByteBuffer* byte_buffer, int block_size, int total_size)
+  ProtoBufferWriter(
+      ByteBuffer* byte_buffer, int block_size, int total_size,
+      grpc_event_engine::experimental::MemoryAllocator* allocator = nullptr)
       : block_size_(block_size),
         total_size_(total_size),
         byte_count_(0),
+        allocator_(allocator),
         have_backup_(false) {
-    GPR_ASSERT(!byte_buffer->Valid());
+    ABSL_CHECK(!byte_buffer->Valid());
     /// Create an empty raw byte buffer and look at its underlying slice buffer
     grpc_byte_buffer* bp = grpc_raw_byte_buffer_create(nullptr, 0);
     byte_buffer->set_buffer(bp);
@@ -79,7 +85,7 @@ class ProtoBufferWriter : public grpc::protobuf::io::ZeroCopyOutputStream {
   /// safe for the caller to write from data[0, size - 1].
   bool Next(void** data, int* size) override {
     // Protobuf should not ask for more memory than total_size_.
-    GPR_ASSERT(byte_count_ < total_size_);
+    ABSL_CHECK_LT(byte_count_, total_size_);
     // 1. Use the remaining backup slice if we have one
     // 2. Otherwise allocate a slice, up to the remaining length needed
     //    or our maximum allocation size
@@ -96,15 +102,20 @@ class ProtoBufferWriter : public grpc::protobuf::io::ZeroCopyOutputStream {
     } else {
       // When less than a whole block is needed, only allocate that much.
       // But make sure the allocated slice is not inlined.
-      size_t allocate_length =
+      const size_t allocate_length =
           remain > static_cast<size_t>(block_size_) ? block_size_ : remain;
-      slice_ = grpc_slice_malloc(allocate_length > GRPC_SLICE_INLINED_SIZE
-                                     ? allocate_length
-                                     : GRPC_SLICE_INLINED_SIZE + 1);
+      const size_t slice_size = allocate_length > GRPC_SLICE_INLINED_SIZE
+                                    ? allocate_length
+                                    : GRPC_SLICE_INLINED_SIZE + 1;
+      if (allocator_ == nullptr) {
+        slice_ = grpc_slice_malloc(slice_size);
+      } else {
+        slice_ = allocator_->MakeSlice(slice_size);
+      }
     }
     *data = GRPC_SLICE_START_PTR(slice_);
     // On win x64, int is only 32bit
-    GPR_ASSERT(GRPC_SLICE_LENGTH(slice_) <= INT_MAX);
+    ABSL_CHECK(GRPC_SLICE_LENGTH(slice_) <= static_cast<size_t>(INT_MAX));
     byte_count_ += * size = static_cast<int>(GRPC_SLICE_LENGTH(slice_));
     // Using grpc_slice_buffer_add could modify slice_ and merge it with the
     // previous slice. Therefore, use grpc_slice_buffer_add_indexed method to
@@ -129,7 +140,7 @@ class ProtoBufferWriter : public grpc::protobuf::io::ZeroCopyOutputStream {
     /// 2. Split it into the needed (if any) and unneeded part
     /// 3. Add the needed part back to the slice buffer
     /// 4. Mark that we still have the remaining part (for later use/unref)
-    GPR_ASSERT(count <= static_cast<int>(GRPC_SLICE_LENGTH(slice_)));
+    ABSL_CHECK_LE(count, static_cast<int>(GRPC_SLICE_LENGTH(slice_)));
     grpc_slice_buffer_pop(slice_buffer_);
     if (static_cast<size_t>(count) == GRPC_SLICE_LENGTH(slice_)) {
       backup_slice_ = slice_;
@@ -149,6 +160,48 @@ class ProtoBufferWriter : public grpc::protobuf::io::ZeroCopyOutputStream {
   /// Returns the total number of bytes written since this object was created.
   int64_t ByteCount() const override { return byte_count_; }
 
+#ifdef GRPC_PROTOBUF_CORD_SUPPORT_ENABLED
+  /// Writes cord to the backing byte_buffer, sharing the memory between the
+  /// blocks of the cord, and the slices of the byte_buffer.
+  // (override is conditionally omitted here to support old Protobuf which
+  //  doesn't have ReadCord method)
+  // NOLINTBEGIN(modernize-use-override,
+  // clang-diagnostic-inconsistent-missing-override)
+  virtual bool WriteCord(const absl::Cord& cord)
+#if GOOGLE_PROTOBUF_VERSION >= 4022000
+      override
+#endif
+  // NOLINTEND(modernize-use-override,
+  // clang-diagnostic-inconsistent-missing-override)
+  {
+    grpc_slice_buffer* buffer = slice_buffer();
+    size_t cur = 0;
+    for (absl::string_view chunk : cord.Chunks()) {
+      // TODO(veblush): Revisit this 512 threadhold which could be smaller.
+      if (chunk.size() < 512) {
+        // If chunk is small enough, just copy it.
+        grpc_slice slice =
+            grpc_slice_from_copied_buffer(chunk.data(), chunk.size());
+        grpc_slice_buffer_add(buffer, slice);
+      } else {
+        // If chunk is large, just use the pointer instead of copying.
+        // To make sure it's alive while being used, a subcord for chunk is
+        // created and attached to a grpc_slice instance.
+        absl::Cord* subcord = new absl::Cord(cord.Subcord(cur, chunk.size()));
+        grpc_slice slice = grpc_slice_new_with_user_data(
+            const_cast<uint8_t*>(
+                reinterpret_cast<const uint8_t*>(chunk.data())),
+            chunk.size(), [](void* p) { delete static_cast<absl::Cord*>(p); },
+            subcord);
+        grpc_slice_buffer_add(buffer, slice);
+      }
+      cur += chunk.size();
+    }
+    set_byte_count(ByteCount() + cur);
+    return true;
+  }
+#endif  // GRPC_PROTOBUF_CORD_SUPPORT_ENABLED
+
   // These protected members are needed to support internal optimizations.
   // they expose internal bits of grpc core that are NOT stable. If you have
   // a use case needs to use one of these functions, please send an email to
@@ -163,6 +216,7 @@ class ProtoBufferWriter : public grpc::protobuf::io::ZeroCopyOutputStream {
   const int block_size_;  ///< size to alloc for each new \a grpc_slice needed
   const int total_size_;  ///< byte size of proto being serialized
   int64_t byte_count_;    ///< bytes written since this object was created
+  grpc_event_engine::experimental::MemoryAllocator* allocator_ = nullptr;
   grpc_slice_buffer*
       slice_buffer_;  ///< internal buffer of slices holding the serialized data
   bool have_backup_;  ///< if we are holding a backup slice or not

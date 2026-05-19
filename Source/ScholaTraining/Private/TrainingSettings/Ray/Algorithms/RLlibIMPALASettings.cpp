@@ -4,7 +4,7 @@
 
 void FRLlibIMPALASettings::GenerateTrainingArgs(FScriptArgBuilder& ArgBuilder) const
 {
-    ArgBuilder.AddFlag(TEXT("disable-vtrace"), !this->bVTrace);
+    ArgBuilder.AddFlag(TEXT("no-vtrace"), !this->bVTrace);
     ArgBuilder.AddFloatArg(TEXT("vtrace-clip-rho-threshold"), this->VTraceClipRhoThreshold);
     ArgBuilder.AddFloatArg(TEXT("vtrace-clip-pg-rho-threshold"), this->VTraceClipPGRhoThreshold);
 }

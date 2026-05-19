@@ -4,16 +4,39 @@
 Script to convert a Ray model to an ONNX model for use in Unreal Engine.
 """
 
-from cyclopts import App, types
+from typing import Annotated, Optional
+from cyclopts import App, Parameter, types
 
-app= App(name="rllib-to-onnx", help="Convert a Ray RLlib policy to ONNX for Unreal Engine")
-
-@app.default
-def export(policy_checkpoint_path:types.ExistingFile, output_path:types.File):
-    from ray.rllib.policy.policy import Policy
-    from schola.rllib.utils import export_onnx_from_policy
-    policy = Policy.from_checkpoint(policy_checkpoint_path)
-    export_onnx_from_policy(policy, output_path)
+export_onnx_app = App(
+    name="rllib-to-onnx",
+    help="Convert a Ray RLlib Algorithm Checkpoint to ONNX for Unreal Engine",
+)
 
 
-        
+@export_onnx_app.default
+def export(
+    policy_checkpoint_path: types.ExistingDirectory,
+    output_path: Optional[types.Directory] = None,
+):
+    """
+    Export an RLlib Algorithm Checkpoint to Schola ONNX format.
+
+    Parameters
+    ----------
+    policy_checkpoint_path : types.ExistingDirectory
+        The path to the RLlib Algorithm Checkpoint.
+    output_path : Optional[types.ExistingDirectory]
+        The path to save the ONNX model to. If not provided, the model will be saved in the same directory as the checkpoint.
+    """
+    if output_path is None:
+        output_path = policy_checkpoint_path
+    from ray.rllib.algorithms.algorithm import Algorithm
+    from schola.rllib.export import export_onnx_from_policy
+
+    algo = Algorithm.from_checkpoint(str(policy_checkpoint_path))
+
+    export_onnx_from_policy(algo, output_path)
+
+
+if __name__ == "__main__":
+    export_onnx_app()

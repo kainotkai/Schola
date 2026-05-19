@@ -17,15 +17,19 @@ struct SCHOLATRAINING_API FRLlibIMPALASettings : public FTrainingSettings
 	GENERATED_BODY()
 
 public:
+	/** Whether to enable V-trace in IMPALA. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "IMPALA Settings")
     bool bVTrace = true;
 
+    /** V-trace rho clipping threshold. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "IMPALA Settings")
     float VTraceClipRhoThreshold = 1.0;
 
+    /** V-trace policy-gradient rho clipping threshold. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "IMPALA Settings")
     float VTraceClipPGRhoThreshold = 1.0;
 
+	/** Appends IMPALA-related CLI arguments to the training script builder. */
 	void GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const;
 
 	virtual ~FRLlibIMPALASettings();

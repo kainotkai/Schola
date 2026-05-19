@@ -3,6 +3,7 @@
 #include "Points/Blueprint/DictPointBlueprintLibrary.h"
 #include "Points/DictPoint.h"
 #include "Common/BlueprintErrorUtils.h"
+#include "Common/InstancedStructUtils.h"
 
 TInstancedStruct<FDictPoint> UDictPointBlueprintLibrary::MapToDictPoint(const TMap<FString, FInstancedStruct>& InPoints)
 {
@@ -48,8 +49,20 @@ bool UDictPointBlueprintLibrary::DictPoint_Add(TInstancedStruct<FDictPoint>& InO
         RaiseInstancedStructTypeMismatchError(InOutDictPoint, TEXT("FDictPoint"), TEXT("DictPoint_Add"));
         return false;
     }
+
+    if (!InValue.GetScriptStruct())
+    {
+        RaiseInvalidInstancedStructError(TEXT("DictPoint_Add"));
+        return false;
+    }
+
+    if (!InValue.GetScriptStruct()->IsChildOf(FPoint::StaticStruct()))
+    {
+        RaiseInstancedStructTypeMismatchError(InValue, TEXT("FPoint"), TEXT("DictPoint_Add"));
+        return false;
+    }
 	
-	TypedPoint->Points.Add(InKey, reinterpret_cast<const TInstancedStruct<FPoint>&>(InValue));
+	TypedPoint->Points.Add(InKey, ToTypedInstancedStruct<FPoint>(InValue));
 
     return true;
 }
@@ -79,7 +92,7 @@ bool UDictPointBlueprintLibrary::DictPoint_Find(TInstancedStruct<FDictPoint>& In
     }
     else
     {
-		OutValue = reinterpret_cast<FInstancedStruct&>(*Found);
+		OutValue = ToUntypedInstancedStruct(*Found);
 		return true;
     }
 
@@ -209,6 +222,6 @@ void UDictPointBlueprintLibrary::DictPoint_Values(const TInstancedStruct<FDictPo
     OutValues.Empty();
     for (const auto& Pair : TypedPoint->Points)
     {
-        OutValues.Add(reinterpret_cast<const FInstancedStruct&>(Pair.Value));
+        OutValues.Add(ToUntypedInstancedStruct(Pair.Value));
     }
 }

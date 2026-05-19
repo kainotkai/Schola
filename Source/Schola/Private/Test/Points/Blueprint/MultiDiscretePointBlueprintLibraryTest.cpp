@@ -19,10 +19,7 @@ bool FMultiDiscretePointBlueprintLibrary_ArrayToMultiDiscretePoint_BasicTest::Ru
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiDiscretePoint& MultiDiscretePoint = Result.Get<FMultiDiscretePoint>();
-    TestEqual(TEXT("MultiDiscretePoint.Values.Num() == 3"), MultiDiscretePoint.Values.Num(), 3);
-    TestEqual(TEXT("MultiDiscretePoint.Values[0] == 1"), MultiDiscretePoint.Values[0], 1);
-    TestEqual(TEXT("MultiDiscretePoint.Values[1] == 2"), MultiDiscretePoint.Values[1], 2);
-    TestEqual(TEXT("MultiDiscretePoint.Values[2] == 3"), MultiDiscretePoint.Values[2], 3);
+    TestEqual(TEXT("MultiDiscretePoint.Values"), MultiDiscretePoint.Values, Values);
 
     return true;
 }
@@ -54,8 +51,7 @@ bool FMultiDiscretePointBlueprintLibrary_ArrayToMultiDiscretePoint_SingleTest::R
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiDiscretePoint& MultiDiscretePoint = Result.Get<FMultiDiscretePoint>();
-    TestEqual(TEXT("MultiDiscretePoint.Values.Num() == 1"), MultiDiscretePoint.Values.Num(), 1);
-    TestEqual(TEXT("MultiDiscretePoint.Values[0] == 42"), MultiDiscretePoint.Values[0], 42);
+    TestEqual(TEXT("MultiDiscretePoint.Values"), MultiDiscretePoint.Values, Values);
 
     return true;
 }
@@ -71,8 +67,7 @@ bool FMultiDiscretePointBlueprintLibrary_ArrayToMultiDiscretePoint_LargeTest::Ru
     TestTrue(TEXT("Result is valid"), Result.IsValid());
     
     const FMultiDiscretePoint& MultiDiscretePoint = Result.Get<FMultiDiscretePoint>();
-    TestEqual(TEXT("MultiDiscretePoint.Values.Num() == 8"), MultiDiscretePoint.Values.Num(), 8);
-    TestEqual(TEXT("MultiDiscretePoint.Values[7] == 80"), MultiDiscretePoint.Values[7], 80);
+    TestEqual(TEXT("MultiDiscretePoint.Values"), MultiDiscretePoint.Values, Values);
 
     return true;
 }
@@ -89,10 +84,7 @@ bool FMultiDiscretePointBlueprintLibrary_MultiDiscretePointToArray_BasicTest::Ru
 
     TArray<int32> Result = UMultiDiscretePointBlueprintLibrary::MultiDiscretePointToArray(Point);
 
-    TestEqual(TEXT("Result.Num() == 3"), Result.Num(), 3);
-    TestEqual(TEXT("Result[0] == 5"), Result[0], 5);
-    TestEqual(TEXT("Result[1] == 10"), Result[1], 10);
-    TestEqual(TEXT("Result[2] == 15"), Result[2], 15);
+    TestEqual(TEXT("Result"), Result, TArray<int32>({5, 10, 15}));
 
     return true;
 }
@@ -106,11 +98,7 @@ bool FMultiDiscretePointBlueprintLibrary_MultiDiscretePointToArray_RoundTripTest
     TInstancedStruct<FMultiDiscretePoint> Point = UMultiDiscretePointBlueprintLibrary::ArrayToMultiDiscretePoint(OriginalValues);
     TArray<int32> Result = UMultiDiscretePointBlueprintLibrary::MultiDiscretePointToArray(Point);
 
-    TestEqual(TEXT("Round trip array length"), Result.Num(), OriginalValues.Num());
-    for (int32 i = 0; i < OriginalValues.Num(); i++)
-    {
-        TestEqual(FString::Printf(TEXT("Round trip array[%d]"), i), Result[i], OriginalValues[i]);
-    }
+    TestEqual(TEXT("Round trip array"), Result, OriginalValues);
 
     return true;
 }

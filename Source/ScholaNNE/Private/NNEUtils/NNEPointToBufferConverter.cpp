@@ -7,7 +7,7 @@ void FNNEPointToBufferConverter::operator()(const FNNEDictBuffer& InBuffer)
 {
     if (!InputPoint.GetPtr<FDictPoint>() || !Space.GetPtr<FDictSpace>())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Point and Space type mismatch for Dict conversion"));
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDictBuffer&): Point and Space type mismatch for Dict conversion");
         return;
     }
 
@@ -21,7 +21,7 @@ void FNNEPointToBufferConverter::operator()(const FNNEDictBuffer& InBuffer)
         if (!DictBuffer.Buffers.Contains(Key))
         {
             // Missing buffer entry; skip but log
-            UE_LOG(LogScholaNNE, Error, TEXT("Dict buffer missing key '%s'"), *Key);
+            UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDictBuffer&): Dict buffer missing key '{0}'", Key);
             continue;
         }
 
@@ -29,14 +29,14 @@ void FNNEPointToBufferConverter::operator()(const FNNEDictBuffer& InBuffer)
         TInstancedStruct<FNNEPointBuffer>* SubBufferPtr = DictBuffer.Buffers.Find(Key);
         if (!SubPointPtr || !SubBufferPtr || !SubBufferPtr->IsValid())
         {
-            UE_LOG(LogScholaNNE, Error, TEXT("Invalid sub-point or sub-buffer for key '%s'"), *Key);
+            UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDictBuffer&): Invalid sub-point or sub-buffer for key '{0}'", Key);
             continue;
         }
 
         // If sub-point missing, we can't synthesize here; just continue.
         if (!SubPointPtr->IsValid())
         {
-            UE_LOG(LogScholaNNE, Error, TEXT("Sub-point for key '%s' is invalid"), *Key);
+            UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDictBuffer&): Sub-point for key '{0}' is invalid", Key);
             continue;
         }
 
@@ -48,7 +48,7 @@ void FNNEPointToBufferConverter::operator()(const FNNEBoxBuffer& InBuffer)
 {
     if (!InputPoint.GetPtr<FBoxPoint>())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Point type mismatch for Box conversion"));
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEBoxBuffer&): Point type mismatch for Box conversion");
         return;
     }
 
@@ -57,7 +57,7 @@ void FNNEPointToBufferConverter::operator()(const FNNEBoxBuffer& InBuffer)
 
     if (BoxBuffer.Buffer.Num() != BoxPoint.Values.Num())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Box buffer size mismatch: buffer=%d, point=%d. Avoiding resize to preserve bindings."),
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEBoxBuffer&): Box buffer size mismatch - buffer={0}, point={1}. Avoiding resize to preserve bindings.",
             BoxBuffer.Buffer.Num(), BoxPoint.Values.Num());
         return;
     }
@@ -69,9 +69,9 @@ void FNNEPointToBufferConverter::operator()(const FNNEBoxBuffer& InBuffer)
 
 void FNNEPointToBufferConverter::operator()(const FNNEMultiDiscreteBuffer& InBuffer)
 {
-    if (!InputPoint.GetPtr<FDiscretePoint>() || !Space.GetPtr<FDiscreteSpace>())
+    if (!InputPoint.GetPtr<FMultiDiscretePoint>() || !Space.GetPtr<FMultiDiscreteSpace>())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Point and Space type mismatch for Discrete conversion"));
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiDiscreteBuffer&): Point and Space type mismatch for MultiDiscrete conversion");
         return;
     }
 
@@ -81,34 +81,33 @@ void FNNEPointToBufferConverter::operator()(const FNNEMultiDiscreteBuffer& InBuf
 
     if (DiscretePoint.Values.Num() != DiscreteSpace.GetNumDimensions())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("DiscretePoint dimensions (%d) don't match DiscreteSpace dimensions (%d)"),
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiDiscreteBuffer&): DiscretePoint dimensions ({0}) don't match DiscreteSpace dimensions ({1})",
             DiscretePoint.Values.Num(), DiscreteSpace.GetNumDimensions());
         return;
     }
 
-    int BufferIndex = 0;
+    if (DiscreteBuffer.Buffer.Num() != DiscreteSpace.GetNumDimensions())
+    {
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiDiscreteBuffer&): Buffer size mismatch - buffer={0}, expected={1}. Avoiding resize to preserve bindings.",
+            DiscreteBuffer.Buffer.Num(), DiscreteSpace.GetNumDimensions());
+        return;
+    }
+
     for (int DimIndex = 0; DimIndex < DiscretePoint.Values.Num(); DimIndex++)
     {
-        int SelectedValue = DiscretePoint.Values[DimIndex];
-        int DimSize = DiscreteSpace.High[DimIndex];
-
-        if (BufferIndex + DimSize > DiscreteBuffer.Buffer.Num())
+        const int SelectedValue = DiscretePoint.Values[DimIndex];
+        const int DimSize = DiscreteSpace.High[DimIndex];
+        if (SelectedValue < 0 || SelectedValue >= DimSize)
         {
-            UE_LOG(LogScholaNNE, Error, TEXT("Buffer bounds exceeded: end=%d, size=%d"), BufferIndex + DimSize, DiscreteBuffer.Buffer.Num());
+            UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiDiscreteBuffer&): MultiDiscrete value out of bounds at dimension {0} - value={1}, valid range=[0, {2})",
+                DimIndex, SelectedValue, DimSize);
             return;
         }
+    }
 
-        for (int i = 0; i < DimSize; i++)
-        {
-            DiscreteBuffer.Buffer[BufferIndex + i] = 0.0f;
-        }
-
-        if (SelectedValue >= 0 && SelectedValue < DimSize)
-        {
-            DiscreteBuffer.Buffer[BufferIndex + SelectedValue] = 1.0f;
-        }
-
-        BufferIndex += DimSize;
+    for (int DimIndex = 0; DimIndex < DiscretePoint.Values.Num(); DimIndex++)
+    {
+        DiscreteBuffer.Buffer[DimIndex] = static_cast<int64>(DiscretePoint.Values[DimIndex]);
     }
 }
 
@@ -116,7 +115,7 @@ void FNNEPointToBufferConverter::operator()(const FNNEDiscreteBuffer& InBuffer)
 {
     if (!InputPoint.GetPtr<FDiscretePoint>() || !Space.GetPtr<FDiscreteSpace>())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Point and Space type mismatch for Discrete conversion"));
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDiscreteBuffer&): Point and Space type mismatch for Discrete conversion");
         return;
     }
 
@@ -124,8 +123,23 @@ void FNNEPointToBufferConverter::operator()(const FNNEDiscreteBuffer& InBuffer)
     FNNEDiscreteBuffer& DiscreteBuffer = OutputBuffer.GetMutable<FNNEDiscreteBuffer>();
     const FDiscreteSpace& DiscreteSpace = Space.Get<FDiscreteSpace>();
 
-    DiscreteBuffer.Buffer.Init(0.0f, DiscreteSpace.GetNumDimensions());
-    DiscreteBuffer.Buffer[DiscretePoint.Value] = 1.0f;
+    if (DiscreteBuffer.Buffer.Num() != DiscreteSpace.GetNumDimensions())
+    {
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDiscreteBuffer&): Buffer size mismatch - buffer={0}, expected={1}. Avoiding resize to preserve bindings.",
+            DiscreteBuffer.Buffer.Num(), DiscreteSpace.GetNumDimensions());
+        return;
+    }
+
+    const int SelectedValue = DiscretePoint.Value;
+    const int DimSize = DiscreteSpace.High;
+    if (SelectedValue < 0 || SelectedValue >= DimSize)
+    {
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEDiscreteBuffer&): Discrete value out of bounds - value={0}, valid range=[0, {1})",
+            SelectedValue, DimSize);
+        return;
+    }
+
+    DiscreteBuffer.Buffer[0] = static_cast<int64>(SelectedValue);
 }
 
 
@@ -134,7 +148,7 @@ void FNNEPointToBufferConverter::operator()(const FNNEMultiBinaryBuffer& InBuffe
 {
     if (!InputPoint.GetPtr<FMultiBinaryPoint>() || !Space.GetPtr<FMultiBinarySpace>())
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Point and Space type mismatch for Binary conversion"));
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiBinaryBuffer&): Point and Space type mismatch for Binary conversion");
         return;
     }
 
@@ -145,14 +159,14 @@ void FNNEPointToBufferConverter::operator()(const FNNEMultiBinaryBuffer& InBuffe
 
     if (BinaryPoint.Values.Num() != ExpectedDims)
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("BinaryPoint dimensions (%d) don't match BinarySpace dimensions (%d)"),
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiBinaryBuffer&): BinaryPoint dimensions ({0}) don't match BinarySpace dimensions ({1})",
             BinaryPoint.Values.Num(), ExpectedDims);
         return;
     }
 
     if (BinaryBuffer.Buffer.Num() != ExpectedDims)
     {
-        UE_LOG(LogScholaNNE, Error, TEXT("Binary buffer size mismatch: buffer=%d, expected=%d. Avoiding resize to preserve bindings."),
+        UE_LOGFMT(LogScholaNNE, Error, "FNNEPointToBufferConverter::operator()(const FNNEMultiBinaryBuffer&): Binary buffer size mismatch - buffer={0}, expected={1}. Avoiding resize to preserve bindings.",
             BinaryBuffer.Buffer.Num(), ExpectedDims);
         return;
     }

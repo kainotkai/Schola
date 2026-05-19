@@ -17,15 +17,19 @@ struct SCHOLATRAINING_API FRLlibPPOSettings : public FTrainingSettings
 	GENERATED_BODY()
 
 public:
+	/** GAE lambda for advantage estimation. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PPO Settings")
     float GAELambda = 0.95;
 
+    /** PPO surrogate clipping range. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PPO Settings")
     float ClipParam = 0.2;
 
+    /** Whether to use generalized advantage estimation. */
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "PPO Settings")
     bool bUseGAE = true;
 
+	/** Appends PPO-related CLI arguments to the training script builder. */
 	void GenerateTrainingArgs( FScriptArgBuilder& ArgBuilder) const;
 
 	virtual ~FRLlibPPOSettings();

@@ -21,4 +21,4 @@ While the play in editor is running, launch schola with the following command. W
 
 .. code-block:: bash
 
-   schola sb3 train sac --resume-from .\ckpt\task1\sac_final.zip --enable-checkpoints --checkpoint-dir .\ckpt\task2 --save-final-policy --protocol.port 8000 --timesteps 100000 --pbar
+   schola sb3 train sac editor --resume-from .\ckpt\task1\sac_final.zip --enable-checkpoints --checkpoint-dir .\ckpt\task2 --save-final-policy --port 8000 --timesteps 100000 --pbar

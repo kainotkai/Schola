@@ -1,0 +1,102 @@
+# Copyright (c) 2026 Advanced Micro Devices, Inc. All Rights Reserved.
+
+"""
+Evaluate a trained RLlib algorithm from a checkpoint using ``Algorithm.evaluate``.
+"""
+
+import logging
+from typing import Any, Dict
+
+from cyclopts import App
+from schola.scripts.common.command_template import MetaNoAlgCommand
+from schola.scripts.rllib.eval.settings import RllibEvalScriptSettings
+
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(levelname)s %(name)s: %(message)s",
+    )
+
+logger = logging.getLogger(__name__)
+
+
+def _apply_eval_episode_budget(algo: Any, n_episodes: int) -> None:
+    """Best-effort override of evaluation length before ``Algorithm.evaluate``."""
+    cfg = getattr(algo, "config", None)
+    if cfg is None:
+        return
+    if not (
+        hasattr(cfg, "evaluation_duration") and hasattr(cfg, "evaluation_duration_unit")
+    ):
+        return
+    try:
+        cfg.evaluation_duration = n_episodes
+        cfg.evaluation_duration_unit = "episodes"
+    except Exception as e:  # pragma: no cover - defensive
+        logger.debug("Could not override evaluation duration: %s", e)
+
+
+def main(args: RllibEvalScriptSettings) -> Dict[str, Any]:
+    """
+    Restore an RLlib ``Algorithm`` from ``checkpoint`` and run built-in evaluation.
+
+    Parameters
+    ----------
+    args : RllibEvalScriptSettings
+        CLI / script configuration.
+
+    Returns
+    -------
+    dict
+        RLlib evaluation ``ResultDict`` (metrics keys vary by Ray version).
+    """
+
+    import ray
+    from ray.rllib.algorithms.algorithm import Algorithm
+
+    if not args.resource_settings.using_cluster:
+        ray.init(
+            num_cpus=args.resource_settings.num_cpus,
+            num_gpus=args.resource_settings.num_gpus,
+        )
+    else:
+        if args.resource_settings.num_cpus > 1:
+            logger.warning(
+                "--num-cpus is non-default but connecting to an existing cluster; "
+                "this parameter will be ignored."
+            )
+        if args.resource_settings.num_gpus > 0:
+            logger.warning(
+                "--num-gpus is non-default but connecting to an existing cluster; "
+                "this parameter will be ignored."
+            )
+
+    try:
+        algo = Algorithm.from_checkpoint(str(args.checkpoint))
+        _apply_eval_episode_budget(algo, args.n_eval_episodes)
+        logger.info(
+            "Running RLlib Algorithm.evaluate() for up to %d episodes (if supported by checkpoint config).",
+            args.n_eval_episodes,
+        )
+        results = algo.evaluate()
+        logger.info("Evaluation finished. Metrics: %s", results)
+        algo.stop()
+        return results
+    finally:
+        if not args.resource_settings.using_cluster:
+            ray.shutdown()
+
+
+app = App(name="eval", help="Evaluate a trained RLlib policy from a checkpoint")
+
+
+class RllibEvalCommand(MetaNoAlgCommand[RllibEvalScriptSettings]):
+    """Cyclopts wiring for ``schola rllib eval``."""
+
+    pass
+
+
+app = RllibEvalCommand(app, RllibEvalScriptSettings, main, logger).make()
+
+if __name__ == "__main__":
+    app.meta()

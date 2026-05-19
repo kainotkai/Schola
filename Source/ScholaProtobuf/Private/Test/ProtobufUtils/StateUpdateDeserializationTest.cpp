@@ -10,7 +10,9 @@
 #include "Points/DiscretePoint.h"
 
 THIRD_PARTY_INCLUDES_START
+#include "ScholaProtobufMacroGuardBegin.h"
 #include "StateUpdates.pb.h"
+#include "ScholaProtobufMacroGuardEnd.h"
 THIRD_PARTY_INCLUDES_END
 #include <string>
 

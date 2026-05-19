@@ -24,8 +24,30 @@ bool FSB3TrainingSettingsTest::RunTest(const FString& Parameters)
 		GeneratedArgs.Contains(TEXT("--timesteps \"3000\"")));
 	TestTrue(TEXT("SB3 args should contain --pbar flag"),
 		GeneratedArgs.Contains(TEXT("--pbar")));
-	TestTrue(TEXT("SB3 args should contain PPO algorithm"),
-		GeneratedArgs.Contains(TEXT("PPO")));
+	TestTrue(TEXT("SB3 args should contain ppo algorithm subcommand"),
+		GeneratedArgs.Contains(TEXT(" ppo ")));
+	TestTrue(TEXT("SB3 args should not contain --disable-eval when bDisableEval is false"),
+		!GeneratedArgs.Contains(TEXT("--disable-eval")));
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FSB3TrainingSettingsDisableEvalTest, "Schola.GymConnectors.Settings.StableBaselines.SB3TrainingSettings DisableEval Test", EAutomationTestFlags::EditorContext | EAutomationTestFlags::ProductFilter)
+
+bool FSB3TrainingSettingsDisableEvalTest::RunTest(const FString& Parameters)
+{
+	FSB3TrainingSettings SB3Settings;
+	SB3Settings.Timesteps = 3000;
+	SB3Settings.bDisplayProgressBar = false;
+	SB3Settings.bDisableEval = true;
+	SB3Settings.Algorithm = ESB3TrainingAlgorithm::PPO;
+
+	FScriptArgBuilder ArgBuilder;
+	SB3Settings.GenerateTrainingArgs(ArgBuilder);
+	FString GeneratedArgs = ArgBuilder.Build();
+
+	TestTrue(TEXT("SB3 args should contain --disable-eval when bDisableEval is true"),
+		GeneratedArgs.Contains(TEXT("--disable-eval")));
 
 	return true;
 }

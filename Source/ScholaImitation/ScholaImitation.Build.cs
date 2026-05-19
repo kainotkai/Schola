@@ -7,11 +7,17 @@ public class ScholaImitation : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
+        if (System.Environment.GetEnvironmentVariable("SCHOLA_MEASURE_CPP_COVERAGE") == "1")
+        {
+            OptimizeCode = CodeOptimization.Never;
+        }
+
         PublicDependencyModuleNames.AddRange(new string[] {
             "Core",
             "CoreUObject",
             "Engine",
             "InputCore",
+            "EnhancedInput",
             "Schola",
             "Projects",
             "ScholaTraining"

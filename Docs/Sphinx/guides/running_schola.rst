@@ -4,23 +4,23 @@ Running Schola
 Schola V2 uses a protocol-simulator architecture to interact with Unreal Engine. It supports both creating a standalone instance of Unreal Engine 
 running as a child process of your Python script, or connecting to a running Unreal Engine process. The architecture separates:
 
-* **Protocols** (:py:class:`~schola.core.protocols.base.BaseRLProtocol`) - Handle communication with Unreal Engine
-* **Simulators** (:py:class:`~schola.core.simulators.base.BaseSimulator`) - Manage the Unreal Engine process lifecycle
+* **Protocols** (:py:class:`~schola.core.protocols.base_protocol.BaseRLProtocol`) - Handle communication with Unreal Engine
+* **Simulators** (:py:class:`~schola.core.simulators.base_simulator.BaseSimulator`) - Manage the Unreal Engine process lifecycle
 
 
 Launch An Unreal Environment From Python
 ----------------------------------------
 
 Schola supports running environments entirely from Python using the :py:class:`~schola.core.simulators.unreal.UnrealExecutable` simulator 
-combined with a communication protocol like :py:class:`~schola.core.protocols.protobuf.gRPC.gRPCProtocol`.
+combined with a communication protocol like :py:class:`~schola.core.protocols.protobuf.grpc_protocol.GrpcProtocol`.
 
 .. code-block:: python
 
-    from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+    from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
     from schola.core.simulators.unreal import UnrealExecutable
 
     # Define the communication protocol
-    protocol = gRPCProtocol(
+    protocol = GrpcProtocol(
         url="localhost",     # Connect to the engine over localhost
         port=50051           # Port for gRPC communication (default: 50051)
     )
@@ -45,12 +45,12 @@ Initialize the Standalone Environment
         
         .. code-block:: python
 
-            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
             from schola.core.simulators.unreal import UnrealExecutable
-            from schola.gym import GymVectorEnv
+            from schola.gym.env import GymVectorEnv
 
             # Setup protocol and simulator
-            protocol = gRPCProtocol(url="localhost", port=50051)
+            protocol = GrpcProtocol(url="localhost", port=50051)
             simulator = UnrealExecutable(
                 executable_path="Path/To/Your/Game.exe",
                 headless_mode=True
@@ -68,12 +68,12 @@ Initialize the Standalone Environment
         
         .. code-block:: python
 
-            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
             from schola.core.simulators.unreal import UnrealExecutable
             from schola.rllib import RayEnv, RayVecEnv
 
             # Setup protocol and simulator
-            protocol = gRPCProtocol(url="localhost", port=50051)
+            protocol = GrpcProtocol(url="localhost", port=50051)
             simulator = UnrealExecutable(
                 executable_path="Path/To/Your/Game.exe",
                 headless_mode=True
@@ -94,12 +94,12 @@ Initialize the Standalone Environment
 
         .. code-block:: python
 
-            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
             from schola.core.simulators.unreal import UnrealExecutable
             from schola.sb3 import VecEnv
 
             # Setup protocol and simulator
-            protocol = gRPCProtocol(url="localhost", port=50051)
+            protocol = GrpcProtocol(url="localhost", port=50051)
             simulator = UnrealExecutable(
                 executable_path="Path/To/Your/Game.exe",
                 headless_mode=True
@@ -121,11 +121,11 @@ Schola supports connecting to an already running Editor or Game, for debugging a
 
 .. code-block:: python
 
-    from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+    from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
     from schola.core.simulators.unreal import UnrealEditor
 
     # Define the communication protocol
-    protocol = gRPCProtocol(
+    protocol = GrpcProtocol(
         url="localhost",  # Connect to the engine over localhost
         port=50051        # Must match the port in your Unreal Engine Schola Plugin Settings
     )
@@ -142,12 +142,12 @@ Initialize the Editor Environment
         
         .. code-block:: python
 
-            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
             from schola.core.simulators.unreal import UnrealEditor
-            from schola.gym import GymVectorEnv
+            from schola.gym.env import GymVectorEnv
 
             # Setup protocol and simulator
-            protocol = gRPCProtocol(url="localhost", port=50051)
+            protocol = GrpcProtocol(url="localhost", port=50051)
             simulator = UnrealEditor()
 
             # Create vectorized Gymnasium environment
@@ -162,12 +162,12 @@ Initialize the Editor Environment
         
         .. code-block:: python
 
-            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
             from schola.core.simulators.unreal import UnrealEditor
             from schola.rllib import RayEnv
 
             # Setup protocol and simulator
-            protocol = gRPCProtocol(url="localhost", port=50051)
+            protocol = GrpcProtocol(url="localhost", port=50051)
             simulator = UnrealEditor()
 
             # Create Ray environment
@@ -182,12 +182,12 @@ Initialize the Editor Environment
 
         .. code-block:: python
 
-            from schola.core.protocols.protobuf.gRPC import gRPCProtocol
+            from schola.core.protocols.protobuf.grpc_protocol import GrpcProtocol
             from schola.core.simulators.unreal import UnrealEditor
             from schola.sb3 import VecEnv
 
             # Setup protocol and simulator
-            protocol = gRPCProtocol(url="localhost", port=50051)
+            protocol = GrpcProtocol(url="localhost", port=50051)
             simulator = UnrealEditor()
 
             # Create vectorized environment for SB3

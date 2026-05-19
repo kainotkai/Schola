@@ -10,19 +10,19 @@ bool UCommunicationManager::RegisterService(std::shared_ptr<grpc::Service> Servi
 
 	if (Service == nullptr)
 	{
-		UE_LOG(LogScholaProtobuf, Warning, TEXT("Service is null Skipping"));
+		UE_LOGFMT(LogScholaProtobuf, Warning, "UCommunicationManager::RegisterService(): Service is null - Skipping");
 		return false;
 	}
 	else if (RegisteredServices.count(Service.get()) == 0)
 	{
-		UE_LOG(LogScholaProtobuf, Log, TEXT("Service Registered"));
+		UE_LOGFMT(LogScholaProtobuf, Verbose, "UCommunicationManager::RegisterService(): Service registered");
 		Builder->RegisterService(Service.get());
 		RegisteredServices.emplace(Service.get());
 		return true;
 	}
 	else
 	{
-		UE_LOG(LogScholaProtobuf, Warning, TEXT("Service Exists: Skipping Registration"));
+		UE_LOGFMT(LogScholaProtobuf, Verbose, "UCommunicationManager::RegisterService(): Service exists - Skipping registration");
 		return false;
 	}
 }
@@ -35,7 +35,7 @@ std::unique_ptr<ServerCompletionQueue> UCommunicationManager::GetCompletionQueue
 void UCommunicationManager::ShutdownServer()
 {
 	this->State = EComSystemState::NOTSTARTED;
-	UE_LOG(LogScholaProtobuf, Log, TEXT("Clearning up Server"));
+	UE_LOGFMT(LogScholaProtobuf, Verbose, "UCommunicationManager::ShutdownServer(): Cleaning up server");
 	// Stop receiving RPC requests
 	if (Server != nullptr)
 	{
@@ -44,12 +44,12 @@ void UCommunicationManager::ShutdownServer()
 	}
 	else
 	{
-		UE_LOG(LogScholaProtobuf, Warning, TEXT("Server was Null"));
+		UE_LOGFMT(LogScholaProtobuf, Warning, "UCommunicationManager::ShutdownServer(): Server was null");
 	}
-	UE_LOG(LogScholaProtobuf, Log, TEXT("Server Shutdown: Closing CQueues"));
+	UE_LOGFMT(LogScholaProtobuf, Verbose, "UCommunicationManager::ShutdownServer(): Server shutdown - Closing CQueues");
 	// broadcast to all the backends to clean up their resources
 	OnServerShutdownDelegate.Broadcast();
-	UE_LOG(LogScholaProtobuf, Log, TEXT("All CQueues Closed"));
+	UE_LOGFMT(LogScholaProtobuf, Verbose, "UCommunicationManager::ShutdownServer(): All CQueues closed");
 }
 
 UCommunicationManager::~UCommunicationManager()
@@ -70,13 +70,13 @@ bool UCommunicationManager::StartBackends()
 
 	if (Server == nullptr)
 	{
-		UE_LOG(LogScholaProtobuf, Error, TEXT("Server not started. Address %s Unavailable or not all services were started."), *ServerURL);
+		UE_LOGFMT(LogScholaProtobuf, Error, "UCommunicationManager::StartBackends(): Server not started - Address {0} unavailable or not all services were started", ServerURL);
 		this->State = EComSystemState::FAILURE;
 		return false;
 	}
 	else
 	{
-		UE_LOG(LogScholaProtobuf, Log, TEXT("Running Server on: %s"), *ServerURL);
+		UE_LOGFMT(LogScholaProtobuf, Log, "UCommunicationManager::StartBackends(): Running server on {0}", ServerURL);
 
 		// Perform initialization of the server
 		this->OnServerStartDelegate.Broadcast();

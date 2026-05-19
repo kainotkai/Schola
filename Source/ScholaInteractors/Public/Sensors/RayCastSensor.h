@@ -27,7 +27,7 @@ class SCHOLAINTERACTORS_API URayCastSensor : public USceneComponent, public ISch
 public:
 	
     /** The baseline length of each ray. Will be adjusted by the scale component of RayTransform. */
-	UPROPERTY(EditAnywhere, Category = "Sensor Properties", meta = (ClampMin = "1"))
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Sensor Properties", meta = (ClampMin = "1"))
 	float RayLength = 4096.f;
 
 	/** The collision channel to use for the raycast. Determines what types of objects the rays can hit. */
@@ -43,28 +43,36 @@ public:
 	bool bTraceComplex = false;
 
 	/** The number of rays to fire. Rays are distributed evenly across RayDegrees. */
-	UPROPERTY(EditAnywhere, Category = "Sensor Properties", meta = (ClampMin = "1"))
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sensor Properties", meta = (ClampMin = "1"))
 	int32 NumRays = 2;
 
 	/** The angle between the first and last ray. Special case of 360 degrees creates a full circle. */
-	UPROPERTY(EditAnywhere, Category = "Sensor Properties", meta = (ClampMin = "0", ClampMax = "360"))
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Sensor Properties", meta = (ClampMin = "0", ClampMax = "360"))
 	float RayDegrees = 90.0f;
 
 	/** Actor tags that are checked on raycast collision. Included in observations as a 1-hot vector per ray. */
-	UPROPERTY(EditAnywhere, Category = "Sensor Properties")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Sensor Properties")
 	TArray<FName> TrackedTags;
 
 	/** A position adjustment that is applied to end points of the generated ray trajectories. Useful for fine-tuning ray placement. */
-	UPROPERTY(EditAnywhere,meta=(MakeEditWidget), Category = "Sensor Properties")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(MakeEditWidget), Category = "Sensor Properties")
 	FVector RayEndOffset;
 
 	/** Debug color for ray hit (when ray intersects an object). */
-	UPROPERTY(EditAnywhere, Category = "Sensor Properties")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Sensor Properties")
 	FColor DebugHitColor = FColor::Green;
 
 	/** Debug color for ray miss (when ray hits nothing). */
-	UPROPERTY(EditAnywhere, Category = "Sensor Properties")
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, Category = "Sensor Properties")
 	FColor DebugMissColor = FColor::Red;
+
+	/** Should the sensor run raytraces in parallel. */
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,meta=(InlineEditConditionToggle), Category = "Sensor Properties")
+	bool bEnableParallelTracing = false;
+
+	/** The minimum number of rays to process in each parallel batch. If bigger than the number of rays parallelization may be disabled.*/
+	UPROPERTY(EditAnywhere,BlueprintReadWrite, meta = (ClampMin = "1", EditCondition = "bEnableParallelTracing"), Category = "Sensor Properties")
+	int32 MinParallelBatchSize = 1;
 
 	/**
 	 * @brief Get the observation space for this sensor.
@@ -106,18 +114,6 @@ public:
 	void AppendEmptyTags(FBoxPoint& OutObservations);
 
 	/**
-	 * @brief Helper function for appending observation data when a ray hits nothing.
-	 * 
-	 * Appends empty tags, hit flag (0.0), and distance (0.0) to observations.
-	 * Optionally draws debug visualization.
-	 * 
-	 * @param[in,out] OutObservations The observations to append the results to
-	 * @param[in] InStart The start point of the ray
-	 * @param[in] InEnd The end point of the ray
-	 */
-	void HandleRayMiss(FBoxPoint& OutObservations, const FVector& InStart, const FVector& InEnd);
-
-	/**
 	 * @brief Handle a successful ray trace and append observation data.
 	 * 
 	 * Checks the hit actor's tags against TrackedTags and appends a 1-hot encoding.
@@ -128,7 +124,7 @@ public:
 	 * @param[in,out] OutObservations The observations to append the results to
 	 * @param[in] InStart The start point of the ray
 	 */
-	void HandleRayHit(const FHitResult& InHitResult, FBoxPoint& OutObservations, const FVector& InStart);
+	static void HandleRayHit(const UWorld* World, const TArray<FName>& TrackedTags, const FHitResult& InHitResult, TArrayView<float>& OutObservations, const FVector& InStart);
 
 	/**
 	 * @brief Collect observations about the environment state by casting rays.
